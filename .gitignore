@@ -1,0 +1,22 @@
+# 依赖
+node_modules/
+
+# 前端构建产物
+dist/
+
+# Tauri / Rust 构建产物
+src-tauri/target/
+src-tauri/gen/
+
+# 日志与临时文件
+*.log
+_*/
+
+# IDE / 编辑器
+.vs/
+.idea/
+*.swp
+
+# 操作系统
+Thumbs.db
+desktop.ini

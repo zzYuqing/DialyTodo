@@ -1,0 +1,107 @@
+// 职责：JSON 结构校验与 version 校验（提示词 4.3）。
+// 纯函数：一律返回布尔值，不抛异常，由调用方决定如何降级。
+
+import { CURRENT_VERSION, HOLIDAY_URL_TEMPLATE } from "@/constants";
+import type { AppSettings, DayRecord, Reminder, Schedule, Task, TasksFile } from "@/types";
+
+const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const SCHEDULE_TYPE_SET = new Set(["once", "workday", "weekend", "daily"]);
+
+/** 是否为合法日期键 YYYY-MM-DD */
+export function isDateKey(value: unknown): value is string {
+  return typeof value === "string" && DATE_KEY_PATTERN.test(value);
+}
+
+function isSchedule(value: unknown): value is Schedule {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<Schedule>;
+  if (typeof candidate.type !== "string" || !SCHEDULE_TYPE_SET.has(candidate.type)) return false;
+  if (!isDateKey(candidate.startDate)) return false;
+  if (candidate.endDate !== null && !isDateKey(candidate.endDate)) return false;
+  return true;
+}
+
+function isReminder(value: unknown): value is Reminder {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<Reminder>;
+  return typeof candidate.enabled === "boolean" && typeof candidate.time === "string";
+}
+
+function isDayRecord(value: unknown): value is DayRecord {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<DayRecord>;
+  if (typeof candidate.done !== "boolean") return false;
+  return candidate.doneAt === null || typeof candidate.doneAt === "string";
+}
+
+/** 是否为合法的任务对象 */
+export function isTask(value: unknown): value is Task {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<Task>;
+
+  if (typeof candidate.id !== "string" || candidate.id.length === 0) return false;
+  if (typeof candidate.title !== "string") return false;
+  if (typeof candidate.note !== "string") return false;
+  if (typeof candidate.createdAt !== "string") return false;
+  if (!isSchedule(candidate.schedule)) return false;
+  if (!isReminder(candidate.reminder)) return false;
+  if (typeof candidate.archived !== "boolean") return false;
+
+  if (typeof candidate.instances !== "object" || candidate.instances === null) return false;
+  return Object.values(candidate.instances).every(isDayRecord);
+}
+
+/**
+ * 校验 tasks.json 的顶层结构。
+ * version 不匹配一律判为非法 —— 调用方会据此尝试读最近一份备份（提示词 4.3）。
+ */
+export function isTasksFile(value: unknown): value is TasksFile {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<TasksFile>;
+  if (candidate.version !== CURRENT_VERSION) return false;
+  if (!Array.isArray(candidate.tasks)) return false;
+  return candidate.tasks.every(isTask);
+}
+
+/** 校验 settings.json 的结构 */
+export function isAppSettings(value: unknown): value is AppSettings {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<AppSettings>;
+
+  if (candidate.version !== CURRENT_VERSION) return false;
+  if (candidate.theme !== "light" && candidate.theme !== "dark") return false;
+  if (candidate.windowMode !== "normal" && candidate.windowMode !== "floating") return false;
+  if (candidate.onBlur !== "hide" && candidate.onBlur !== "mini" && candidate.onBlur !== "off") {
+    return false;
+  }
+  if (typeof candidate.autoStart !== "boolean") return false;
+  if (typeof candidate.petEnabled !== "boolean") return false;
+  if (typeof candidate.hideCompleted !== "boolean") return false;
+  if (typeof candidate.holidayUrlTemplate !== "string") return false;
+  if (candidate.lastBackupDate !== null && !isDateKey(candidate.lastBackupDate)) return false;
+
+  return true;
+}
+
+/** 出厂设置。autoStart 默认 false，符合提示词第八节「不开机自启除非用户手动开启」。 */
+export function defaultSettings(): AppSettings {
+  return {
+    version: CURRENT_VERSION,
+    theme: "light",
+    windowMode: "normal",
+    onBlur: "off",
+    autoStart: false,
+    petEnabled: false,
+    hideCompleted: false,
+    holidayUrlTemplate: HOLIDAY_URL_TEMPLATE,
+    lastBackupDate: null,
+  };
+}
+
+/** 首次启动时的空数据文件 */
+export function emptyTasksFile(): TasksFile {
+  return {
+    version: CURRENT_VERSION,
+    tasks: [],
+  };
+}

@@ -1,0 +1,44 @@
+/* 职责：DailyTodo 全部 CSS 变量（提示词 5.8 / 十三节）。
+   组件内禁止硬编码颜色与尺寸，一律引用这里的变量。
+   主题切换通过 html[data-theme="dark"] 覆盖变量实现，阶段 7 接线。 */
+
+:root {
+  /* 基础色 */
+  --dt-bg: #f4f5f7;
+  --dt-panel: #ffffff;
+  --dt-panel-2: #f8f9fa;
+  --dt-text: #1f2328;
+  --dt-text-muted: #6b7280;
+  --dt-border: #e5e7eb;
+  --dt-accent: #3b82f6;
+  --dt-accent-contrast: #ffffff;
+  --dt-danger: #e5484d;
+
+  /* 标题栏高度，供 TitleBar 与主内容区布局对齐 */
+  --dt-titlebar-height: 40px;
+
+  /* 贡献墙 5 档色阶（提示词 5.6），变量名与 constants/contribution.ts 一一对应 */
+  --dt-contrib-0: #ebedf0;
+  --dt-contrib-1: #9be9a8;
+  --dt-contrib-2: #40c463;
+  --dt-contrib-3: #30a14e;
+  --dt-contrib-4: #216e39;
+}
+
+html[data-theme="dark"] {
+  --dt-bg: #1b1d21;
+  --dt-panel: #232529;
+  --dt-panel-2: #2a2d32;
+  --dt-text: #e6e8eb;
+  --dt-text-muted: #9aa0a6;
+  --dt-border: #3a3d42;
+  --dt-accent: #5b9cf6;
+  --dt-accent-contrast: #0b0c0e;
+  --dt-danger: #ff6369;
+
+  --dt-contrib-0: #2d3138;
+  --dt-contrib-1: #0e4429;
+  --dt-contrib-2: #006d32;
+  --dt-contrib-3: #26a641;
+  --dt-contrib-4: #39d353;
+}

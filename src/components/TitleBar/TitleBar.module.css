@@ -1,0 +1,52 @@
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--dt-titlebar-height);
+  padding: 0 4px 0 12px;
+  background: var(--dt-panel);
+  border-bottom: 1px solid var(--dt-border);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.drag {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dt-text-muted);
+  cursor: default;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  color: var(--dt-text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.control:hover {
+  background: var(--dt-panel-2);
+  color: var(--dt-text);
+}
+
+.controlClose:hover {
+  background: var(--dt-danger);
+  color: var(--dt-accent-contrast);
+}
