@@ -9,7 +9,14 @@ import { holidayFileName } from "@/lib";
 /** 数据根目录缓存，避免每次 IO 都重新解析 */
 let cachedRoot: string | null = null;
 
-/** %APPDATA%/DailyTodo */
+/**
+ * 数据根目录 = appDataDir() + "DailyTodo"
+ *
+ * 注意：appDataDir() 返回的已是 `%APPDATA%/<bundle-identifier>`
+ * （即 ...\Roaming\com.yoyo.dailytodo），**本身已包含 identifier**。
+ * 因此 capabilities 的 fs scope 必须写成 `$APPDATA/DailyTodo`，
+ * 写成 `$APPDATA/com.yoyo.dailytodo/DailyTodo` 会多一层导致权限被拒。
+ */
 export async function dataRoot(): Promise<string> {
   if (cachedRoot !== null) return cachedRoot;
   const base = await appDataDir();

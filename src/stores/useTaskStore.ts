@@ -4,6 +4,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import {
+  applyTaskEdit,
   archiveTask,
   createTask,
   restoreTask,
@@ -12,7 +13,7 @@ import {
   todayKey,
 } from "@/lib";
 import { dailyBackup, loadTasks, saveTasks } from "@/services";
-import type { CreateTaskInput, Task } from "@/types";
+import type { CreateTaskInput, Task, TaskEdit } from "@/types";
 
 interface TaskState {
   tasks: Task[];
@@ -22,6 +23,7 @@ interface TaskState {
   /** 启动加载：读主文件，损坏则回退备份；成功后执行每日一次备份 */
   initialize: () => Promise<void>;
   addTask: (input: CreateTaskInput) => Promise<void>;
+  updateTask: (id: string, edit: TaskEdit) => Promise<void>;
   setDone: (id: string, dateKey: string, done: boolean) => Promise<void>;
   /** 删除语义为归档（提示词 5.1） */
   removeTask: (id: string) => Promise<void>;
@@ -42,9 +44,15 @@ export const useTaskStore = create<TaskState>()(
       if (result.ok) await dailyBackup(todayKey());
     },
 
-    async addTask(input) {
+async addTask(input) {
       const task = createTask(input);
       const next = [...get().tasks, task];
+      set({ tasks: next });
+      await saveTasks(next);
+    },
+
+    async updateTask(id, edit) {
+      const next = get().tasks.map((task) => (task.id === id ? applyTaskEdit(task, edit) : task));
       set({ tasks: next });
       await saveTasks(next);
     },

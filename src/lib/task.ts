@@ -1,6 +1,6 @@
 // 职责：任务的不可变变换。全部为纯函数，返回新对象，不修改入参。
 
-import type { CreateTaskInput, Reminder, Schedule, Task } from "@/types";
+import type { CreateTaskInput, Reminder, Schedule, Task, TaskEdit } from "@/types";
 import { nowIso } from "./date";
 
 /** 生成任务 ID。使用 WebView2 内置的 crypto.randomUUID，不引入 uuid 依赖。 */
@@ -66,6 +66,11 @@ export function archiveTask(task: Task): Task {
 /** 从归档列表恢复 */
 export function restoreTask(task: Task): Task {
   return { ...task, archived: false };
+}
+
+/** 应用表单提交值：一次性写入 title / note / schedule / reminder（避免多次落盘） */
+export function applyTaskEdit(task: Task, edit: TaskEdit): Task {
+  return { ...task, title: edit.title, note: edit.note, schedule: edit.schedule, reminder: edit.reminder };
 }
 
 /** 按创建时间升序排列，保证列表顺序稳定 */

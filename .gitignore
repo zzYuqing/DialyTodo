@@ -4,7 +4,7 @@ node_modules/
 # 前端构建产物
 dist/
 
-# Tauri / Rust 构建产物
+# Tauri / Rust 构建产物（src-tauri/Cargo.lock 为二进制 crate 锁文件，需入库以保证构建可复现，不忽略）
 src-tauri/target/
 src-tauri/gen/
 
@@ -20,3 +20,6 @@ _*/
 # 操作系统
 Thumbs.db
 desktop.ini
+
+# AI 协作目录（工作日志与长期记忆，属本机私有内容，不入库）
+.workbuddy/

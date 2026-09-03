@@ -1,38 +1,55 @@
-// 职责：主窗口根组件（阶段 2 最小可跑骨架）。
-// 后续阶段 3+ 在此接入路由式视图切换（日 / 月 / 贡献墙 / 归档 / 设置）。
+// 职责：主窗口根组件。
+// 阶段 3 接入视图路由 —— 左侧 Sidebar 切换视图，右侧按 useViewStore.view 渲染对应视图组件。
+// DayView / 占位视图的具体内容各自维护；App 只负责装配与初始化副作用。
 
-import { useEffect } from "react";
-import { TitleBar } from "@/components";
+import { useEffect, type JSX } from "react";
+import { Sidebar, TitleBar } from "@/components";
+import { ArchiveView, DayView, MonthView, SettingsView } from "@/views";
 import { useSettingsStore, useTaskStore, useViewStore } from "@/stores";
-import { formatDateLabel } from "@/lib";
+import type { ViewName } from "@/stores";
 import styles from "./App.module.css";
 
+/** 视图名 → 组件，避免每次渲染重建对象 */
+const VIEW_COMPONENTS: Record<ViewName, () => JSX.Element> = {
+  day: () => <DayView />,
+  month: () => <MonthView />,
+  archive: () => <ArchiveView />,
+  settings: () => <SettingsView />,
+  contribution: () => <MonthView />, // 阶段 3 未单独建，暂用月视图占位
+};
+
 export default function App() {
-  const tasks = useTaskStore((s) => s.tasks);
-  const loaded = useTaskStore((s) => s.loaded);
-  const loadError = useTaskStore((s) => s.loadError);
-  const initializeTasks = useTaskStore((s) => s.initialize);
   const initializeSettings = useSettingsStore((s) => s.initialize);
-  const selectedDate = useViewStore((s) => s.selectedDate);
+  const initializeTasks = useTaskStore((s) => s.initialize);
+  const loadError = useTaskStore((s) => s.loadError);
+  const view = useViewStore((s) => s.view);
 
   useEffect(() => {
-    void initializeSettings();
-    void initializeTasks();
+    const init = async () => {
+      try {
+        await Promise.all([initializeSettings(), initializeTasks()]);
+      } catch (err) {
+        useTaskStore.setState({
+          loaded: true,
+          loadError: err instanceof Error ? err.message : String(err),
+        });
+      }
+    };
+    void init();
   }, [initializeSettings, initializeTasks]);
+
+  const ViewComponent = VIEW_COMPONENTS[view];
 
   return (
     <div className={styles.app}>
       <TitleBar />
-      <main className={styles.body}>
-        <h1 className={styles.title}>DailyTodo</h1>
-        <p className={styles.date}>{formatDateLabel(selectedDate)}</p>
-        {loadError !== null && <p className={styles.error}>数据加载异常：{loadError}</p>}
-        <p className={styles.hint}>
-          {loaded
-            ? `已加载 ${tasks.length} 个任务（含归档）。日/月/贡献墙等视图将在阶段 3 起逐步接入。`
-            : "正在加载任务数据…"}
-        </p>
-      </main>
+      <div className={styles.shell}>
+        <Sidebar />
+        <main className={styles.main}>
+          {loadError !== null && <p className={styles.error}>数据加载异常：{loadError}</p>}
+          <ViewComponent />
+        </main>
+      </div>
     </div>
   );
 }

@@ -54,3 +54,14 @@ export interface CreateTaskInput {
   schedule: Schedule;
   reminder: Reminder;
 }
+
+/**
+ * 编辑/新建表单的统一提交值：一次性写入 title / note / schedule / reminder。
+ * 字段与 CreateTaskInput 完全一致，因此同一套表单既能新建也能编辑。
+ */
+export interface TaskEdit {
+  title: string;
+  note: string;
+  schedule: Schedule;
+  reminder: Reminder;
+}

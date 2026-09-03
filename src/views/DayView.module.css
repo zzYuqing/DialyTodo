@@ -1,0 +1,51 @@
+/* position: relative 供 AddTaskFab 绝对定位 */
+.view {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.header {
+  flex-shrink: 0;
+  padding: 20px 20px 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+.subtitle {
+  margin: 6px 0 0 0;
+  font-size: 13px;
+  color: var(--dt-text-muted);
+}
+
+.empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--dt-text-muted);
+  text-align: center;
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* 底部留白避开悬浮按钮，防止最后一条任务被遮住 */
+  padding: 0 20px 92px;
+  margin: 0;
+  list-style: none;
+}

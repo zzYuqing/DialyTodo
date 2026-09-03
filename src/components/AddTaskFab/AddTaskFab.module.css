@@ -1,0 +1,35 @@
+/* 右下角悬浮新建按钮：尺寸与配色全部引用 theme.css 的变量，不硬编码 */
+
+.fab {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  z-index: 10;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 52px;
+  height: 52px;
+  border: none;
+  border-radius: 50%;
+
+  background: var(--dt-accent);
+  color: var(--dt-accent-contrast);
+  font-size: 26px;
+  line-height: 1;
+
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.fab:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.fab:active {
+  transform: scale(0.96);
+}
