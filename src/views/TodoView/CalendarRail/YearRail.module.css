@@ -1,0 +1,56 @@
+/* 年粒度：整年色块转置（行为周），容器自身滚动。
+   网格 = 行首月份标签列 + 7 个星期列；星期表头吸顶。 */
+.scroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 8px 8px;
+}
+
+.weekdays,
+.week {
+  display: grid;
+  grid-template-columns: 30px repeat(7, 1fr);
+  gap: 2px;
+}
+
+/* 星期表头吸顶，滚动时盖住下方行 */
+.weekdays {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin-bottom: 2px;
+  background: var(--dt-panel);
+}
+
+.week {
+  margin-bottom: 2px;
+}
+
+/* 单元格固定正方形：列宽随栏宽变化（1fr），aspect-ratio:1 保证格子始终为方形，
+   间距 gap 固定，整体随栏宽等比例放大缩小 */
+.week > * {
+  aspect-ratio: 1;
+  box-sizing: border-box;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 11px;
+  line-height: 15px;
+  color: var(--dt-text-muted);
+}
+
+.monthLabel {
+  font-size: 11px;
+  line-height: 15px;
+  color: var(--dt-text-muted);
+  white-space: nowrap;
+}
+
+/* 末行补位：与格子同形，保持网格节奏 */
+.pad {
+  border-radius: 4px;
+  background: transparent;
+}

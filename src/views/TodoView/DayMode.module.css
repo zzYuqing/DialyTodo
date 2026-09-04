@@ -1,5 +1,5 @@
 /* position: relative 供 AddTaskFab 绝对定位 */
-.view {
+.mode {
   position: relative;
   flex: 1;
   display: flex;
@@ -7,22 +7,12 @@
   min-height: 0;
 }
 
-.header {
-  flex-shrink: 0;
-  padding: 20px 20px 12px;
-}
-
-.title {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--dt-text);
-}
-
-.subtitle {
-  margin: 6px 0 0 0;
-  font-size: 13px;
-  color: var(--dt-text-muted);
+/* 内容列限宽居中：980px 窗口下任务卡不拉满全宽，保持舒适读距 */
+.empty,
+.list {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
 }
 
 .empty {
@@ -31,7 +21,7 @@
   align-items: center;
   justify-content: center;
   padding: 32px;
-  margin: 0;
+  margin: 0 auto;
   font-size: 14px;
   color: var(--dt-text-muted);
   text-align: center;
@@ -44,8 +34,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  /* 底部留白避开悬浮按钮，防止最后一条任务被遮住 */
-  padding: 0 20px 92px;
-  margin: 0;
+  /* 底部留白避开右下角悬浮按钮，防止最后一条任务被遮住 */
+  padding: 0 20px 96px;
+  margin: 0 auto;
   list-style: none;
 }

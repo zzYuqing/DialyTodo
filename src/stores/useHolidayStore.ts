@@ -13,8 +13,8 @@ interface HolidayState {
   checkers: Record<number, WorkdayChecker>;
   /** 已确认无本地数据的年份，用于提示"是否刷新" */
   missingYears: number[];
-  /** 加载某年的本地缓存（不联网） */
-  ensureYear: (year: number) => Promise<void>;
+  /** 加载某年的本地缓存（不联网）；返回 true 表示命中本地缓存，false 表示无数据已降级 */
+  ensureYear: (year: number) => Promise<boolean>;
   /** 用户主动触发的联网刷新 */
   refresh: (year: number, urlTemplate: string) => Promise<boolean>;
   /** 对外的工作日判定：无数据时自动降级为按星期判定 */
@@ -27,7 +27,7 @@ export const useHolidayStore = create<HolidayState>()(
     missingYears: [],
 
     async ensureYear(year) {
-      if (get().checkers[year] !== undefined) return;
+      if (get().checkers[year] !== undefined) return true;
 
       const cache = await loadYearCache(year);
       // 无缓存时降级为按星期判定，绝不在此联网（提示词 5.3）
@@ -43,6 +43,9 @@ export const useHolidayStore = create<HolidayState>()(
               : [...state.missingYears, year]
             : state.missingYears.filter((item) => item !== year),
       }));
+
+      // 命中本地缓存返回 true；无数据降级返回 false（由调用方决定是否自动拉取）
+      return cache !== null;
     },
 
     async refresh(year, urlTemplate) {

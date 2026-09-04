@@ -6,10 +6,8 @@ import {
   addDays,
   eachDayOfInterval,
   endOfMonth,
-  endOfWeek,
   format,
   parseISO,
-  startOfMonth,
   startOfWeek,
 } from "date-fns";
 
@@ -54,14 +52,12 @@ export function isWeekendByCalendar(key: string): boolean {
 }
 
 /**
- * 生成月视图的日期网格（提示词 5.2）。
- * 思路：取当月首日所在周的周一为起点、当月末日所在周的周日为终点，
- * 保证网格恒为整周，行数随月份在 5-6 行之间浮动。
+ * 生成某自然月的所有日期（仅当月，不含邻月溢出）。
+ * 返回按日期先后排序的 YYYY-MM-DD 列表；周首尾的空白对齐交由调用方用占位元素补齐。
  */
-export function getMonthGrid(year: number, month: number): string[] {
-  const anchor = new Date(year, month, 1);
-  const start = startOfWeek(startOfMonth(anchor), { weekStartsOn: 1 });
-  const end = endOfWeek(endOfMonth(anchor), { weekStartsOn: 1 });
+export function getMonthDays(year: number, month: number): string[] {
+  const start = new Date(year, month, 1);
+  const end = endOfMonth(start);
   return eachDayOfInterval({ start, end }).map(toDateKey);
 }
 
@@ -69,11 +65,6 @@ export function getMonthGrid(year: number, month: number): string[] {
 export function formatDateLabel(key: string): string {
   const date = fromDateKey(key);
   return `${date.getMonth() + 1}月${date.getDate()}日 ${WEEKDAY_LABELS[date.getDay()]}`;
-}
-
-/** 形如「2026年9月」的月份展示文案 */
-export function formatMonthLabel(year: number, month: number): string {
-  return `${year}年${month + 1}月`;
 }
 
 /** 当前时刻的 ISO8601 字符串，用于 createdAt / doneAt */
@@ -94,4 +85,20 @@ export function millisecondsUntil(time: string, now: Date = new Date()): number 
   const target = new Date(now);
   target.setHours(hour, minute, 0, 0);
   return target.getTime() - now.getTime();
+}
+
+/** Date -> YYYY-MM */
+export function toMonthKey(date: Date): string {
+  return format(date, MONTH_KEY_FORMAT);
+}
+
+/**
+ * 生成贡献墙的日期序列（GitHub 风格整年，提示词 5.6）。
+ * 思路：从今天往前推 months-1 个月，取该月 1 号所在周的周一为起点，
+ * 到今天为止（未来日期不渲染）；起点取整周保证所有列与星期对齐。
+ */
+export function getContributionDays(months: number, now: Date = new Date()): string[] {
+  const windowStart = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+  const start = startOfWeek(windowStart, { weekStartsOn: 1 });
+  return eachDayOfInterval({ start, end: now }).map(toDateKey);
 }

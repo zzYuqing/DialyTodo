@@ -19,7 +19,7 @@ export interface AppSettings {
   autoStart: boolean;
   /** 桌宠开关（提示词 5.7） */
   petEnabled: boolean;
-  /** 日视图中隐藏已完成任务（提示词 5.1） */
+  /** 日模式中隐藏已完成任务（提示词 5.1） */
   hideCompleted: boolean;
   /** 节假日数据源 URL 模板，%1 为四位年份；留空即退化为「永不联网」（提示词 5.3） */
   holidayUrlTemplate: string;

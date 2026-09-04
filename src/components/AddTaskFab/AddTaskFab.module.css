@@ -1,8 +1,9 @@
-/* 右下角悬浮新建按钮：尺寸与配色全部引用 theme.css 的变量，不硬编码 */
-
+/* 右下角悬浮新建按钮：尺寸与配色全部引用 theme.css 的变量，不硬编码。
+   水平位置跟随日模式的 720px 内容列——列右侧留白超过按钮宽度时贴列外沿，
+   窗口收窄（留白不足）时退回贴窗口右缘。 */
 .fab {
   position: absolute;
-  right: 24px;
+  right: max(24px, calc((100% - 720px) / 2 - 24px));
   bottom: 24px;
   z-index: 10;
 
@@ -17,11 +18,9 @@
 
   background: var(--dt-accent);
   color: var(--dt-accent-contrast);
-  font-size: 26px;
-  line-height: 1;
 
   cursor: pointer;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+  box-shadow: var(--dt-shadow-lg);
   transition: transform 0.12s ease, filter 0.12s ease;
 }
 

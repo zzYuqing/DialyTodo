@@ -1,0 +1,21 @@
+/* 设置页容器：窄栏居中，留白克制 */
+.wrap {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 次级说明文字：低饱和灰，不抢主体 */
+.muted {
+  color: var(--dt-text-muted);
+  line-height: 1.4;
+}
+
+/* 底部占位说明 */
+.note {
+  color: var(--dt-text-muted);
+  margin-top: 4px;
+}

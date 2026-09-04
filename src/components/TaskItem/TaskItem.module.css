@@ -6,37 +6,68 @@
   background: var(--dt-panel);
   border: 1px solid var(--dt-border);
   border-radius: 10px;
-  transition: opacity 120ms ease;
+  box-shadow: var(--dt-shadow-sm);
+  transition: box-shadow 150ms ease, transform 150ms ease, opacity 120ms ease;
+}
+
+.row:hover {
+  box-shadow: var(--dt-shadow-md);
+  transform: translateY(-1px);
 }
 
 .row.done {
   opacity: 0.55;
 }
 
+.row.done:hover {
+  transform: none;
+}
+
 .checkbox {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 22px;
   height: 22px;
   margin-top: 2px;
   padding: 0;
-  border: 2px solid var(--dt-border);
+  border: 1.5px solid var(--dt-border);
   background: transparent;
-  color: var(--dt-accent);
+  color: var(--dt-accent-contrast);
   border-radius: 50%;
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
-  transition: border-color 120ms ease, background-color 120ms ease;
+  transition: border-color 120ms ease, background-color 120ms ease, transform 120ms ease;
 }
 
 .checkbox:hover {
   border-color: var(--dt-accent);
 }
 
+/* 按下轻微收缩，勾上回弹（120–200ms 微动效口径） */
+.checkbox:active {
+  transform: scale(0.85);
+}
+
+/* 未来日期禁用勾选：置灰 + 禁止光标，取消 hover / active 反馈 */
+.checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.checkbox:disabled:hover {
+  border-color: var(--dt-border);
+}
+
+.checkbox:disabled:active {
+  transform: none;
+}
+
 .row.done .checkbox {
   background: var(--dt-accent);
   border-color: var(--dt-accent);
-  color: var(--dt-bg);
 }
 
 .body {
@@ -76,13 +107,20 @@
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   padding: 2px 8px;
   font-size: 11px;
   color: var(--dt-text-muted);
   background: var(--dt-bg);
   border: 1px solid var(--dt-border);
-  border-radius: 10px;
+  border-radius: 999px;
+}
+
+/* 提醒徽标：唯一用强调色的徽标，暗示"带通知" */
+.badgeReminder {
+  color: var(--dt-accent);
+  background: var(--dt-accent-soft);
+  border-color: transparent;
 }
 
 .date {

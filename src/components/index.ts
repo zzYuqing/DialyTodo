@@ -6,3 +6,13 @@ export { TaskItem } from "./TaskItem/TaskItem";
 export { AddTaskFab } from "./AddTaskFab/AddTaskFab";
 export { EditTaskModal } from "./EditTaskModal/EditTaskModal";
 export type { TaskModalTarget } from "./EditTaskModal/EditTaskModal";
+export {
+  ArchiveIcon,
+  BellIcon,
+  CheckIcon,
+  EditIcon,
+  PlusIcon,
+  SettingsIcon,
+  TodoIcon,
+  TrashIcon,
+} from "./Icons";

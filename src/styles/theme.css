@@ -1,46 +1,70 @@
-/* 职责：DailyTodo 全部 CSS 变量（提示词 5.8 / 十三节）。
+/* 职责：DailyTodo 全部 CSS 变量。
    组件内禁止硬编码颜色与尺寸，一律引用这里的变量。
-   主题切换通过 html[data-theme="dark"] 覆盖变量实现，阶段 7 接线。 */
+   主题切换通过 html[data-theme="dark"] 覆盖变量实现，阶段 7 接线。
+
+   配色方向「墨绿工房」（用户 2026-09-04 拍板）：UI 强调色与贡献墙色阶同源
+   （取最高档 #2C7A53），全应用一个颜色故事；中性色带微绿灰倾向。
+   硬性约束：干净、低饱和（需求草稿六节仅这两条为强制）。 */
 
 :root {
   /* 基础色 */
-  --dt-bg: #f4f5f7;
+  --dt-bg: #f5f7f4;
   --dt-panel: #ffffff;
-  --dt-panel-2: #f8f9fa;
-  --dt-text: #1f2328;
-  --dt-text-muted: #6b7280;
-  --dt-border: #e5e7eb;
-  --dt-accent: #3b82f6;
+  --dt-panel-2: #eef2ed;
+  --dt-text: #2a332b;
+  --dt-text-muted: #75806f;
+  --dt-border: rgba(45, 60, 50, 0.12);
+  --dt-accent: #2c7a53;
   --dt-accent-contrast: #ffffff;
-  --dt-accent-soft: #dbeafe;
-  --dt-danger: #e5484d;
+  --dt-accent-soft: rgba(44, 122, 83, 0.1);
+  --dt-danger: #c2452d;
 
   /* 标题栏高度，供 TitleBar 与主内容区布局对齐 */
   --dt-titlebar-height: 40px;
 
-  /* 贡献墙 5 档色阶（提示词 5.6），变量名与 constants/contribution.ts 一一对应 */
-  --dt-contrib-0: #ebedf0;
-  --dt-contrib-1: #9be9a8;
-  --dt-contrib-2: #40c463;
-  --dt-contrib-3: #30a14e;
-  --dt-contrib-4: #216e39;
+  /* 阴影三档：带绿倾向的低饱和投影，随主题切换 */
+  --dt-shadow-sm: 0 1px 2px rgba(44, 80, 60, 0.06);
+  --dt-shadow-md: 0 2px 6px rgba(44, 80, 60, 0.08), 0 6px 16px rgba(44, 80, 60, 0.07);
+  --dt-shadow-lg: 0 4px 12px rgba(44, 80, 60, 0.1), 0 12px 28px rgba(44, 80, 60, 0.1);
+
+  /* 贡献墙 5 档色阶：严格按提示词 5.6 的硬性色值，不得改成 GitHub 绿 */
+  --dt-contrib-0: rgba(0, 0, 0, 0.04);
+  --dt-contrib-1: #cde3d4;
+  --dt-contrib-2: #8fcba3;
+  --dt-contrib-3: #4fa372;
+  --dt-contrib-4: #2c7a53;
+
+  /* 未来日期格：空心描边（透明填充 + 虚线边），与「过去空日(level-0，近透明)」及绿色数据档区分；
+     本变量存的是虚线边的颜色，浅色下用微绿灰半透明，保证可见但不抢眼；随主题切换。 */
+  --dt-contrib-future: rgba(45, 60, 50, 0.25);
 }
 
 html[data-theme="dark"] {
-  --dt-bg: #1b1d21;
-  --dt-panel: #232529;
-  --dt-panel-2: #2a2d32;
-  --dt-text: #e6e8eb;
-  --dt-text-muted: #9aa0a6;
-  --dt-border: #3a3d42;
-  --dt-accent: #5b9cf6;
-  --dt-accent-contrast: #0b0c0e;
-  --dt-accent-soft: #1e3a5f;
-  --dt-danger: #ff6369;
+  --dt-bg: #151a16;
+  --dt-panel: #1c221d;
+  --dt-panel-2: #232a24;
+  --dt-text: #e3e8e3;
+  --dt-text-muted: #96a196;
+  --dt-border: rgba(255, 255, 255, 0.1);
+  --dt-accent: #57b385;
+  --dt-accent-contrast: #0e1511;
+  --dt-accent-soft: rgba(87, 179, 133, 0.14);
+  --dt-danger: #e06a55;
 
-  --dt-contrib-0: #2d3138;
-  --dt-contrib-1: #0e4429;
-  --dt-contrib-2: #006d32;
-  --dt-contrib-3: #26a641;
-  --dt-contrib-4: #39d353;
+  /* 深色下绿调投影几乎不可见，改用黑色投影表达层级 */
+  --dt-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --dt-shadow-md: 0 2px 6px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.35);
+  --dt-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.45), 0 12px 28px rgba(0, 0, 0, 0.4);
+
+  /* 深色色阶：沿用浅色的色相与饱和度、整体压暗，但仍保持「完成越多越突出」的递进，
+     否则最高档在深底上会与背景糊在一起（提示词 5.6：降低明度但要过渡自然） */
+  --dt-contrib-0: rgba(255, 255, 255, 0.05);
+  --dt-contrib-1: #23432e;
+  --dt-contrib-2: #2f603f;
+  --dt-contrib-3: #3d7b5e;
+  --dt-contrib-4: #3ba574;
+
+  /* 深色未来格：空心描边的虚线边色，明显区别于近透明的 level-0 与绿色数据档，
+     用偏亮的白半透明，确保在深底上可见。 */
+  --dt-contrib-future: rgba(255, 255, 255, 0.28);
 }

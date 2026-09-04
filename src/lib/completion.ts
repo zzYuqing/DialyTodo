@@ -1,5 +1,7 @@
 // 职责：完成率计算与贡献墙分档（提示词 5.6）。
-// 完成率 = 当日已完成数 / 当日应完成数，分 5 档色阶递进。
+// 单日完成率 = 当日已完成数 / 当日应完成数。
+// 贡献墙色阶档位基于「近一年窗口内单日完成数量」分档：完成越多颜色越深，
+// 最深档对应当前窗口内单日完成数量的最大值。
 // 纯函数，不碰 IO。
 
 import type { ContributionLevel } from "@/constants";
@@ -13,7 +15,7 @@ export interface DayCompletion {
   done: number;
   /** 完成率 0 - 1；当日无应完成任务时为 0 */
   ratio: number;
-  /** 贡献墙色阶档位 */
+  /** 贡献墙色阶档位；仅在批量窗口计算（calcDaysCompletion）时有效，单日计算无窗口上下文故为 0 */
   level: ContributionLevel;
 }
 
@@ -30,7 +32,7 @@ export function collectTasksOfDay(
   return tasks.filter((task) => !task.archived && occursOn(task.schedule, dateKey, isWorkday));
 }
 
-/** 计算某一天的完成情况 */
+/** 计算某一天的完成情况（不含窗口色阶档位） */
 export function calcDayCompletion(
   tasks: Task[],
   dateKey: string,
@@ -44,19 +46,48 @@ export function calcDayCompletion(
     total: dayTasks.length,
     done,
     ratio,
-    level: ratioToLevel(ratio),
+    level: 0,
   };
 }
 
 /**
- * 完成率转档位（提示词 5.6 的五档口径）。
- * 0% → 0；1–25% → 1；26–50% → 2；51–75% → 3；76–100% → 4。
+ * 无数据时的占位完成情况。
+ * 渲染端用它可以免去 undefined 判断 —— 批量计算的结果必然覆盖传入的每个日期键，
+ * 但 TS 的索引访问类型仍可能给出 undefined，这里统一兜底为空。
  */
-export function ratioToLevel(ratio: number): ContributionLevel {
-  if (ratio <= 0) return 0;
-  const percent = ratio * 100;
-  if (percent <= 25) return 1;
-  if (percent <= 50) return 2;
-  if (percent <= 75) return 3;
-  return 4;
+export const EMPTY_COMPLETION: DayCompletion = { total: 0, done: 0, ratio: 0, level: 0 };
+
+/**
+ * 批量计算多天的完成情况，返回「日期键 -> 完成情况」映射（月历与贡献墙共用）。
+ * 思路：先逐日计算 total/done/ratio，再在窗口内按「单日完成数量」分档色阶：
+ * 0 项为 0 档，其余按 maxDone 等分为 1-4 档，完成越多档位越高。
+ */
+export function calcDaysCompletion(
+  tasks: Task[],
+  dateKeys: string[],
+  isWorkday: WorkdayChecker,
+): Record<string, DayCompletion> {
+  const result: Record<string, DayCompletion> = {};
+  for (const key of dateKeys) {
+    result[key] = calcDayCompletion(tasks, key, isWorkday);
+  }
+
+  const maxDone = Math.max(0, ...Object.values(result).map((c) => c.done));
+  for (const key of dateKeys) {
+    result[key].level = countToLevel(result[key].done, maxDone);
+  }
+
+  return result;
+}
+
+/**
+ * 单日完成数量转档位。
+ * - 0 项 → 0 档（无色）；
+ * - 其余按 maxDone 线性均分为 1-4 档，完成越多档位越高；
+ * - maxDone 即当前窗口内单日完成数量的最大值，最深档对应该值。
+ */
+function countToLevel(done: number, maxDone: number): ContributionLevel {
+  if (done <= 0 || maxDone <= 0) return 0;
+  const bucket = Math.ceil((done / maxDone) * 4);
+  return Math.min(4, Math.max(1, bucket)) as ContributionLevel;
 }

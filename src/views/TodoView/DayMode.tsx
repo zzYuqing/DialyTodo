@@ -1,26 +1,22 @@
-// 职责：DayView —— 今日任务 + 完成率 + 新建/编辑/完成/归档入口。
+// 职责：Todo 页的日模式 —— 单日任务清单 + 完成/编辑/归档 + 新建入口。
 // 设计要点：
-// - 任务过滤完全在纯函数层完成（lib/），DayView 只负责按周期判定与展示；
-// - 工作日判定从 useHolidayStore 注入，避免在这里直接访问节假日缓存；
+// - 任务过滤在纯函数层完成（lib/），本组件只负责按周期判定与展示；
+// - 工作日判定由 useWorkdayChecker 注入，缓存未就绪时降级为按星期判定；
 // - 新建与编辑共用 EditTaskModal，新建时即配置周期与提醒，不做"先建后改"；
-// - 阶段 3 不做"上一日/下一日"日期切换，selectedDate 默认 = 今日。
+// - 日期导航在 TodoView 容器上，本组件只渲染清单本体；
+// - 未来日期（selectedDate > 今天）仍可点开并新建任务，但不可勾选完成（透传 disabledDone）。
 
 import { useMemo, useState } from "react";
 import { TaskItem } from "@/components/TaskItem/TaskItem";
 import { AddTaskFab } from "@/components/AddTaskFab/AddTaskFab";
 import { EditTaskModal, type TaskModalTarget } from "@/components/EditTaskModal/EditTaskModal";
-import { useHolidayStore, useTaskStore, useViewStore } from "@/stores";
-import {
-  calcDayCompletion,
-  collectTasksOfDay,
-  formatDateLabel,
-  isWorkdayByWeekday,
-} from "@/lib";
+import { collectTasksOfDay, todayKey } from "@/lib";
+import { useTaskStore, useViewStore } from "@/stores";
+import { useWorkdayChecker } from "@/hooks";
 import type { TaskEdit } from "@/types";
-import { CONTRIBUTION_LABELS } from "@/constants";
-import styles from "./DayView.module.css";
+import styles from "./DayMode.module.css";
 
-export function DayView() {
+export function DayMode() {
   const tasks = useTaskStore((s) => s.tasks);
   const addTask = useTaskStore((s) => s.addTask);
   const updateTask = useTaskStore((s) => s.updateTask);
@@ -30,29 +26,19 @@ export function DayView() {
   const selectedDate = useViewStore((s) => s.selectedDate);
   const hideCompleted = useViewStore((s) => s.hideCompleted);
 
-  const ensureYear = useHolidayStore((s) => s.ensureYear);
-  const checkerByYear = useHolidayStore((s) => s.checkers);
-
-  // null = 弹窗关闭；create = 新建；edit = 编辑既有任务
+  const isWorkday = useWorkdayChecker([selectedDate]);
+  const isFuture = selectedDate > todayKey();
   const [target, setTarget] = useState<TaskModalTarget | null>(null);
 
-  // 当前年份的工作日判定：缓存有则用，没有则先按星期粗判（不联网时降级）
-  const year = Number(selectedDate.slice(0, 4));
-  void ensureYear(year);
-  const checker = checkerByYear[year] ?? isWorkdayByWeekday;
-
-  // 过滤今日应出现的任务
+  // 过滤当日应出现的任务
   const visibleTasks = useMemo(
-    () => collectTasksOfDay(tasks, selectedDate, checker),
-    [tasks, selectedDate, checker],
+    () => collectTasksOfDay(tasks, selectedDate, isWorkday),
+    [tasks, selectedDate, isWorkday],
   );
 
   const filtered = hideCompleted
     ? visibleTasks.filter((t) => t.instances[selectedDate]?.done !== true)
     : visibleTasks;
-
-  const completion = calcDayCompletion(tasks, selectedDate, checker);
-  const completionLabel = CONTRIBUTION_LABELS[completion.level];
 
   const handleSubmit = (edit: TaskEdit) => {
     if (target === null) return;
@@ -64,27 +50,20 @@ export function DayView() {
   };
 
   const handleArchive = (id: string) => {
-    if (window.confirm("归档后任务将从今日列表移除，但保留历史完成记录。确定？")) {
+    if (window.confirm("归档后任务将从列表移除，但保留历史完成记录。确定？")) {
       void removeTask(id);
     }
   };
 
   return (
-    <section className={styles.view}>
-      <header className={styles.header}>
-        <div>
-          <h2 className={styles.title}>{formatDateLabel(selectedDate)}</h2>
-          <p className={styles.subtitle}>
-            今日 {completion.total} 项，已完成 {completion.done} · 完成度 {completionLabel}
-          </p>
-        </div>
-      </header>
-
+    <div className={styles.mode}>
       {filtered.length === 0 ? (
         <p className={styles.empty}>
           {visibleTasks.length === 0
-            ? "今天还没有任务，点击右下角 ＋ 新建一条吧。"
-            : "今日任务已全部完成，干得漂亮 🎉"}
+            ? (isFuture
+                ? "这是未来的日子，现在还不能勾完成，但可以先建好任务。"
+                : "这一天还没有任务，点击右下角 ＋ 新建一条吧。")
+            : "这一天的任务已全部完成，干得漂亮 🎉"}
         </p>
       ) : (
         <ul className={styles.list}>
@@ -93,6 +72,7 @@ export function DayView() {
               key={task.id}
               task={task}
               dateKey={selectedDate}
+              disabledDone={isFuture}
               onToggleDone={(id, done) => void setDone(id, selectedDate, done)}
               onEdit={(t) => setTarget({ kind: "edit", task: t })}
               onRemove={handleArchive}
@@ -109,6 +89,6 @@ export function DayView() {
         onArchive={handleArchive}
         onClose={() => setTarget(null)}
       />
-    </section>
+    </div>
   );
 }

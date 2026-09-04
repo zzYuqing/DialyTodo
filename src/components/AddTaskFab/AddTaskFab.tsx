@@ -3,6 +3,7 @@
 // - 只负责"发起点新建"这一个动作，表单本身由 EditTaskModal 承担；
 // - 定位由父容器提供（父容器需 position: relative），这里不写 fixed，避免跨视图定位错乱。
 
+import { PlusIcon } from "@/components/Icons";
 import styles from "./AddTaskFab.module.css";
 
 interface AddTaskFabProps {
@@ -18,7 +19,7 @@ export function AddTaskFab({ onClick }: AddTaskFabProps) {
       title="新建任务"
       aria-label="新建任务"
     >
-      ＋
+      <PlusIcon size={22} />
     </button>
   );
 }

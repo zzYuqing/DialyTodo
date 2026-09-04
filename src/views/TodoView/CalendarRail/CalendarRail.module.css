@@ -1,0 +1,152 @@
+/* 贡献栏：Todo 页左栏。宽度由内联 style（store）驱动，右缘为拖宽把手。
+   间距 4px 基准；色值一律引用 theme.css 变量，不硬编码。 */
+.rail {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--dt-border);
+  background: var(--dt-panel);
+}
+
+.railHeader {
+  flex-shrink: 0;
+  display: flex;
+  padding: 12px 12px 8px;
+}
+
+/* 月/年粒度切换：小分段控件 */
+.toggle {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  background: var(--dt-bg);
+}
+
+.toggleButton,
+.toggleButtonActive {
+  height: 22px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.toggleButton {
+  background: transparent;
+  color: var(--dt-text-muted);
+}
+
+.toggleButton:hover {
+  color: var(--dt-text);
+}
+
+.toggleButtonActive {
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+  font-weight: 500;
+  cursor: default;
+}
+
+.railBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.railFooter {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px 12px;
+  border-top: 1px solid var(--dt-border);
+}
+
+.railStats {
+  font-size: 12px;
+  color: var(--dt-text-muted);
+  white-space: nowrap;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.legendLabel {
+  font-size: 11px;
+  color: var(--dt-text-muted);
+  line-height: 1;
+}
+
+.legendItem {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+/* 右缘拖宽把手：命中区域比视觉位置略宽，方便抓取 */
+.resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 7px;
+  height: 100%;
+  z-index: 5;
+  cursor: col-resize;
+}
+
+.resizer:hover {
+  background: var(--dt-accent-soft);
+}
+
+/* 拖动期间挂到 body：统一光标并禁用文本选择（类名经模块生成，以字符串挂 body 仍生效） */
+.bodyResizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* ---------- 格子（RailCell，月/年共用） ---------- */
+.cell {
+  padding: 0;
+  border: 1.5px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: filter 120ms ease;
+}
+
+.cell:hover {
+  filter: brightness(1.06);
+}
+
+/* 选中日：实线描边 */
+.cellSelected {
+  border-color: var(--dt-accent);
+}
+
+/* 今天：内圈描边（可与选中叠加） */
+.cellToday {
+  box-shadow: inset 0 0 0 1.5px var(--dt-accent);
+}
+
+/* 未来日期：空心描边（透明填充 + 虚线边），读作「待填空槽」，与过去空日(level-0)及绿色数据档区分；可点 */
+.cellFuture {
+  border: 1.5px dashed var(--dt-contrib-future);
+  border-radius: 4px;
+  background: transparent;
+}
+
+/* 未来日期被选中：保持虚线、描边转强调色，与正常选中态一致 */
+.cellFuture.cellSelected {
+  border-color: var(--dt-accent);
+}

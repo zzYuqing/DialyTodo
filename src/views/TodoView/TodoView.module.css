@@ -1,0 +1,94 @@
+/* 容器：头部（日导航）+ 主体（左贡献栏 + 右日视图）的分栏工作台 */
+.view {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 头部：‹ 日期(含副标题) › [今天] 一行排布，按钮顶对齐标题行；间距统一 4px 基准 */
+.header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px 12px;
+}
+
+/* 主体：左贡献栏 + 右日视图的分栏工作台 */
+.body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* 标题组：‹ 标题(含副标题) › [今天] 一行排布，按钮顶对齐标题行 */
+.titleGroup {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 28px;
+  color: var(--dt-text);
+}
+
+/* 副标题：仅日模式给出当日完成情况 */
+.context {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--dt-text-muted);
+}
+
+.navButton {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  background: var(--dt-panel);
+  color: var(--dt-text);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.navButton:hover {
+  background: var(--dt-panel-2);
+}
+
+.textButton {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.textButton:hover:not(:disabled) {
+  background: var(--dt-panel-2);
+  color: var(--dt-text);
+}
+
+/* 已在今天 / 当月时禁用：置灰且不可点 */
+.textButton:disabled {
+  cursor: default;
+  opacity: 0.45;
+}

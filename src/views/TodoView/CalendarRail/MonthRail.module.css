@@ -1,0 +1,55 @@
+/* 月粒度：12 个迷你月历竖排，容器自身滚动（position:relative 供 offsetTop 定位） */
+.scroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 12px 8px;
+}
+
+.monthBlock {
+  margin-bottom: 14px;
+}
+
+.monthBlock:last-child {
+  margin-bottom: 0;
+}
+
+.monthLabel {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dt-text);
+}
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-bottom: 3px;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 11px;
+  color: var(--dt-text-muted);
+}
+
+/* 格子尺寸交给网格：等分列宽 + 正方形 */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.grid > * {
+  aspect-ratio: 1;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 周首空白占位：透明，仅用于对齐星期列，不渲染邻月日期 */
+.empty {
+  border-radius: 4px;
+  background: transparent;
+}
