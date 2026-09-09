@@ -45,6 +45,12 @@ export interface Task {
    * 但 instances 历史记录保留，贡献墙历史格子不会因删除而缺洞。
    */
   archived: boolean;
+  /**
+   * 永久完成日期。仅当 schedule.type === "once" 且 schedule.endDate !== null 时使用：
+   * null 表示任务尚未完成；非 null 表示一次性勾选完成的日期（YYYY-MM-DD），
+   * 该字段决定历史格子灰化与未来日期消失。其他周期类型恒为 null。
+   */
+  completedAt: string | null;
 }
 
 /** 新建任务时的入参 */

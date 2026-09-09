@@ -10,7 +10,7 @@ import { useMemo, useState } from "react";
 import { TaskItem } from "@/components/TaskItem/TaskItem";
 import { AddTaskFab } from "@/components/AddTaskFab/AddTaskFab";
 import { EditTaskModal, type TaskModalTarget } from "@/components/EditTaskModal/EditTaskModal";
-import { collectTasksOfDay, todayKey } from "@/lib";
+import { collectTasksOfDay, todayKey, isActiveDdlTask } from "@/lib";
 import { useTaskStore, useViewStore } from "@/stores";
 import { useWorkdayChecker } from "@/hooks";
 import type { TaskEdit } from "@/types";
@@ -40,6 +40,13 @@ export function DayMode() {
     ? visibleTasks.filter((t) => t.instances[selectedDate]?.done !== true)
     : visibleTasks;
 
+  // 活跃 DDL 置顶：长期 DDL（endDate ≠ startDate）且尚未完成、未归档的任务排在最前，
+  // 便于一眼看到临近截止的事项。其他任务保持原顺序。
+  const sorted = [
+    ...filtered.filter((t) => isActiveDdlTask(t)),
+    ...filtered.filter((t) => !isActiveDdlTask(t)),
+  ];
+
   const handleSubmit = (edit: TaskEdit) => {
     if (target === null) return;
     if (target.kind === "create") {
@@ -67,7 +74,7 @@ export function DayMode() {
         </p>
       ) : (
         <ul className={styles.list}>
-          {filtered.map((task) => (
+          {sorted.map((task) => (
             <TaskItem
               key={task.id}
               task={task}

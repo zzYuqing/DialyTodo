@@ -20,6 +20,8 @@ interface TaskState {
   loaded: boolean;
   /** 启动加载时产生的提示信息，null 表示无异常 */
   loadError: string | null;
+  /** 损坏兜底生成的备份路径（绝对路径），null 表示未生成。UI 用它指引用户去找原文件 */
+  corruptedBackupPath: string | null;
   /** 启动加载：读主文件，损坏则回退备份；成功后执行每日一次备份 */
   initialize: () => Promise<void>;
   addTask: (input: CreateTaskInput) => Promise<void>;
@@ -35,10 +37,16 @@ export const useTaskStore = create<TaskState>()(
     tasks: [],
     loaded: false,
     loadError: null,
+    corruptedBackupPath: null,
 
     async initialize() {
       const { result, tasks } = await loadTasks();
-      set({ tasks: sortTasksByCreatedAt(tasks), loaded: true, loadError: result.error });
+      set({
+        tasks: sortTasksByCreatedAt(tasks),
+        loaded: true,
+        loadError: result.error,
+        corruptedBackupPath: result.corruptedBackupPath,
+      });
 
       // 只在数据可用时才备份，避免把损坏数据写进备份
       if (result.ok) await dailyBackup(todayKey());

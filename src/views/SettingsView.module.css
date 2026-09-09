@@ -19,3 +19,24 @@
   color: var(--dt-text-muted);
   margin-top: 4px;
 }
+
+/* 数据目录路径：窄容器内长路径可断行，避免撑破卡片 */
+.path {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* 迁移结果反馈行距 */
+.feedback {
+  line-height: 1.4;
+}
+
+/* 让说明文字区占满剩余宽度，把开关/按钮顶到右侧 */
+.grow {
+  flex: 1;
+}
+
+/* 卡片标题：墨绿工房主色，与贡献墙最高档同源 */
+.cardTitle {
+  color: var(--dt-accent);
+}

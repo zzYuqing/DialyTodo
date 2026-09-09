@@ -18,6 +18,7 @@
   --dt-accent-contrast: #ffffff;
   --dt-accent-soft: rgba(44, 122, 83, 0.1);
   --dt-danger: #c2452d;
+  --dt-danger-contrast: #ffffff;
 
   /* 标题栏高度，供 TitleBar 与主内容区布局对齐 */
   --dt-titlebar-height: 40px;
@@ -37,6 +38,22 @@
   /* 未来日期格：空心描边（透明填充 + 虚线边），与「过去空日(level-0，近透明)」及绿色数据档区分；
      本变量存的是虚线边的颜色，浅色下用微绿灰半透明，保证可见但不抢眼；随主题切换。 */
   --dt-contrib-future: rgba(45, 60, 50, 0.25);
+
+  /* DDL 过期红点：贡献墙格子右下角的小圆点。鲜艳红，浅深主题共用同一颜色，
+     在深底上也保留识别度（避免与红色 DDL 行徽章撞色）。 */
+  --dt-expired-badge: #e74c3c;
+
+  /* DDL 行紧迫度：低饱和暖灰递进（避红橙），仅作整条色条 + 标题色阶；
+     真正「已过期」走红色徽章（--dt-danger + --dt-danger-contrast），不在此序列。 */
+  --dt-ddl-bar-far: #cfc9c1;
+  --dt-ddl-bar-soon: #b6aea3;
+  --dt-ddl-bar-imminent: #978d80;
+  --dt-ddl-bar-today: #7c7264;
+  --dt-ddl-bar-overdue: #5f564b;
+  --dt-ddl-title-imminent: #6b6358;
+  --dt-ddl-title-today: #4f4740;
+  --dt-ddl-title-overdue: #3a342e;
+  --dt-ddl-row-overdue: #efe9e2;
 }
 
 html[data-theme="dark"] {
@@ -67,4 +84,15 @@ html[data-theme="dark"] {
   /* 深色未来格：空心描边的虚线边色，明显区别于近透明的 level-0 与绿色数据档，
      用偏亮的白半透明，确保在深底上可见。 */
   --dt-contrib-future: rgba(255, 255, 255, 0.28);
+
+  /* 深色下 DDL 行暖灰递进：明度整体抬升，保持「越紧迫越深」的递进 */
+  --dt-ddl-bar-far: #4a443c;
+  --dt-ddl-bar-soon: #5c554b;
+  --dt-ddl-bar-imminent: #6f675b;
+  --dt-ddl-bar-today: #857b6d;
+  --dt-ddl-bar-overdue: #9c9182;
+  --dt-ddl-title-imminent: #b8afa2;
+  --dt-ddl-title-today: #ccc2b3;
+  --dt-ddl-title-overdue: #e0d6c7;
+  --dt-ddl-row-overdue: #20241f;
 }

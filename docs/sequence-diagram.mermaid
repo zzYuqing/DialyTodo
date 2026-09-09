@@ -1,0 +1,101 @@
+sequenceDiagram
+    autonumber
+    actor U as 用户
+    participant DM as DayMode
+    participant CT as completion.ts
+    participant OC as schedule.ts occursOn
+    participant DL as lib/ddl.ts
+    participant TI as TaskItem
+    participant CR as CalendarRail
+    participant RC as RailCell
+    participant EM as EditTaskModal
+    participant ST as useTaskStore
+    participant TL as lib/task.ts
+    participant SV as services/storage.ts
+
+    rect rgb(232, 240, 234)
+    Note over U, SV: 阶段一 · 日视图渲染与 DDL 档位（含逾期顺延）
+    U->>DM: 打开应用 / 切换日期 selectedDate = todayKey
+    DM->>CT: collectTasksOfDay(tasks, dateKey, isWorkday)
+    loop 每条未归档任务
+        CT->>OC: occursOn(schedule, dateKey, isWorkday, completedAt)
+        alt type === "once"
+            OC->>DL: isLongDdlTask(schedule)
+            DL-->>OC: boolean
+            alt endDate 为空 或 起止同日
+                OC-->>CT: dateKey === startDate （普通单次，不进日清单的其它天）
+            else 未完成 DDL completedAt == null
+                Note over OC: 规则 R1 逾期顺延（无界）<br/>dateKey >= startDate 即 true<br/>突破 endDate 上界，过期任务今天仍可见
+                OC-->>CT: true
+            else 已完成 completedAt != null
+                OC-->>CT: dateKey <= completedAt
+            end
+        else daily / workday / weekend
+            OC->>OC: isWithinRange + 周期判定
+            OC-->>CT: boolean
+        end
+    end
+    CT-->>DM: visibleTasks（含逾期的未完成 DDL）
+    DM->>DL: isActiveDdlTask(task) 逐条
+    DL-->>DM: boolean
+    Note over DM: 未完成 DDL 置顶，其余保持创建时间序
+    DM->>TI: 渲染 TaskItem(task, dateKey)
+    TI->>DL: ddlUrgencyFor(task, dateKey)
+    DL-->>TI: overdue / today / imminent / soon / far / null
+    TI->>DL: isOverdueDdl(task, dateKey)
+    DL-->>TI: boolean
+    Note over TI: urgency 非 null → row 追加档位类<br/>左侧色条 + 整行底色 + 标题色阶<br/>overdue 为真 → 在周期徽章后、起止日期前插「已过期」红徽章<br/>done 为真 → 仅追加 .done 灰化删除线，不加档位
+    TI-->>U: 渲染完成的任务行
+    end
+
+    rect rgb(244, 246, 243)
+    Note over U, SV: 阶段二 · 贡献墙红点（DDL-2 同步）
+    CR->>CT: calcDaysCompletion(tasks, days, isWorkday)
+    Note over CR: days = getContributionDays 12 个月，截至今天，不含未来
+    loop 每个日期键
+        CT->>CT: calcDayCompletion → collectTasksOfDay
+        loop dayTasks 每条
+            CT->>DL: isOverdueDdl(task, dateKey)
+            Note over DL: dateKey > endDate 且 completedAt == null<br/>endDate 当天恒为 false，不打红点
+            DL-->>CT: boolean
+        end
+        CT-->>CR: DayCompletion total done ratio level expiredDdlCount
+    end
+    CR->>RC: RailCell(dateKey, completion)
+    RC->>RC: hasExpired = expiredDdlCount > 0
+    Note over RC: 未来日期分支直接返回，永不打红点<br/>红点色取 --dt-expired-badge，描边改 --dt-bg
+    RC-->>U: 渲染格子，含或不含红点
+    end
+
+    rect rgb(250, 245, 240)
+    Note over U, SV: 阶段三 · 表单编辑 → 落盘 → 刷新
+    U->>EM: 双击任务行或点编辑图标
+    EM->>EM: 按 targetKey 重灌表单值
+    Note over EM: endDateEnabled = endDate != null<br/>endDate 回退值 = endDate ?? startDate<br/>Stack gap xs，按钮区 mt md<br/>周期 + 起始日同行，开关套等高容器
+    U->>EM: 调整字段并提交
+    EM->>EM: 校验 标题非空 且 结束日期不早于起始日期
+    EM->>ST: onSubmit(TaskEdit)
+    ST->>TL: applyTaskEdit(task, edit)
+    TL-->>ST: 新 Task 对象（不可变）
+    ST->>SV: saveTasks(next)
+    SV-->>ST: 落盘完成
+    ST-->>DM: tasks 引用变更触发重渲染
+    Note over DM: 若把 endDate 改成等于 startDate<br/>isLongDdlTask 转 false，退化为普通单次任务<br/>不再上档位，也不再出现在 endDate 之后
+    end
+
+    rect rgb(240, 240, 240)
+    Note over U, SV: 阶段四 · 逾期 DDL 的两种收敛路径（例 endDate 9/5，今天 9/8）
+    alt 路径 A 勾选完成
+        U->>TI: 点击 checkbox
+        TI->>ST: setDone(id, "9/8", true)
+        ST->>TL: toggleTaskDone(task, "9/8", true)
+        TL-->>ST: completedAt = "9/8"
+        Note over OC: 之后 occursOn 走 dateKey <= completedAt<br/>9/9 起不再出现；9/6 至 9/8 出现且灰化禁用，防补勾
+    else 路径 B 归档
+        U->>TI: 点击归档图标
+        TI->>ST: removeTask(id)
+        ST->>TL: archiveTask(task)
+        TL-->>ST: archived = true
+        Note over CT: collectTasksOfDay 过滤 archived<br/>所有日期立即消失，instances 历史保留，贡献墙不缺洞
+    end
+    end

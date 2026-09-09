@@ -18,6 +18,12 @@ export interface LoadResult {
   usedBackup: boolean;
   /** 需要提示用户的信息，null 表示无异常 */
   error: string | null;
+  /**
+   * 当主文件 tasks.json 损坏时，被改名保留的备份路径（绝对路径），null 表示未生成。
+   * 兜底逻辑保证：损坏时原文件必须先被 rename 为 .bak.{timestamp}，
+   * 后续 saveTasks 写入新数据时不会覆盖损坏原文件，事后可手动比对恢复。
+   */
+  corruptedBackupPath: string | null;
 }
 
 /** 导入备份时的冲突处理策略（提示词 5.4） */

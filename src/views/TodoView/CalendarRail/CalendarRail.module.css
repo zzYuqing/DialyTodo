@@ -118,6 +118,7 @@
 
 /* ---------- 格子（RailCell，月/年共用） ---------- */
 .cell {
+  position: relative;
   padding: 0;
   border: 1.5px solid transparent;
   border-radius: 4px;
@@ -149,4 +150,20 @@
 /* 未来日期被选中：保持虚线、描边转强调色，与正常选中态一致 */
 .cellFuture.cellSelected {
   border-color: var(--dt-accent);
+}
+
+/* DDL 过期角标：仅当当天有 DDL 任务过期时显示，绝对定位贴右下角并略微悬出，
+   阶段 6 改为纯红点（不带数字），hover 文本由组件 title 提供。
+   pointer-events 防止吞掉 cell 的点击。 */
+.expiredBadge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--dt-bg);
+  background: var(--dt-expired-badge);
+  pointer-events: none;
+  box-sizing: border-box;
 }

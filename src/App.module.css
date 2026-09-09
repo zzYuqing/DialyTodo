@@ -21,13 +21,44 @@
   min-width: 0;
   min-height: 0;
   background: var(--dt-bg);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
-.error {
-  margin: 0;
-  padding: 8px 16px;
+/* 数据加载异常横幅：损坏兜底后用三段式提示（标题 / 详情 / 备份路径指引），
+   视觉偏警示但不刺眼，与「墨绿工房」主题用红系 danger 色统一。 */
+.errorBanner {
+  padding: 10px 16px;
   font-size: 13px;
   color: var(--dt-danger);
   background: var(--dt-panel);
   border-bottom: 1px solid var(--dt-border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.errorBannerTitle {
+  font-weight: 600;
+}
+
+.errorBannerBody {
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.errorBannerHint {
+  font-size: 12px;
+  color: var(--dt-text-muted);
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.errorBannerHint code {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--dt-panel-2);
+  color: var(--dt-text);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px;
 }

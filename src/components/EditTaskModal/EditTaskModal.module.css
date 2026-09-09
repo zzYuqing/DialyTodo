@@ -5,3 +5,11 @@
 .header {
   font-weight: 600;
 }
+
+/* Switch 与同行日期输入等高对齐：Mantine Switch 的 label 内联在轨道右侧，
+   单独包裹进 36px 的 flex 居中容器，使其轨道与右侧 TextInput 的输入框垂直对齐。 */
+.switchRow {
+  height: 36px;
+  display: flex;
+  align-items: center;
+}

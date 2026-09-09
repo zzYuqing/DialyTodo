@@ -4,6 +4,7 @@
 
 import {
   addDays,
+  differenceInDays,
   eachDayOfInterval,
   endOfMonth,
   format,
@@ -35,6 +36,14 @@ export function todayKey(): string {
 /** 在日期键上加减天数 */
 export function addDaysToKey(key: string, amount: number): string {
   return toDateKey(addDays(fromDateKey(key), amount));
+}
+
+/**
+ * 两日期键相差的天数（end - start）；可负数。日期键按本地零点解析，差值与日历一致。
+ * DDL 任务档位判定依赖此函数保持「跨月 / 跨年」的天数正确性。
+ */
+export function daysBetweenKeys(start: string, end: string): number {
+  return differenceInDays(parseISO(end), parseISO(start));
 }
 
 /**
@@ -85,6 +94,13 @@ export function millisecondsUntil(time: string, now: Date = new Date()): number 
   const target = new Date(now);
   target.setHours(hour, minute, 0, 0);
   return target.getTime() - now.getTime();
+}
+
+/** 距离下一个本地午夜的毫秒数（提醒跨日重排用，恒为正数）。 */
+export function millisecondsUntilMidnight(now: Date = new Date()): number {
+  const next = new Date(now);
+  next.setHours(24, 0, 0, 0);
+  return next.getTime() - now.getTime();
 }
 
 /** Date -> YYYY-MM */

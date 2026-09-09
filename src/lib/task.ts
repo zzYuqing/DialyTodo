@@ -19,22 +19,29 @@ export function createTask(input: CreateTaskInput, id: string = generateTaskId()
     instances: {},
     reminder: input.reminder,
     archived: false,
+    completedAt: null,
   };
 }
 
 /**
  * 切换某一天的完成状态。
  * 取消完成时直接删除 instances 里的日期键，避免无限累积无效记录（沿用上一版设计）。
+ *
+ * 「once + endDate」扩展（DDL 任务）：勾选时同步设置 completedAt = dateKey（永久完成）；
+ * 取消勾选时清零 completedAt。其他模式按原语义工作。
  */
 export function toggleTaskDone(task: Task, dateKey: string, done: boolean): Task {
   const instances = { ...task.instances };
+  const isDdlOnce = task.schedule.type === "once" && task.schedule.endDate !== null;
 
   if (done) {
     instances[dateKey] = { done: true, doneAt: nowIso() };
-  } else {
-    delete instances[dateKey];
+    if (isDdlOnce) return { ...task, instances, completedAt: dateKey };
+    return { ...task, instances };
   }
 
+  delete instances[dateKey];
+  if (isDdlOnce) return { ...task, instances, completedAt: null };
   return { ...task, instances };
 }
 

@@ -5,3 +5,5 @@ export * from "./paths";
 export * from "./storage";
 export * from "./holidayService";
 export * from "./reminderService";
+export * from "./migration";
+export * from "./windowService";

@@ -7,6 +7,7 @@
 import type { ContributionLevel } from "@/constants";
 import type { Task } from "@/types";
 import { occursOn, type WorkdayChecker } from "./schedule";
+import { isOverdueDdl } from "./ddl";
 
 export interface DayCompletion {
   /** 当日应完成任务数 */
@@ -17,6 +18,11 @@ export interface DayCompletion {
   ratio: number;
   /** 贡献墙色阶档位；仅在批量窗口计算（calcDaysCompletion）时有效，单日计算无窗口上下文故为 0 */
   level: ContributionLevel;
+  /**
+   * 当天过期的 DDL 任务数。仅在 dateKey === schedule.endDate 且 completedAt === null 时为 1，
+   * 贡献墙用此字段决定右下角是否显示过期角标。其他日期恒为 0。
+   */
+  expiredDdlCount: number;
 }
 
 /**
@@ -29,7 +35,10 @@ export function collectTasksOfDay(
   dateKey: string,
   isWorkday: WorkdayChecker,
 ): Task[] {
-  return tasks.filter((task) => !task.archived && occursOn(task.schedule, dateKey, isWorkday));
+  return tasks.filter(
+    (task) =>
+      !task.archived && occursOn(task.schedule, dateKey, isWorkday, task.completedAt),
+  );
 }
 
 /** 计算某一天的完成情况（不含窗口色阶档位） */
@@ -41,12 +50,20 @@ export function calcDayCompletion(
   const dayTasks = collectTasksOfDay(tasks, dateKey, isWorkday);
   const done = dayTasks.filter((task) => task.instances[dateKey]?.done === true).length;
   const ratio = dayTasks.length === 0 ? 0 : done / dayTasks.length;
+  // DDL 任务过期：endDate 当天且尚未完成，贡献墙角标用此计数
+  const expiredDdlCount = dayTasks.filter(
+    (task) =>
+      task.schedule.type === "once" &&
+      task.schedule.endDate === dateKey &&
+      task.completedAt === null,
+  ).length;
 
   return {
     total: dayTasks.length,
     done,
     ratio,
     level: 0,
+    expiredDdlCount,
   };
 }
 
@@ -55,7 +72,13 @@ export function calcDayCompletion(
  * 渲染端用它可以免去 undefined 判断 —— 批量计算的结果必然覆盖传入的每个日期键，
  * 但 TS 的索引访问类型仍可能给出 undefined，这里统一兜底为空。
  */
-export const EMPTY_COMPLETION: DayCompletion = { total: 0, done: 0, ratio: 0, level: 0 };
+export const EMPTY_COMPLETION: DayCompletion = {
+  total: 0,
+  done: 0,
+  ratio: 0,
+  level: 0,
+  expiredDdlCount: 0,
+};
 
 /**
  * 批量计算多天的完成情况，返回「日期键 -> 完成情况」映射（月历与贡献墙共用）。

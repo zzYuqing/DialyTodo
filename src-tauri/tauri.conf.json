@@ -26,7 +26,7 @@
       },
       {
         "label": "pet",
-        "title": "DailyTodo 桌宠",
+        "title": "普通待办小工具 桌宠",
         "width": 168,
         "height": 168,
         "resizable": false,
@@ -40,12 +40,6 @@
     ],
     "security": {
       "csp": null
-    },
-    "trayIcon": {
-      "id": "daily-todo-tray",
-      "iconPath": "icons/32x32.png",
-      "iconAsTemplate": false,
-      "menuOnLeftClick": false
     }
   },
   "bundle": {

@@ -1,7 +1,14 @@
 // 职责：持久化相关的常量集中定义，禁止在业务代码里散落魔法数字。
 
-/** 数据根目录名，位于 %APPDATA% 下 */
+/** 数据根目录名（默认值），位于 %APPDATA% 下 */
 export const DATA_DIR_NAME = "DailyTodo";
+
+/**
+ * 数据目录指针文件名，位于 appDataDir() 根（数据目录之外）。
+ * 内容为当前数据目录的绝对路径。数据目录可自定义（设置页迁移），
+ * 因此指针必须住在数据目录外面，否则迁移删除旧目录时会把自己删掉。
+ */
+export const DATA_DIR_POINTER_FILE = "data-dir";
 
 export const TASKS_FILE = "tasks.json";
 export const SETTINGS_FILE = "settings.json";

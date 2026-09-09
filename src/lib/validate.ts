@@ -17,7 +17,9 @@ function isSchedule(value: unknown): value is Schedule {
   const candidate = value as Partial<Schedule>;
   if (typeof candidate.type !== "string" || !SCHEDULE_TYPE_SET.has(candidate.type)) return false;
   if (!isDateKey(candidate.startDate)) return false;
-  if (candidate.endDate !== null && !isDateKey(candidate.endDate)) return false;
+  // 用 != null 同时放过 null 与 undefined：老数据可能整个缺 endDate 字段，
+  // 严格写 !== null 会让 undefined 走进 isDateKey 并被判非法，导致整份文件被误判损坏。
+  if (candidate.endDate != null && !isDateKey(candidate.endDate)) return false;
   return true;
 }
 
@@ -46,6 +48,10 @@ export function isTask(value: unknown): value is Task {
   if (!isSchedule(candidate.schedule)) return false;
   if (!isReminder(candidate.reminder)) return false;
   if (typeof candidate.archived !== "boolean") return false;
+  // completedAt 是阶段 6 新增字段，存量数据里整个缺失。用 != null 同时放过
+  // null 与 undefined：写成 !== null 时 undefined 会被 isDateKey 判非法，
+  // 进而让整份 tasks.json（及全部备份）被误判为「损坏」，数据凭空消失。
+  if (candidate.completedAt != null && !isDateKey(candidate.completedAt)) return false;
 
   if (typeof candidate.instances !== "object" || candidate.instances === null) return false;
   return Object.values(candidate.instances).every(isDayRecord);
@@ -70,10 +76,11 @@ export function isAppSettings(value: unknown): value is AppSettings {
 
   if (candidate.version !== CURRENT_VERSION) return false;
   if (candidate.theme !== "light" && candidate.theme !== "dark") return false;
-  if (candidate.windowMode !== "normal" && candidate.windowMode !== "floating") return false;
-  if (candidate.onBlur !== "hide" && candidate.onBlur !== "mini" && candidate.onBlur !== "off") {
+  if (typeof candidate.alwaysOnTop !== "boolean") return false;
+  if (candidate.layout !== "full" && candidate.layout !== "simple" && candidate.layout !== "mini") {
     return false;
   }
+  if (typeof candidate.closeToTray !== "boolean") return false;
   if (typeof candidate.autoStart !== "boolean") return false;
   if (typeof candidate.petEnabled !== "boolean") return false;
   if (typeof candidate.hideCompleted !== "boolean") return false;
@@ -88,8 +95,11 @@ export function defaultSettings(): AppSettings {
   return {
     version: CURRENT_VERSION,
     theme: "light",
-    windowMode: "normal",
-    onBlur: "off",
+    // 默认不置顶、完整布局，符合桌面应用的常规形态
+    alwaysOnTop: false,
+    layout: "full",
+    // 常驻托盘符合提示词 5.5「最小化到系统托盘后台常驻」，退出入口保留在托盘菜单
+    closeToTray: true,
     autoStart: false,
     petEnabled: false,
     hideCompleted: false,

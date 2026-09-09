@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "DailyTodo 默认权限集，按最小权限原则配置：文件访问仅限 $APPDATA/DailyTodo 目录树（$APPDATA 已含 bundle identifier）",
+  "description": "普通待办小工具 默认权限集，按最小权限原则配置：文件访问限定应用自有数据目录（$APPDATA 已含 bundle identifier）。静态 scope 覆盖 $APPDATA 整层（含数据目录指针文件与默认 DailyTodo/）；用户自定义的数据目录经 authorize_dir 运行时动态授权。",
   "windows": ["main", "pet"],
   "permissions": [
     "core:default",
@@ -16,12 +16,15 @@
     "core:window:allow-hide",
     "core:window:allow-set-focus",
     "core:window:allow-set-size",
+    "core:window:allow-set-size-constraints",
     "core:window:allow-set-position",
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-ignore-cursor-events",
     "core:window:allow-inner-size",
     "core:window:allow-outer-position",
+    "core:window:allow-outer-size",
     "core:window:allow-scale-factor",
+    "core:window:allow-current-monitor",
     "core:window:allow-is-visible",
     "core:webview:allow-webview-position",
     "core:webview:allow-webview-size",
@@ -29,57 +32,57 @@
     {
       "identifier": "fs:allow-exists",
       "allow": [
-        { "path": "$APPDATA/DailyTodo" },
-        { "path": "$APPDATA/DailyTodo/**" }
+        { "path": "$APPDATA" },
+        { "path": "$APPDATA/**" }
       ]
     },
     {
       "identifier": "fs:allow-mkdir",
       "allow": [
-        { "path": "$APPDATA/DailyTodo" },
-        { "path": "$APPDATA/DailyTodo/**" }
+        { "path": "$APPDATA" },
+        { "path": "$APPDATA/**" }
       ]
     },
     {
       "identifier": "fs:allow-read-dir",
       "allow": [
-        { "path": "$APPDATA/DailyTodo" },
-        { "path": "$APPDATA/DailyTodo/**" }
+        { "path": "$APPDATA" },
+        { "path": "$APPDATA/**" }
       ]
     },
     {
       "identifier": "fs:allow-read-text-file",
       "allow": [
-        { "path": "$APPDATA/DailyTodo" },
-        { "path": "$APPDATA/DailyTodo/**" }
+        { "path": "$APPDATA" },
+        { "path": "$APPDATA/**" }
       ]
     },
     {
       "identifier": "fs:allow-write-text-file",
       "allow": [
-        { "path": "$APPDATA/DailyTodo" },
-        { "path": "$APPDATA/DailyTodo/**" }
+        { "path": "$APPDATA" },
+        { "path": "$APPDATA/**" }
       ]
     },
     {
       "identifier": "fs:allow-remove",
       "allow": [
-        { "path": "$APPDATA/DailyTodo" },
-        { "path": "$APPDATA/DailyTodo/**" }
+        { "path": "$APPDATA" },
+        { "path": "$APPDATA/**" }
       ]
     },
     {
       "identifier": "fs:allow-rename",
       "allow": [
-        { "path": "$APPDATA/DailyTodo" },
-        { "path": "$APPDATA/DailyTodo/**" }
+        { "path": "$APPDATA" },
+        { "path": "$APPDATA/**" }
       ]
     },
     {
       "identifier": "fs:allow-copy-file",
       "allow": [
-        { "path": "$APPDATA/DailyTodo" },
-        { "path": "$APPDATA/DailyTodo/**" }
+        { "path": "$APPDATA" },
+        { "path": "$APPDATA/**" }
       ]
     },
 
@@ -92,8 +95,8 @@
     {
       "identifier": "opener:allow-open-path",
       "allow": [
-        { "path": "$APPDATA/DailyTodo" },
-        { "path": "$APPDATA/DailyTodo/**" }
+        { "path": "$APPDATA" },
+        { "path": "$APPDATA/**" }
       ]
     }
   ]

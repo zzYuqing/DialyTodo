@@ -6,7 +6,7 @@ mod commands;
 
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
-    tray::TrayIconBuilder,
+    tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
     Manager,
 };
 
@@ -27,10 +27,10 @@ pub fn run() {
         }))
         .invoke_handler(tauri::generate_handler![
             commands::show_main_window,
-            commands::switch_window_mode,
             commands::toggle_pet_window,
             commands::set_pet_ignore_cursor,
             commands::quit_app,
+            commands::authorize_dir,
         ])
         .setup(setup_app)
         .build(tauri::generate_context!())
@@ -72,14 +72,33 @@ fn build_tray_menu(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error
         .item(&quit_item)
         .build()?;
 
-    TrayIconBuilder::with_id("daily-todo-tray")
+    let mut builder = TrayIconBuilder::with_id("daily-todo-tray")
         .menu(&menu)
-        .show_menu_on_left_click(false)
+        .show_menu_on_left_click(false);
+
+    // 托盘图标统一由代码构建（config 静态 trayIcon 已移除，避免双图标）；
+    // 显式复用应用默认窗口图标，确保托盘有图。
+    if let Some(icon) = app.default_window_icon().cloned() {
+        builder = builder.icon(icon);
+    }
+
+    builder
         .on_menu_event(|app, event| match event.id.as_ref() {
             "show" => focus_main_window(app),
             "pet" => commands::toggle_pet_window(app.clone()),
             "quit" => commands::quit_app(app.clone()),
             _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            // 左键双击托盘图标唤起主窗口（提示词 5.5「最小化到托盘后台常驻」，
+            // 常驻后需能从托盘恢复；此前未监听左键事件导致双击无响应）
+            if let TrayIconEvent::DoubleClick {
+                button: MouseButton::Left,
+                ..
+            } = event
+            {
+                focus_main_window(tray.app_handle());
+            }
         })
         .build(app)?;
 

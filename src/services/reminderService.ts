@@ -10,23 +10,29 @@ import {
 import {
   collectTasksOfDay,
   millisecondsUntil,
+  millisecondsUntilMidnight,
   todayKey,
   type WorkdayChecker,
 } from "@/lib";
 import type { Task } from "@/types";
 
-/** 已排定的计时器句柄，重排时统一清理 */
+/** 已排定的任务提醒计时器句柄，重排时统一清理 */
 const timers = new Set<ReturnType<typeof setTimeout>>();
+
+/** 跨日重排计时器：到下一个午夜触发 onRollover，让调用方按新的一天重新排定 */
+let rolloverTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
  * 为某一天的全部待办重排提醒。
  * 思路：遍历当天应出现的任务，对开启提醒且时刻未过的任务各排一个一次性计时器；
  * 到点后发系统通知。当天已完成的任务不再提醒。
+ * 传入 onRollover 时额外排一个午夜计时器，跨日后回调以重排次日提醒。
  */
 export function scheduleReminders(
   tasks: Task[],
   isWorkday: WorkdayChecker,
   dateKey: string = todayKey(),
+  onRollover?: () => void,
 ): void {
   clearReminders();
 
@@ -46,12 +52,23 @@ export function scheduleReminders(
 
     timers.add(timer);
   }
+
+  if (onRollover !== undefined) {
+    rolloverTimer = setTimeout(() => {
+      rolloverTimer = null;
+      onRollover();
+    }, millisecondsUntilMidnight());
+  }
 }
 
-/** 清理全部已排定的提醒 */
+/** 清理全部已排定的提醒（含跨日重排计时器） */
 export function clearReminders(): void {
   for (const timer of timers) clearTimeout(timer);
   timers.clear();
+  if (rolloverTimer !== null) {
+    clearTimeout(rolloverTimer);
+    rolloverTimer = null;
+  }
 }
 
 /** 发送系统通知。未授权时先申请，申请失败则静默放弃。 */

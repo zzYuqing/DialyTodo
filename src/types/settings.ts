@@ -3,18 +3,22 @@
 /** 主题模式（提示词 5.8） */
 export type ThemeMode = "light" | "dark";
 
-/** 主窗口形态（提示词 5.5） */
-export type WindowMode = "normal" | "floating";
-
-/** 失焦行为：自动隐藏 / 切换迷你模式 / 不处理 */
-export type BlurBehavior = "hide" | "mini" | "off";
+/**
+ * 窗口界面模式（提示词 5.5）。
+ * full = 完整布局（侧栏 + 贡献墙 + 设置/归档）；simple = 仅当日待办（含新建按钮）；
+ * mini = 迷你条（暂未开放，接口保留）。
+ */
+export type LayoutMode = "full" | "simple" | "mini";
 
 export interface AppSettings {
   version: number;
   theme: ThemeMode;
-  windowMode: WindowMode;
-  /** 失焦时的行为，可关闭 */
-  onBlur: BlurBehavior;
+  /** 窗口是否置顶（永远悬浮在其他窗口之上）。只管置顶，不调尺寸与布局。 */
+  alwaysOnTop: boolean;
+  /** 窗口界面模式，控制布局与窗口尺寸（提示词 5.5） */
+  layout: LayoutMode;
+  /** 点击标题栏关闭按钮时的行为：true = 隐藏到托盘常驻，false = 直接退出（提示词 5.5） */
+  closeToTray: boolean;
   /** 开机自启，仅写 HKCU Run，默认 false（提示词第八节） */
   autoStart: boolean;
   /** 桌宠开关（提示词 5.7） */

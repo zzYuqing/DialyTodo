@@ -1,4 +1,5 @@
 .row {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -20,6 +21,29 @@
 }
 
 .row.done:hover {
+  transform: none;
+}
+
+/* DDL 任务已完成，dateKey 早于 completedAt：整行灰化、勾选按钮禁用且不可 hover */
+.row.pastDay {
+  opacity: 0.4;
+}
+
+.row.pastDay:hover {
+  transform: none;
+}
+
+.row.pastDay .checkbox {
+  cursor: not-allowed;
+  border-style: dashed;
+  background: transparent;
+}
+
+.row.pastDay .checkbox:hover {
+  border-color: var(--dt-border);
+}
+
+.row.pastDay .checkbox:active {
   transform: none;
 }
 
@@ -123,6 +147,13 @@
   border-color: transparent;
 }
 
+/* DDL 完成态追加徽章：与提醒同色调，呼应"达成"语义 */
+.badgeCompletion {
+  color: var(--dt-accent);
+  background: var(--dt-accent-soft);
+  border-color: transparent;
+}
+
 .date {
   font-size: 11px;
   color: var(--dt-text-muted);
@@ -154,4 +185,63 @@
 
 .iconButton.danger:hover {
   color: var(--dt-danger);
+}
+
+/* ---------- DDL 行紧迫度分层（整条色条 + 标题色阶，避红橙） ---------- */
+
+/* 整条左侧色条：3px，按紧迫度递进（低饱和暖灰）；仅作视觉分层，不表达"已过期"。 */
+.row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 10px 0 0 10px;
+  background: transparent;
+}
+
+.row.toneFar::before {
+  background: var(--dt-ddl-bar-far);
+}
+
+.row.toneSoon::before {
+  background: var(--dt-ddl-bar-soon);
+}
+
+.row.toneImminent::before {
+  background: var(--dt-ddl-bar-imminent);
+}
+
+.row.toneToday::before {
+  background: var(--dt-ddl-bar-today);
+}
+
+.row.toneOverdue::before {
+  background: var(--dt-ddl-bar-overdue);
+}
+
+/* 标题色阶：仅中高紧迫度加深，far/soon 保持默认文字色 */
+.row.toneImminent .title {
+  color: var(--dt-ddl-title-imminent);
+}
+
+.row.toneToday .title {
+  color: var(--dt-ddl-title-today);
+}
+
+.row.toneOverdue .title {
+  color: var(--dt-ddl-title-overdue);
+}
+
+/* 已过期当天：整条轻微加深（暖灰底），与色条呼应；红信号由独立徽章承担 */
+.row.toneOverdue {
+  background: var(--dt-ddl-row-overdue);
+}
+
+/* 已过期红徽章：独立红色通道，置于周期徽章右侧、日期之前 */
+.badgeExpired {
+  color: var(--dt-danger-contrast);
+  background: var(--dt-danger);
+  border-color: transparent;
 }

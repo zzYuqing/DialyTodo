@@ -11,33 +11,6 @@ pub fn show_main_window(app: tauri::AppHandle) {
     crate::focus_main_window(&app);
 }
 
-/// 普通窗口 ↔ 悬浮窗形态切换（提示词 5.5）。
-/// 为何必须 Rust：需改动 alwaysOnTop / skipTaskbar 等宿主窗口标志与窗口尺寸。
-#[tauri::command]
-pub fn switch_window_mode(app: tauri::AppHandle, floating: bool) {
-    use tauri::{LogicalSize, Size};
-
-    let Some(window) = app.get_webview_window("main") else {
-        return;
-    };
-
-    if floating {
-        let _ = window.set_always_on_top(true);
-        let _ = window.set_skip_taskbar(true);
-        let _ = window.set_size(Size::Logical(LogicalSize {
-            width: 380.0,
-            height: 560.0,
-        }));
-    } else {
-        let _ = window.set_always_on_top(false);
-        let _ = window.set_skip_taskbar(false);
-        let _ = window.set_size(Size::Logical(LogicalSize {
-            width: 980.0,
-            height: 680.0,
-        }));
-    }
-}
-
 /// 显示 / 隐藏桌宠窗口（提示词 5.7）。
 /// 为何必须 Rust：桌宠窗口由宿主创建并持有 handle，且需保证与主窗口同进程。
 #[tauri::command]
@@ -70,4 +43,16 @@ pub fn quit_app(app: tauri::AppHandle) {
         let _ = pet.destroy();
     }
     app.exit(0);
+}
+
+/// 把用户选定的自定义数据目录加入 fs 访问白名单（运行时动态授权，不持久化）。
+/// 为何必须 Rust：plugin-fs 的 scope 校验发生在宿主进程，TS 侧没有扩展 scope 的 API。
+/// 启动时由 TS 在解析到非默认数据目录后调用一次；迁移前也调用一次。
+#[tauri::command]
+pub fn authorize_dir(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    use tauri_plugin_fs::FsExt;
+
+    app.fs_scope()
+        .allow_directory(path, true)
+        .map_err(|err| err.to_string())
 }

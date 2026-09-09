@@ -1,0 +1,155 @@
+classDiagram
+    class Schedule {
+        +type: ScheduleType
+        +startDate: string
+        +endDate: string
+    }
+    note for Schedule "endDate 实际类型为 string 或 null；\n起止同日 endDate === startDate 不再算 DDL"
+
+    class Reminder {
+        +enabled: boolean
+        +time: string
+    }
+
+    class DayRecord {
+        +done: boolean
+        +doneAt: string
+    }
+
+    class Task {
+        +id: string
+        +title: string
+        +note: string
+        +createdAt: string
+        +schedule: Schedule
+        +instances: Record
+        +reminder: Reminder
+        +archived: boolean
+        +completedAt: string
+    }
+    note for Task "completedAt 实际类型为 YYYY-MM-DD 或 null；\n本次结构不变，不新增字段"
+
+    class DdlLib {
+        <<module>>
+        +isLongDdlTask(schedule) boolean
+        +isOverdueDdl(task, dateKey) boolean
+        +isActiveDdlTask(task) boolean
+        +ddlUrgencyFor(task, dateKey) DdlUrgency
+    }
+    note for DdlLib "src/lib/ddl.ts —— DDL 语义单一真相源\nDDL-1 / DDL-2 / 视觉档位\n所有判空一律用 != null"
+
+    class ScheduleLib {
+        <<module>>
+        +occursOn(schedule, dateKey, isWorkday, completedAt) boolean
+        +isWithinRange(schedule, dateKey) boolean
+        -occursOnceOn(schedule, dateKey, completedAt) boolean
+    }
+    note for ScheduleLib "src/lib/schedule.ts\nonce 分支自行处理区间：\n未完成 DDL 突破 endDate 上界（逾期顺延）"
+
+    class CompletionLib {
+        <<module>>
+        +collectTasksOfDay(tasks, dateKey, isWorkday) Task[]
+        +calcDayCompletion(tasks, dateKey, isWorkday) DayCompletion
+        +calcDaysCompletion(tasks, dateKeys, isWorkday) Record
+    }
+
+    class DayCompletion {
+        +total: number
+        +done: number
+        +ratio: number
+        +level: ContributionLevel
+        +expiredDdlCount: number
+    }
+    note for DayCompletion "expiredDdlCount 口径改为：统计 isOverdueDdl 为真的任务数\n原口径 endDate === dateKey 且未完成，与用户语义相反\n红带收敛：calcDaysCompletion 末尾把非今天格子的值清零\n\ntotal 保持不变：是「今日 N 项」文案的唯一数据源\n必须等于日清单实际条数，不得排除逾期任务\n否则会出现「写 2 项、列出 3 条」的不一致\nratio 改用排除逾期口径（当前零消费方）"
+
+    class DdlUrgency {
+        <<enum>>
+        overdue
+        far
+        soon
+        imminent
+        today
+    }
+
+    class TaskItem {
+        <<component>>
+        +task: Task
+        +dateKey: string
+        +disabledDone: boolean
+        +onToggleDone(id, done)
+        +onEdit(task)
+        +onRemove(id)
+        -URGENCY_ROW_CLASS: Record
+    }
+    note for TaskItem "meta 区顺序契约：\n周期徽章 → 已过期 → 完成态 → 起止日期 → 提醒\n档位类名用显式映射，禁止字符串拼接\n零硬编码颜色"
+
+    class EditTaskModal {
+        <<component>>
+        +target: TaskModalTarget
+        +onSubmit(edit)
+        +onArchive(id)
+        +onClose()
+    }
+    note for EditTaskModal "字段顺序：标题 / 备注 /\n周期+起始日 / 是否结束+结束日 / 提醒+时间 / 按钮\nStack gap xs，按钮区 mt md"
+
+    class DayMode {
+        <<component>>
+        -visibleTasks: Task[]
+        -sorted: Task[]
+    }
+    note for DayMode "置顶判定改用 isActiveDdlTask，\n删除内联 isActiveDdl"
+
+    class RailCell {
+        <<component>>
+        +dateKey: string
+        +completion: DayCompletion
+    }
+    note for RailCell "hasExpired = expiredDdlCount > 0\n未来日期分支永不打红点"
+
+    class CalendarRail {
+        <<component>>
+        -days: string[]
+        -completions: Record
+    }
+
+    class UseTaskStore {
+        <<store>>
+        +tasks: Task[]
+        +loaded: boolean
+        +addTask(input)
+        +updateTask(id, edit)
+        +setDone(id, dateKey, done)
+        +removeTask(id)
+        +restoreArchived(id)
+    }
+
+    class TaskLib {
+        <<module>>
+        +createTask(input, id) Task
+        +toggleTaskDone(task, dateKey, done) Task
+        +applyTaskEdit(task, edit) Task
+        +archiveTask(task) Task
+    }
+    note for TaskLib "不可变变换，返回新对象"
+
+    Task *-- Schedule : 组合
+    Task *-- Reminder : 组合
+    Task o-- DayRecord : instances 映射
+    DdlLib ..> Schedule : 读 endDate 与 startDate
+    DdlLib ..> Task : 读 completedAt
+    DdlLib ..> DdlUrgency : 产出档位
+    ScheduleLib ..> DdlLib : 调用 isLongDdlTask
+    CompletionLib ..> ScheduleLib : 调用 occursOn
+    CompletionLib ..> DdlLib : 调用 isOverdueDdl
+    CompletionLib ..> DayCompletion : 产出
+    TaskItem ..> DdlLib : 取档位与过期判定
+    DayMode ..> CompletionLib : collectTasksOfDay
+    DayMode ..> DdlLib : isActiveDdlTask 置顶
+    DayMode o-- TaskItem : 渲染
+    CalendarRail ..> CompletionLib : calcDaysCompletion
+    CalendarRail o-- RailCell : 渲染
+    RailCell ..> DayCompletion : 读 expiredDdlCount
+    UseTaskStore o-- Task : 持有
+    UseTaskStore ..> TaskLib : 不可变变换
+    DayMode ..> UseTaskStore : 读写
+    EditTaskModal ..> UseTaskStore : 提交 TaskEdit

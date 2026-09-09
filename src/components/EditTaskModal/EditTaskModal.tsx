@@ -5,6 +5,12 @@
 // - target 为 null 表示关闭；kind=create 表示新建；kind=edit 表示编辑既有任务；
 // - 表单状态按 targetKey 重新初始化，切换任务或重开弹窗都不会残留上一次的值；
 // - "归档"按钮仅在编辑模式出现，直接调 onArchive（语义对应 store.removeTask）。
+//
+// 表单排布（阶段 6 + 方向 B）：
+// - 周期独占一行；
+// - 起始日期独立一行（无起始日预设下拉框）；
+// - 「是否设置结束日期」开关 + 结束日期同行，开关=否时结束日期不可编辑（视为无 DDL）；
+// - 校验：开关=是且结束日期早于起始日期 → 阻止提交并显示错误文本。
 
 import { useEffect, useState } from "react";
 import {
@@ -18,14 +24,8 @@ import {
   Textarea,
 } from "@mantine/core";
 import type { ScheduleType, Task, TaskEdit } from "@/types";
-import {
-  SCHEDULE_TYPES,
-  SCHEDULE_TYPE_LABELS,
-  START_DATE_PRESETS,
-  START_DATE_PRESET_LABELS,
-  type StartDatePreset,
-} from "@/constants";
-import { addDaysToKey, todayKey } from "@/lib";
+import { SCHEDULE_TYPES, SCHEDULE_TYPE_LABELS } from "@/constants";
+import { todayKey } from "@/lib";
 import styles from "./EditTaskModal.module.css";
 
 /** 模态目标：新建时只需一个默认起始日，编辑时需要完整任务 */
@@ -42,18 +42,6 @@ interface EditTaskModalProps {
   onClose: () => void;
 }
 
-/** 根据 startDatePreset 反推起始日（"自定义"时维持当前值） */
-function resolveStartDate(preset: StartDatePreset, current: string): string {
-  switch (preset) {
-    case "today":
-      return todayKey();
-    case "tomorrow":
-      return addDaysToKey(todayKey(), 1);
-    case "custom":
-      return current;
-  }
-}
-
 /** 默认值：新建时的表单初值 */
 const DEFAULT_REMINDER_TIME = "09:00";
 
@@ -63,17 +51,13 @@ function isScheduleType(value: string): value is ScheduleType {
   return (SCHEDULE_TYPES as readonly string[]).includes(value);
 }
 
-function isStartDatePreset(value: string): value is StartDatePreset {
-  return (START_DATE_PRESETS as readonly string[]).includes(value);
-}
-
 export function EditTaskModal({ target, onSubmit, onArchive, onClose }: EditTaskModalProps) {
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [scheduleType, setScheduleType] = useState<Task["schedule"]["type"]>("once");
-  const [startDatePreset, setStartDatePreset] = useState<StartDatePreset>("today");
   const [startDate, setStartDate] = useState(todayKey());
-  const [endDate, setEndDate] = useState<string>("");
+  const [endDateEnabled, setEndDateEnabled] = useState(true);
+  const [endDate, setEndDate] = useState(todayKey());
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState(DEFAULT_REMINDER_TIME);
 
@@ -90,10 +74,11 @@ export function EditTaskModal({ target, onSubmit, onArchive, onClose }: EditTask
       setNote(target.task.note);
       setScheduleType(target.task.schedule.type);
       setStartDate(target.task.schedule.startDate);
-      setEndDate(target.task.schedule.endDate ?? "");
+      // 编辑模式按 endDate 是否存在还原开关：有结束日 → 开，无 → 关
+      setEndDateEnabled(target.task.schedule.endDate !== null);
+      setEndDate(target.task.schedule.endDate ?? target.task.schedule.startDate);
       setReminderEnabled(target.task.reminder.enabled);
       setReminderTime(target.task.reminder.time);
-      setStartDatePreset("custom");
       return;
     }
 
@@ -101,8 +86,9 @@ export function EditTaskModal({ target, onSubmit, onArchive, onClose }: EditTask
     setNote("");
     setScheduleType("once");
     setStartDate(target.startDate);
-    setStartDatePreset(target.startDate === todayKey() ? "today" : "custom");
-    setEndDate("");
+    // 新建默认「是」，结束日期 = 起始日期（DDL 当天）
+    setEndDateEnabled(true);
+    setEndDate(target.startDate);
     setReminderEnabled(false);
     setReminderTime(DEFAULT_REMINDER_TIME);
     // targetKey 已完整表达"目标身份"，target 只作为取值来源
@@ -111,17 +97,21 @@ export function EditTaskModal({ target, onSubmit, onArchive, onClose }: EditTask
 
   const isEdit = target !== null && target.kind === "edit";
 
+  // 日期校验：仅当启用结束日期时才校验；结束日期早于起始日期视为不合法
+  const endDateInvalid = endDateEnabled && endDate < startDate;
+
   const handleSubmit = () => {
     if (target === null) return;
     const trimmedTitle = title.trim();
     if (trimmedTitle.length === 0) return;
+    if (endDateInvalid) return;
     onSubmit({
       title: trimmedTitle,
       note,
       schedule: {
         type: scheduleType,
         startDate,
-        endDate: endDate.length > 0 ? endDate : null,
+        endDate: endDateEnabled ? endDate : null,
       },
       reminder: { enabled: reminderEnabled, time: reminderTime },
     });
@@ -150,7 +140,7 @@ export function EditTaskModal({ target, onSubmit, onArchive, onClose }: EditTask
           handleSubmit();
         }}
       >
-        <Stack gap="sm">
+        <Stack gap="xs">
           <TextInput
             label="标题"
             value={title}
@@ -168,55 +158,58 @@ export function EditTaskModal({ target, onSubmit, onArchive, onClose }: EditTask
             maxRows={5}
           />
 
-          <Group grow>
-            <Select
-              label="周期"
-              data={SCHEDULE_TYPES.map((v) => ({ value: v, label: SCHEDULE_TYPE_LABELS[v] }))}
-              value={scheduleType}
-              onChange={(v) => v !== null && isScheduleType(v) && setScheduleType(v)}
-              allowDeselect={false}
-            />
-            <Select
-              label="起始日"
-              data={START_DATE_PRESETS.map((v) => ({
-                value: v,
-                label: START_DATE_PRESET_LABELS[v],
-              }))}
-              value={startDatePreset}
-              onChange={(v) => {
-                if (v === null || !isStartDatePreset(v)) return;
-                setStartDatePreset(v);
-                setStartDate(resolveStartDate(v, startDate));
-              }}
-              allowDeselect={false}
-            />
-          </Group>
+          {/* 周期独占一行：起始日预设已去掉，永远走「自定义起始日期」 */}
+          <Select
+            label="周期"
+            data={SCHEDULE_TYPES.map((v) => ({ value: v, label: SCHEDULE_TYPE_LABELS[v] }))}
+            value={scheduleType}
+            onChange={(v) => v !== null && isScheduleType(v) && setScheduleType(v)}
+            allowDeselect={false}
+          />
 
-          <Group grow>
+          {/* 起始日期独立一行 */}
+          <TextInput
+            type="date"
+            label="起始日期"
+            value={startDate}
+            onChange={(e) => setStartDate(e.currentTarget.value)}
+          />
+
+          {/* 是否设置结束日期开关 + 结束日期同行：
+              - 开关 = 否：结束日期禁用，等价于无 DDL（endDate=null）；
+              - 开关 = 是：结束日期可编辑，默认值 = 起始日期；
+              - 校验：结束日期早于起始日期时阻止提交并显示错误文本。 */}
+          <Group grow align="flex-end">
+            <div className={styles.switchRow}>
+              <Switch
+                label="是否设置结束日期"
+                checked={endDateEnabled}
+                onChange={(e) => {
+                  const enabled = e.currentTarget.checked;
+                  setEndDateEnabled(enabled);
+                  // 关闭时清掉校验残留；打开时若 endDate 还停在禁用前的不合法状态，自动回退到 startDate
+                  if (enabled && endDate < startDate) setEndDate(startDate);
+                }}
+              />
+            </div>
             <TextInput
               type="date"
-              label="起始日期"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.currentTarget.value);
-                setStartDatePreset("custom");
-              }}
-            />
-            <TextInput
-              type="date"
-              label="结束日期（可选）"
+              label="结束日期"
               value={endDate}
+              disabled={!endDateEnabled}
+              error={endDateInvalid ? "结束日期不能早于起始日期" : undefined}
               onChange={(e) => setEndDate(e.currentTarget.value)}
-              placeholder="不填则不封顶"
             />
           </Group>
 
           <Group grow align="flex-end">
-            <Switch
-              label="启用提醒"
-              checked={reminderEnabled}
-              onChange={(e) => setReminderEnabled(e.currentTarget.checked)}
-            />
+            <div className={styles.switchRow}>
+              <Switch
+                label="启用提醒"
+                checked={reminderEnabled}
+                onChange={(e) => setReminderEnabled(e.currentTarget.checked)}
+              />
+            </div>
             <TextInput
               type="time"
               label="提醒时间"
@@ -227,7 +220,7 @@ export function EditTaskModal({ target, onSubmit, onArchive, onClose }: EditTask
           </Group>
         </Stack>
 
-        <Group justify="space-between" mt="lg">
+        <Group justify="space-between" mt="md">
           {isEdit ? (
             <Button variant="subtle" color="red" onClick={handleArchive}>
               归档
@@ -239,7 +232,10 @@ export function EditTaskModal({ target, onSubmit, onArchive, onClose }: EditTask
             <Button variant="default" onClick={onClose}>
               取消
             </Button>
-            <Button type="submit" disabled={title.trim().length === 0}>
+            <Button
+              type="submit"
+              disabled={title.trim().length === 0 || endDateInvalid}
+            >
               {isEdit ? "保存" : "创建"}
             </Button>
           </Group>
