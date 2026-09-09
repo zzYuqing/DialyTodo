@@ -2,6 +2,7 @@
 
 import type { CreateTaskInput, Reminder, Schedule, Task, TaskEdit } from "@/types";
 import { nowIso } from "./date";
+import { isLongDdlTask } from "./ddl";
 
 /** 生成任务 ID。使用 WebView2 内置的 crypto.randomUUID，不引入 uuid 依赖。 */
 export function generateTaskId(): string {
@@ -27,12 +28,13 @@ export function createTask(input: CreateTaskInput, id: string = generateTaskId()
  * 切换某一天的完成状态。
  * 取消完成时直接删除 instances 里的日期键，避免无限累积无效记录（沿用上一版设计）。
  *
- * 「once + endDate」扩展（DDL 任务）：勾选时同步设置 completedAt = dateKey（永久完成）；
- * 取消勾选时清零 completedAt。其他模式按原语义工作。
+ * DDL 判定统一走 ddl.ts 的 isLongDdlTask（once 且 endDate ≠ null 且 endDate ≠ startDate）：
+ * 勾选时同步设置 completedAt = dateKey（永久完成）；取消勾选时清零 completedAt。
+ * 起止同日的 once 任务不算 DDL，不写 completedAt。其他模式按原语义工作。
  */
 export function toggleTaskDone(task: Task, dateKey: string, done: boolean): Task {
   const instances = { ...task.instances };
-  const isDdlOnce = task.schedule.type === "once" && task.schedule.endDate !== null;
+  const isDdlOnce = isLongDdlTask(task.schedule);
 
   if (done) {
     instances[dateKey] = { done: true, doneAt: nowIso() };

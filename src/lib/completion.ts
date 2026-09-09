@@ -50,13 +50,9 @@ export function calcDayCompletion(
   const dayTasks = collectTasksOfDay(tasks, dateKey, isWorkday);
   const done = dayTasks.filter((task) => task.instances[dateKey]?.done === true).length;
   const ratio = dayTasks.length === 0 ? 0 : done / dayTasks.length;
-  // DDL 任务过期：endDate 当天且尚未完成，贡献墙角标用此计数
-  const expiredDdlCount = dayTasks.filter(
-    (task) =>
-      task.schedule.type === "once" &&
-      task.schedule.endDate === dateKey &&
-      task.completedAt === null,
-  ).length;
+  // DDL 任务过期：endDate 当天且尚未完成，贡献墙角标用此计数。
+  // 判定统一走 ddl.ts 的单一真相源：起止同日的 once 任务不算 DDL，不在此重复实现该规则。
+  const expiredDdlCount = dayTasks.filter((task) => isOverdueDdl(task, dateKey)).length;
 
   return {
     total: dayTasks.length,

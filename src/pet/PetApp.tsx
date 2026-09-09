@@ -2,7 +2,6 @@
 // 当前仅渲染一个透明占位，用于打通第二个 Vite 入口与独立窗口的构建链路。
 // 桌宠本体（半透明、可拖动、悬浮缩放与鼠标穿透）在阶段 6 实现。
 
-import React from "react";
 import ReactDOM from "react-dom/client";
 import styles from "./pet.module.css";
 

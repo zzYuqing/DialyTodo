@@ -46,9 +46,10 @@ export interface Task {
    */
   archived: boolean;
   /**
-   * 永久完成日期。仅当 schedule.type === "once" 且 schedule.endDate !== null 时使用：
+   * 永久完成日期。仅长期 DDL 任务使用（定义见 lib/ddl.ts 的 isLongDdlTask：
+   * schedule.type === "once" 且 endDate !== null 且 endDate !== startDate）：
    * null 表示任务尚未完成；非 null 表示一次性勾选完成的日期（YYYY-MM-DD），
-   * 该字段决定历史格子灰化与未来日期消失。其他周期类型恒为 null。
+   * 该字段决定历史格子灰化与未来日期消失。起止同日的 once 任务与其他周期类型恒为 null。
    */
   completedAt: string | null;
 }

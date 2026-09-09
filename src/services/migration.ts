@@ -106,8 +106,13 @@ export async function migrateDataTo(targetDir: string): Promise<MigrationResult>
   clearDataRootCache();
 
   // 5. 最后删除源目录内容（尽力而为，残留降级为警示而非失败）
-  const warning = await removeSourceDir(src);
-  return { ok: true, root: targetDir, warning: warning ?? undefined };
+  // 删除失败时返回未能删除的条目名列表（null = 全删干净），收敛成一条可读警示文本
+  const leftover = await removeSourceDir(src);
+  const warning =
+    leftover != null && leftover.length > 0
+      ? `旧数据目录有 ${leftover.length} 项未能删除：${leftover.join("、")}`
+      : undefined;
+  return { ok: true, root: targetDir, warning };
 }
 
 /** 目标目录是否已含 DailyTodo 数据文件（非空数据目录的标志） */
