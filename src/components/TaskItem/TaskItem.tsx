@@ -1,7 +1,9 @@
 // 职责：单条任务行 —— 显示标题、备注、周期徽标、完成状态、操作图标。
 // 交互：
 // - 点击 checkbox 切换当日完成（future 日由 disabledDone 禁用）
-// - 长期 DDL 任务已完成且 dateKey < completedAt 时：整行灰化、checkbox 禁用无勾（防止补勾）
+// - 一次性长期任务（含无截止日）被某日勾选关闭后，早于完成日的空格子：整行灰化、
+//   checkbox 禁用无勾（防止补勾），并追加「X月X日已完成」徽章说明关闭时间；
+//   未来日期由 occursOn 直接过滤，不渲染（DDL 同理）
 // - 双击标题 / 点击右侧编辑图标 → 触发 onEdit
 // - 点击右侧归档图标 → 触发 onRemove（语义为归档）
 // - 已完成任务整体变灰、标题加删除线
@@ -18,8 +20,9 @@ import { memo } from "react";
 import type { Task } from "@/types";
 import {
   daysBetweenKeys,
+  formatMonthDay,
   isDoneOn,
-  isLongDdlTask,
+  isLongTermOnce,
   isOverdueDdl,
   ddlUrgencyFor,
   type DdlUrgency,
@@ -59,17 +62,18 @@ export const TaskItem = memo(function TaskItem({
   const done = isDoneOn(task, dateKey);
   const scheduleLabel = SCHEDULE_TYPE_LABELS[task.schedule.type];
 
-  // 长期 DDL 判定：一次且仅一次、有结束日、且结束日 ≠ 起始日
-  const isLongDdl = isLongDdlTask(task.schedule);
-  const isDdlCompleted = isLongDdl && task.completedAt != null;
+  // 跨天的一次性长期任务判定：含 endDate === null 的「未指定截止日」长期任务
+  const isLongOnce = isLongTermOnce(task.schedule);
+  const isDdlCompleted = isLongOnce && task.completedAt != null;
   const isDdlCompletedDay = isDdlCompleted && task.completedAt === dateKey;
-  // 过去格子：DDL 已完成但 dateKey 早于完成日（防止补勾）
+  // 过去格子：已永久完成但 dateKey 早于完成日（防止补勾）
   const isDdlPastDay =
     isDdlCompleted && task.completedAt != null && dateKey < task.completedAt;
 
-  // 紧迫度档位：仅长期 DDL 未完成时按 dateKey 计算（含 overdue 档）
+  // 紧迫度档位：仅未完成时计算（含 overdue 档）。
+  // ddlUrgencyFor 内部仍要求 isLongDdlTask（有 endDate），无截止日的长期任务自然返回 null。
   const urgency: DdlUrgency =
-    isLongDdl && !isDdlCompleted ? ddlUrgencyFor(task, dateKey) : null;
+    isLongOnce && !isDdlCompleted ? ddlUrgencyFor(task, dateKey) : null;
   // 已过期：长期 DDL 在结束日当天且未完成（独立于档位，走红徽章）
   const overdue = isOverdueDdl(task, dateKey);
 
@@ -77,6 +81,13 @@ export const TaskItem = memo(function TaskItem({
   const daysAhead =
     isDdlCompletedDay && task.schedule.endDate != null && task.completedAt != null
       ? daysBetweenKeys(task.completedAt, task.schedule.endDate)
+      : null;
+
+  // 过去格子文案：任务已在某日永久关闭，本行早于完成日 —— 标注具体完成日。
+  // 与 daysAhead（完成当日，可算「提前/准时」）互斥，两者不同时出现。
+  const completedDateText =
+    isDdlPastDay && task.completedAt != null
+      ? `${formatMonthDay(task.completedAt)}已完成`
       : null;
 
   // 行类与禁用：除未来日，DDL 过去格子也禁用
@@ -128,6 +139,11 @@ export const TaskItem = memo(function TaskItem({
           <span className={styles.badge}>{scheduleLabel}</span>
           {overdue && (
             <span className={`${styles.badge} ${styles.badgeExpired}`}>已过期</span>
+          )}
+          {completedDateText !== null && (
+            <span className={`${styles.badge} ${styles.badgeCompletion}`}>
+              {completedDateText}
+            </span>
           )}
           {daysAhead !== null && daysAhead > 0 && (
             <span className={`${styles.badge} ${styles.badgeCompletion}`}>

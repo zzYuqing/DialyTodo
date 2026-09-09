@@ -1,7 +1,7 @@
 // 职责：JSON 结构校验与 version 校验（提示词 4.3）。
 // 纯函数：一律返回布尔值，不抛异常，由调用方决定如何降级。
 
-import { CURRENT_VERSION, HOLIDAY_URL_TEMPLATE } from "@/constants";
+import { CURRENT_VERSION, HOLIDAY_URL_TEMPLATE, MIN_SUPPORTED_VERSION } from "@/constants";
 import type { AppSettings, DayRecord, Reminder, Schedule, Task, TasksFile } from "@/types";
 
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -55,6 +55,85 @@ export function isTask(value: unknown): value is Task {
 
   if (typeof candidate.instances !== "object" || candidate.instances === null) return false;
   return Object.values(candidate.instances).every(isDayRecord);
+}
+
+/**
+ * 按指定类型校验任务。与 isTask 的区别：schedule.type 只要求等于传入的 type，
+ * 不再依赖全局 SCHEDULE_TYPE_SET 白名单 —— 新增任务类型时只需登记自己的校验分支，
+ * 已有类型的判断逻辑完全不动（满足「新增类型不影响旧 task」）。基础字段校验与 isTask 保持一致。
+ */
+export function validateTaskOfType(type: string, value: unknown): value is Task {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<Task>;
+
+  if (typeof candidate.id !== "string" || candidate.id.length === 0) return false;
+  if (typeof candidate.title !== "string") return false;
+  if (typeof candidate.note !== "string") return false;
+  if (typeof candidate.createdAt !== "string") return false;
+  if (typeof candidate.schedule !== "object" || candidate.schedule === null) return false;
+  if (candidate.schedule.type !== type) return false;
+  if (!isDateKey(candidate.schedule.startDate)) return false;
+  if (candidate.schedule.endDate != null && !isDateKey(candidate.schedule.endDate)) return false;
+  if (!isReminder(candidate.reminder)) return false;
+  if (typeof candidate.archived !== "boolean") return false;
+  if (candidate.completedAt != null && !isDateKey(candidate.completedAt)) return false;
+  if (typeof candidate.instances !== "object" || candidate.instances === null) return false;
+  if (!Object.values(candidate.instances).every(isDayRecord)) return false;
+  return true;
+}
+
+/**
+ * 结构迁移路由：version 低于 CURRENT_VERSION 时逐级应用 MIGRATIONS，
+ * 最后统一 normalize（补齐新增的可选字段）。version 低于 MIN_SUPPORTED_VERSION 视为无法迁移，返回 null。
+ *
+ * 新增任务类型 / 字段时：把升级步骤登记进 MIGRATIONS[旧版本]，旧数据加载时自动升到最新版本，
+ * 无需全量重写文件，也不会因「版本号不匹配」整份判废。
+ */
+const MIGRATIONS: Record<number, (file: TasksFile) => TasksFile> = {};
+
+export function migrateTasksFile(parsed: TasksFile): TasksFile | null {
+  if (parsed.version < MIN_SUPPORTED_VERSION) return null;
+  let file = parsed;
+  while (file.version < CURRENT_VERSION) {
+    const step = MIGRATIONS[file.version];
+    file = step ? step(file) : file;
+    file = { ...file, version: file.version + 1 };
+  }
+  return {
+    version: CURRENT_VERSION,
+    tasks: file.tasks.map(normalizeTask),
+  };
+}
+
+/**
+ * 宽松解析任意来源（主文件 / 备份 / 单类型文件）的 tasks 结构：
+ * 只要求 version 达到最低兼容版本，不要求精确等于 CURRENT_VERSION。
+ * 通过则执行迁移并返回归一化结果，否则 null。
+ * dev 构建的 per-type 存储与备份恢复统一走此函数，彻底消除
+ * 「版本号一 bump 就将所有旧文件 + 备份判废」的隐患。
+ */
+export function parseTasksValueTolerant(value: unknown): TasksFile | null {
+  if (typeof value !== "object" || value === null) return null;
+  const candidate = value as Partial<TasksFile>;
+  if (typeof candidate.version !== "number") return null;
+  if (!Array.isArray(candidate.tasks)) return null;
+  return migrateTasksFile({ version: candidate.version, tasks: candidate.tasks });
+}
+
+/**
+ * 补齐存量数据缺失的可选字段，使内存态与 Task 类型定义一致。
+ * - completedAt：阶段 6 新增，老数据整个字段缺失；
+ * - schedule.endDate：老字段，但放宽校验后理论上允许缺失，一并归一。
+ * 两者缺失时下游都用 `!== null` 判空，undefined 会被误读成「有值」。
+ *
+ * 归入纯函数校验层（与 isTask / normalize 同处），由 storage 与迁移路由共用。
+ */
+export function normalizeTask(task: Task): Task {
+  return {
+    ...task,
+    completedAt: task.completedAt ?? null,
+    schedule: { ...task.schedule, endDate: task.schedule.endDate ?? null },
+  };
 }
 
 /**

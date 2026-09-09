@@ -43,8 +43,10 @@
      在深底上也保留识别度（避免与红色 DDL 行徽章撞色）。 */
   --dt-expired-badge: #e74c3c;
 
-  /* DDL 行紧迫度：低饱和暖灰递进（避红橙），仅作整条色条 + 标题色阶；
-     真正「已过期」走红色徽章（--dt-danger + --dt-danger-contrast），不在此序列。 */
+  /* DDL 行紧迫度：低饱和暖灰递进（避红橙）。越临近截止日，整行底色越深，
+     左侧 3px 色条作同色锚点，标题色阶仅中高档跟进；
+     真正「已过期」走红色徽章（--dt-danger + --dt-danger-contrast），不在此序列。
+     整行底色是本序列的主表达，因此每一档单独给值，不靠色条换算。 */
   --dt-ddl-bar-far: #cfc9c1;
   --dt-ddl-bar-soon: #b6aea3;
   --dt-ddl-bar-imminent: #978d80;
@@ -53,7 +55,14 @@
   --dt-ddl-title-imminent: #6b6358;
   --dt-ddl-title-today: #4f4740;
   --dt-ddl-title-overdue: #3a342e;
-  --dt-ddl-row-overdue: #efe9e2;
+  /* 整行底色：紧迫度递进的主表达。浅色下靠「加暖」而非「压暗」递进 —— 色差由 3 拉到 35，
+     饱和度全程 ≤ 15%（低饱和暖灰口径），档间亮度比均匀（约 1.04），相邻两档肉眼可分；
+     这样备注小字在最深档仍有 3.40:1，与改动前已上线的过期行（3.43:1）基本持平，不产生劣化。 */
+  --dt-ddl-row-far: #fdfcfa;
+  --dt-ddl-row-soon: #fbf7f0;
+  --dt-ddl-row-imminent: #f8f2e6;
+  --dt-ddl-row-today: #f6eddb;
+  --dt-ddl-row-overdue: #f3e8d0;
 }
 
 html[data-theme="dark"] {
@@ -94,5 +103,11 @@ html[data-theme="dark"] {
   --dt-ddl-title-imminent: #b8afa2;
   --dt-ddl-title-today: #ccc2b3;
   --dt-ddl-title-overdue: #e0d6c7;
-  --dt-ddl-row-overdue: #20241f;
+  /* 深色整行底色：深色下方向相反，靠「抬亮」递进（越紧迫越凸显），
+     同样保持档间亮度比均匀（约 1.06）；备注小字全程 ≥ 5.0:1。 */
+  --dt-ddl-row-far: #1e1d1a;
+  --dt-ddl-row-soon: #232119;
+  --dt-ddl-row-imminent: #282520;
+  --dt-ddl-row-today: #2e2922;
+  --dt-ddl-row-overdue: #332d24;
 }

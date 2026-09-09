@@ -13,9 +13,11 @@ export type WorkdayChecker = (dateKey: string) => boolean;
  * 思路：先做日期区间过滤（startDate / endDate），再按周期类型分派；
  * workday / weekend 依赖外部传入的工作日判定（含调休逻辑）。
  *
- * 「once + endDate」扩展（阶段 5+）：当 schedule.type === "once" 且 endDate !== null 时，
- * 走 DDL 任务语义——未完成时整天显示，completedAt 非空时仅显示 <= completedAt。
- * completedAt 默认 null，旧调用方保持兼容。
+ * 「一次性任务 = 长期任务」语义（阶段 7 起）：schedule.type === "once" 的任务从 startDate
+ * 起每天都出现，直到被完成（勾选即关闭）。endDate 只是可选封顶：
+ * - endDate === null（未指定截止日）：无限期出现，靠 completedAt 关闭；
+ * - endDate !== null：到截止日为止的有界长期任务。
+ * 已完成（completedAt 非空）后仅显示 <= 完成日的日期。completedAt 默认 null，旧调用方保持兼容。
  *
  * 日期键为 YYYY-MM-DD 格式，字典序等价于时间序，可直接用字符串比较。
  */
@@ -29,12 +31,9 @@ export function occursOn(
 
   switch (schedule.type) {
     case "once": {
-      // 无结束日：原 once 语义——仅起始日那一天
-      if (schedule.endDate === null) return dateKey === schedule.startDate;
-      // 有结束日：扩展 DDL 任务语义
       // 已完成：仅显示 <= 完成日（历史格子灰化、未来日期消失）
       if (completedAt !== null) return dateKey <= completedAt;
-      // 未完成：整天显示
+      // 未完成：从起始日起每天都出现。endDate 为可选封顶，已由 isWithinRange 处理
       return true;
     }
     case "daily":

@@ -31,13 +31,43 @@ export function TodoIcon({ size }: IconProps) {
   );
 }
 
-/** 归档：收纳箱 */
-export function ArchiveIcon({ size }: IconProps) {
+/** 长期任务：旗帜（长期目标 / 截止日） */
+export function LongTermIcon({ size }: IconProps) {
   return (
     <svg {...base(size)}>
-      <rect x="2" y="3" width="12" height="3.5" rx="1" />
-      <path d="M3.5 6.5v5a1.5 1.5 0 001.5 1.5h6a1.5 1.5 0 001.5-1.5v-5" />
-      <path d="M6.5 9h3" />
+      <path d="M3.5 3v10.5" />
+      <path d="M3.5 3.3h7.5l-2 2.6 2 2.6H3.5" />
+    </svg>
+  );
+}
+
+/** 待完成：时钟 */
+export function ClockIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <circle cx="8" cy="8" r="5.5" />
+      <path d="M8 5v3l2 1.5" />
+    </svg>
+  );
+}
+
+/** 已逾期：警示三角 */
+export function AlertIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M8 2.5l6 10.5H2z" />
+      <path d="M8 7v3" />
+      <path d="M7.7 12h.6" />
+    </svg>
+  );
+}
+
+/** 已完成：带勾的圆 */
+export function CheckCircleIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <circle cx="8" cy="8" r="5.5" />
+      <path d="M5.5 8.2l1.8 1.8L11 6" />
     </svg>
   );
 }

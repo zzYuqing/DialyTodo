@@ -70,10 +70,16 @@ export function getMonthDays(year: number, month: number): string[] {
   return eachDayOfInterval({ start, end }).map(toDateKey);
 }
 
+/** 形如「9月5日」的月日文案，不带星期 */
+export function formatMonthDay(key: string): string {
+  const date = fromDateKey(key);
+  return `${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
 /** 形如「9月2日 周三」的展示文案 */
 export function formatDateLabel(key: string): string {
   const date = fromDateKey(key);
-  return `${date.getMonth() + 1}月${date.getDate()}日 ${WEEKDAY_LABELS[date.getDay()]}`;
+  return `${formatMonthDay(key)} ${WEEKDAY_LABELS[date.getDay()]}`;
 }
 
 /** 当前时刻的 ISO8601 字符串，用于 createdAt / doneAt */

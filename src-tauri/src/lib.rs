@@ -21,10 +21,6 @@ pub fn run() {
             None,
         ))
         .plugin(tauri_plugin_opener::init())
-        // 单实例：二次启动直接唤起已有窗口，不开第二个进程
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            focus_main_window(app);
-        }))
         .invoke_handler(tauri::generate_handler![
             commands::show_main_window,
             commands::toggle_pet_window,
@@ -41,9 +37,30 @@ pub fn run() {
 
 /// 启动装配：应用窗口背板效果，随后构建托盘菜单。
 fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    // 开发构建：加载 dev 图标，让运行中的 dev 窗口/托盘与已发布的 exe 一眼区分。
+    // release 跳过此分支，继续使用 bundle 图标，无需重打包正式 exe。
+    #[cfg(debug_assertions)]
+    apply_dev_icon(app);
+
     apply_window_effect(app.app_handle());
     build_tray_menu(app)?;
     Ok(())
+}
+
+/// 加载 dev 图标；仅在 debug 构建中可用，release 不参与编译。
+#[cfg(debug_assertions)]
+fn load_dev_icon() -> Option<tauri::image::Image<'static>> {
+    tauri::image::Image::from_bytes(include_bytes!("../icons/dev-icon.png")).ok()
+}
+
+/// 开发构建：将主窗口图标替换为 dev 图标。
+#[cfg(debug_assertions)]
+fn apply_dev_icon(app: &tauri::App) {
+    if let Some(icon) = load_dev_icon() {
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.set_icon(icon);
+        }
+    }
 }
 
 /// 按系统版本应用窗口背板：Windows 11 用 Mica，失败（Windows 10）降级为 Acrylic 半透明纯色。
@@ -76,9 +93,13 @@ fn build_tray_menu(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error
         .menu(&menu)
         .show_menu_on_left_click(false);
 
-    // 托盘图标统一由代码构建（config 静态 trayIcon 已移除，避免双图标）；
-    // 显式复用应用默认窗口图标，确保托盘有图。
-    if let Some(icon) = app.default_window_icon().cloned() {
+    // 托盘图标：dev 构建用 dev 图标，release 用 bundle 默认图标。
+    #[cfg(debug_assertions)]
+    let tray_icon = load_dev_icon();
+    #[cfg(not(debug_assertions))]
+    let tray_icon = app.default_window_icon().cloned();
+
+    if let Some(icon) = tray_icon {
         builder = builder.icon(icon);
     }
 

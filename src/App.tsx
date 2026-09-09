@@ -4,7 +4,7 @@
 
 import { useEffect, type JSX } from "react";
 import { Sidebar, TitleBar } from "@/components";
-import { ArchiveView, SettingsView, SimpleModeView, TodoView } from "@/views";
+import { LongTermView, SettingsView, SimpleModeView, TodoView } from "@/views";
 import { useReminders, useWindowMode } from "@/hooks";
 import { useSettingsStore, useTaskStore, useViewStore } from "@/stores";
 import type { ViewName } from "@/stores";
@@ -13,7 +13,7 @@ import styles from "./App.module.css";
 /** 视图名 → 组件，避免每次渲染重建对象 */
 const VIEW_COMPONENTS: Record<ViewName, () => JSX.Element> = {
   todo: () => <TodoView />,
-  archive: () => <ArchiveView />,
+  longterm: () => <LongTermView />,
   settings: () => <SettingsView />,
 };
 

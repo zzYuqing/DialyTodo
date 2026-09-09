@@ -187,7 +187,8 @@
   color: var(--dt-danger);
 }
 
-/* ---------- DDL 行紧迫度分层（整条色条 + 标题色阶，避红橙） ---------- */
+/* ---------- DDL 行紧迫度分层（整行底色 + 左侧色条 + 标题色阶，避红橙） ---------- */
+/* 三层同调，其中整行底色是主表达：越临近截止日整行越深 */
 
 /* 整条左侧色条：3px，按紧迫度递进（低饱和暖灰）；仅作视觉分层，不表达"已过期"。 */
 .row::before {
@@ -234,7 +235,26 @@
   color: var(--dt-ddl-title-overdue);
 }
 
-/* 已过期当天：整条轻微加深（暖灰底），与色条呼应；红信号由独立徽章承担 */
+/* 整行底色：紧迫度递进的主表达（低饱和暖灰），越临近截止日越深/越凸显。
+   红色仍只保留给「已过期」徽章，不进这条序列。
+   色值是量过的：档间亮度比均匀（浅色约 1.04 / 深色约 1.06），标题全程 ≥ 5.0:1，
+   备注小字在最深档不低于改动前已上线的过期行水平。 */
+.row.toneFar {
+  background: var(--dt-ddl-row-far);
+}
+
+.row.toneSoon {
+  background: var(--dt-ddl-row-soon);
+}
+
+.row.toneImminent {
+  background: var(--dt-ddl-row-imminent);
+}
+
+.row.toneToday {
+  background: var(--dt-ddl-row-today);
+}
+
 .row.toneOverdue {
   background: var(--dt-ddl-row-overdue);
 }

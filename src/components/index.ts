@@ -7,10 +7,13 @@ export { AddTaskFab } from "./AddTaskFab/AddTaskFab";
 export { EditTaskModal } from "./EditTaskModal/EditTaskModal";
 export type { TaskModalTarget } from "./EditTaskModal/EditTaskModal";
 export {
-  ArchiveIcon,
+  AlertIcon,
   BellIcon,
+  CheckCircleIcon,
   CheckIcon,
+  ClockIcon,
   EditIcon,
+  LongTermIcon,
   PlusIcon,
   SettingsIcon,
   TodoIcon,

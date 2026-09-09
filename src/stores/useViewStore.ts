@@ -6,7 +6,7 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { todayKey } from "@/lib";
 
-export type ViewName = "todo" | "archive" | "settings";
+export type ViewName = "todo" | "longterm" | "settings";
 
 /** 贡献栏的时间粒度：月 = 近 12 个月迷你月历，年 = 整年色块转置（行为周） */
 export type RailMode = "month" | "year";

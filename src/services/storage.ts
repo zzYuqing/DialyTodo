@@ -1,11 +1,12 @@
 // 职责：tasks.json / settings.json 的原子读写、自动备份滚动、导入导出（提示词 4.3 / 5.4）。
-// 原子写入三步：写 .tmp → 删除目标 → rename，全部在 TS 侧完成。
+// 原子写入：写 .tmp → rename 原地原子替换目标，全部在 TS 侧完成。
 // 提示词 3.5 明确禁止为此新写 Rust command。
 
 import { join } from "@tauri-apps/api/path";
 import {
   copyFile,
   exists,
+  mkdir,
   readDir,
   readTextFile,
   remove,
@@ -16,25 +17,39 @@ import {
   BACKUP_FILE_PREFIX,
   BACKUP_KEEP_COUNT,
   CURRENT_VERSION,
+  QUARANTINE_SUFFIX,
+  TASK_TYPE_FILE_SUFFIX,
   TMP_FILE_SUFFIX,
 } from "@/constants";
-import { defaultSettings, isAppSettings, isTasksFile } from "@/lib";
+import {
+  defaultSettings,
+  isAppSettings,
+  isTasksFile,
+  normalizeTask,
+  parseTasksValueTolerant,
+  validateTaskOfType,
+} from "@/lib";
 import type { AppSettings, LoadResult, ParsedImport, Task } from "@/types";
 import {
   backupDirPath,
   ensureDirectories,
+  IS_DEV,
   settingsFilePath,
+  tasksDirPath,
   tasksFilePath,
+  taskTypeFilePath,
 } from "./paths";
 
 /**
- * 原子写入：先写临时文件，再删除目标，最后重命名。
- * 任何一步失败都不会破坏已有的目标文件。
+ * 原子写入：先写临时文件，再 rename 原地替换目标。
+ * 关键：不先删除目标——rename 在 POSIX 与 Windows（MoveFileEx MOVEFILE_REPLACE_EXISTING）
+ * 上都是原子替换。这样即便写入过程中进程崩溃，目标文件始终停在「旧完整版」或「新完整版」之一，
+ * 绝不会留下半截文件导致整份数据损坏。
+ * 旧实现先 remove 再 rename 会在两步之间留出「目标不存在」的空窗，崩溃即丢数据，故移除该步骤。
  */
 async function atomicWrite(path: string, content: string): Promise<void> {
   const tmpPath = `${path}${TMP_FILE_SUFFIX}`;
   await writeTextFile(tmpPath, content);
-  if (await exists(path)) await remove(path);
   await rename(tmpPath, path);
 }
 
@@ -49,6 +64,7 @@ async function atomicWrite(path: string, content: string): Promise<void> {
   首次写入就抹掉损坏文件 → 数据彻底丢失」的连环丢数据链路）。
  */
 export async function loadTasks(): Promise<{ result: LoadResult; tasks: Task[] }> {
+  if (IS_DEV) return loadTasksDev();
   await ensureDirectories();
   const path = await tasksFilePath();
 
@@ -118,6 +134,7 @@ async function renameCorruptedToBackup(path: string): Promise<string | null> {
 
 /** 保存全部任务 */
 export async function saveTasks(tasks: Task[]): Promise<void> {
+  if (IS_DEV) return saveTasksDev(tasks);
   await ensureDirectories();
   const content = JSON.stringify({ version: CURRENT_VERSION, tasks }, null, 2);
   await atomicWrite(await tasksFilePath(), content);
@@ -163,6 +180,7 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
  * 返回是否实际生成了新备份。
  */
 export async function dailyBackup(today: string): Promise<boolean> {
+  if (IS_DEV) return dailyBackupDev(today);
   const path = await tasksFilePath();
   // 只有主文件当前是合法的才备份，避免把损坏数据写进去盖掉好备份
   if ((await tryParseTasksFile(path)) === null) return false;
@@ -194,18 +212,9 @@ async function tryParseTasksFile(path: string): Promise<Task[] | null> {
 }
 
 /**
- * 补齐存量数据缺失的可选字段，使内存态与 Task 类型定义一致。
- * - completedAt：阶段 6 新增，老数据整个字段缺失；
- * - schedule.endDate：老字段，但放宽校验后理论上允许缺失，一并归一。
- * 两者缺失时下游都用 `!== null` 判空，undefined 会被误读成「有值」。
+ * 补齐存量数据缺失的可选字段的 normalizeTask 已移至 @/lib（validate.ts），
+ * storage 与迁移路由共用同一份实现，避免重复定义漂移。
  */
-function normalizeTask(task: Task): Task {
-  return {
-    ...task,
-    completedAt: task.completedAt ?? null,
-    schedule: { ...task.schedule, endDate: task.schedule.endDate ?? null },
-  };
-}
 
 /** 从最近的一份可用备份恢复，逐份回退，全部失败返回 null */
 async function loadFromBackup(): Promise<Task[] | null> {
@@ -273,4 +282,203 @@ export function mergeTasks(current: Task[], incoming: Task[]): Task[] {
     if (!map.has(task.id)) map.set(task.id, task);
   }
   return [...map.values()];
+}
+
+// ============================================================================
+// dev 构建：每种任务类型独立一个文件（<数据根>/tasks/<type>.json）
+// 用 IS_DEV 隔离，release 构建完全不进入这些分支，旧 exe 的单文件 tasks.json 不受影响。
+// 对外 API（loadTasks / saveTasks / dailyBackup）签名不变，下游零改动。
+// ============================================================================
+
+/**
+ * 宽松解析单个 JSON 文件（类型文件或整合备份），返回归一化后的 TasksFile；
+ * 任何失败（不存在 / 非 JSON / version 过低）返回 null。version 闸门走
+ * parseTasksValueTolerant（最低兼容而非精确匹配），避免 bump 版本整份判废。
+ */
+async function tryParseTypeFileRaw(path: string): Promise<TasksFile | null> {
+  try {
+    if (!(await exists(path))) return null;
+    const parsed: unknown = JSON.parse(await readTextFile(path));
+    return parseTasksValueTolerant(parsed);
+  } catch {
+    return null;
+  }
+}
+
+/** 把无法校验的任务隔离写入 <type>.quarantine.json，绝不静默丢弃 */
+async function writeQuarantine(type: string, bad: Task[]): Promise<void> {
+  const path = await join(await tasksDirPath(), `${type}${QUARANTINE_SUFFIX}`);
+  await atomicWrite(path, JSON.stringify({ version: CURRENT_VERSION, tasks: bad }, null, 2));
+}
+
+/**
+ * 首次在 dev 下运行：把旧的单个 tasks.json 按类型拆分到 tasks/ 目录。
+ * 原文件改名保留（.migrated.<时间戳>），绝不删除。已迁移过（tasks 目录已有类型文件）则跳过。
+ */
+async function migrateLegacyTasksFile(): Promise<void> {
+  try {
+    const tasksDir = await tasksDirPath();
+    const legacy = await tasksFilePath();
+
+    if (await exists(tasksDir)) {
+      const entries = await readDir(tasksDir);
+      const hasTypeFile = entries.some(
+        (e) =>
+          typeof e.name === "string" &&
+          e.name.endsWith(TASK_TYPE_FILE_SUFFIX) &&
+          !e.name.endsWith(QUARANTINE_SUFFIX),
+      );
+      if (hasTypeFile) return;
+    }
+    if (!(await exists(legacy))) return;
+
+    const parsed: unknown = JSON.parse(await readTextFile(legacy));
+    const file = parseTasksValueTolerant(parsed);
+    if (file === null) return; // 旧文件损坏：不动，交由后续加载流程处理
+
+    if (!(await exists(tasksDir))) await mkdir(tasksDir, { recursive: true });
+    const byType = new Map<string, Task[]>();
+    for (const task of file.tasks) {
+      const list = byType.get(task.schedule.type);
+      if (list) list.push(task);
+      else byType.set(task.schedule.type, [task]);
+    }
+    for (const [type, list] of byType) {
+      await atomicWrite(
+        await taskTypeFilePath(type),
+        JSON.stringify({ version: CURRENT_VERSION, tasks: list }, null, 2),
+      );
+    }
+    // 原文件改名保留，便于事后比对
+    const ts = new Date().toISOString().replace(/[:.]/g, "-");
+    await rename(legacy, `${legacy}.migrated.${ts}`);
+  } catch {
+    // 迁移失败不应阻塞启动，后续按「无旧文件」流程继续
+  }
+}
+
+/** dev 加载：逐类型文件读取；单文件损坏尝试从整合备份找回该类型，否则隔离改名 */
+async function loadTasksDev(): Promise<{ result: LoadResult; tasks: Task[] }> {
+  await ensureDirectories();
+  const tasksDir = await tasksDirPath();
+
+  // 首次运行：把旧的单文件 tasks.json 拆成 per-type
+  await migrateLegacyTasksFile();
+
+  const entries = (await exists(tasksDir)) ? await readDir(tasksDir) : [];
+  const typeFiles = entries
+    .map((e) => e.name)
+    .filter(
+      (name): name is string =>
+        typeof name === "string" &&
+        name.endsWith(TASK_TYPE_FILE_SUFFIX) &&
+        !name.endsWith(QUARANTINE_SUFFIX),
+    );
+
+  const allTasks: Task[] = [];
+  let usedBackup = false;
+  let corruptedBackupPath: string | null = null;
+  let error: string | null = null;
+
+  for (const name of typeFiles) {
+    const type = name.slice(0, -TASK_TYPE_FILE_SUFFIX.length);
+    const path = await join(tasksDir, name);
+    const raw = await tryParseTypeFileRaw(path);
+    if (raw === null) {
+      // 整个类型文件损坏：尝试从最近一份整合备份里找回该类型
+      const recovered = await loadLatestConsolidatedBackup();
+      const ofType = recovered?.filter((t) => t.schedule.type === type) ?? [];
+      if (ofType.length > 0) {
+        allTasks.push(...ofType);
+        usedBackup = true;
+        continue;
+      }
+      corruptedBackupPath = await renameCorruptedToBackup(path);
+      error = `tasks/${name} 已损坏，已尝试从备份恢复（原文件保留于 ${corruptedBackupPath ?? path}）。`;
+      continue;
+    }
+    const good = raw.tasks.filter((t) => validateTaskOfType(type, t));
+    const bad = raw.tasks.filter((t) => !validateTaskOfType(type, t));
+    if (bad.length > 0) await writeQuarantine(type, bad);
+    allTasks.push(...good);
+  }
+
+  return {
+    result: { ok: error === null, usedBackup, error, corruptedBackupPath },
+    tasks: allTasks,
+  };
+}
+
+/** dev 保存：按类型分组写入各自文件，并清理已无任何任务的类型文件（避免陈旧数据回读） */
+async function saveTasksDev(tasks: Task[]): Promise<void> {
+  await ensureDirectories();
+  const tasksDir = await tasksDirPath();
+  if (!(await exists(tasksDir))) await mkdir(tasksDir, { recursive: true });
+
+  const byType = new Map<string, Task[]>();
+  for (const task of tasks) {
+    const list = byType.get(task.schedule.type);
+    if (list) list.push(task);
+    else byType.set(task.schedule.type, [task]);
+  }
+
+  for (const [type, list] of byType) {
+    await atomicWrite(
+      await taskTypeFilePath(type),
+      JSON.stringify({ version: CURRENT_VERSION, tasks: list }, null, 2),
+    );
+  }
+
+  // 删除已无任务的类型文件，防止下次加载把陈旧数据重新读回
+  const entries = await readDir(tasksDir);
+  for (const e of entries) {
+    const name = e.name;
+    if (typeof name !== "string") continue;
+    if (!name.endsWith(TASK_TYPE_FILE_SUFFIX) || name.endsWith(QUARANTINE_SUFFIX)) continue;
+    const type = name.slice(0, -TASK_TYPE_FILE_SUFFIX.length);
+    if (!byType.has(type)) await remove(await join(tasksDir, name));
+  }
+}
+
+/** dev 备份：把全部类型文件整合为一份 backup_YYYY-MM-DD.json 快照（沿用原备份命名与保留份数） */
+async function dailyBackupDev(today: string): Promise<boolean> {
+  const tasksDir = await tasksDirPath();
+  if (!(await exists(tasksDir))) return false;
+
+  const entries = await readDir(tasksDir);
+  const allTasks: Task[] = [];
+  for (const e of entries) {
+    const name = e.name;
+    if (typeof name !== "string") continue;
+    if (!name.endsWith(TASK_TYPE_FILE_SUFFIX) || name.endsWith(QUARANTINE_SUFFIX)) continue;
+    const raw = await tryParseTypeFileRaw(await join(tasksDir, name));
+    if (raw === null) return false; // 有类型文件损坏则不覆盖好备份
+    allTasks.push(...raw.tasks);
+  }
+
+  const target = await join(await backupDirPath(), `${BACKUP_FILE_PREFIX}${today}.json`);
+  if (await exists(target)) return false;
+  await atomicWrite(target, JSON.stringify({ version: CURRENT_VERSION, tasks: allTasks }, null, 2));
+  await pruneBackups();
+  return true;
+}
+
+/** 从最近的整合备份恢复全部任务（dev 类型文件整文件损坏时的兜底） */
+async function loadLatestConsolidatedBackup(): Promise<Task[] | null> {
+  const dir = await backupDirPath();
+  if (!(await exists(dir))) return null;
+  const entries = await readDir(dir);
+  const names = entries
+    .map((e) => e.name)
+    .filter(
+      (name): name is string =>
+        typeof name === "string" && name.startsWith(BACKUP_FILE_PREFIX) && name.endsWith(TASK_TYPE_FILE_SUFFIX),
+    )
+    .sort()
+    .reverse();
+  for (const name of names) {
+    const raw = await tryParseTypeFileRaw(await join(dir, name));
+    if (raw !== null) return raw.tasks;
+  }
+  return null;
 }

@@ -18,10 +18,24 @@ import {
   DATA_DIR_NAME,
   DATA_DIR_POINTER_FILE,
   SETTINGS_FILE,
+  TASKS_DIR,
   TASKS_FILE,
+  TASK_TYPE_FILE_SUFFIX,
   TMP_FILE_SUFFIX,
 } from "@/constants";
 import { holidayFileName } from "@/lib";
+
+/**
+ * 构建模式区分：dev（npm run tauri dev）与 release（打包出的 exe）共用同一 bundle
+ * identifier（com.yoyo.dailytodo），因此 appDataDir() 完全相同、数据目录指针文件也共用 ——
+ * 这正是「dev 删数据、exe 跟着没」的根因。用 Vite 注入的 import.meta.env.DEV 区分两者：
+ * - dev     → 指针 data-dir-dev、默认目录 DailyTodo-dev
+ * - release → 指针 data-dir、默认目录 DailyTodo
+ * 使 dev 与 exe 的数据目录彻底独立，互不影响、可同时运行。
+ */
+export const IS_DEV = import.meta.env.DEV;
+const POINTER_FILE = IS_DEV ? "data-dir-dev" : DATA_DIR_POINTER_FILE;
+const DEFAULT_DIR_NAME = IS_DEV ? "DailyTodo-dev" : DATA_DIR_NAME;
 
 /** 数据根目录缓存，避免每次 IO 都重新解析 */
 let cachedRoot: string | null = null;
@@ -52,7 +66,7 @@ export async function dataRoot(): Promise<string> {
 /** 首次解析：读指针 → 定根目录 → 自定义目录需动态授权 → 缓存 */
 async function resolveDataRoot(): Promise<string> {
   const base = await appDataDir();
-  cachedPointer = await join(base, DATA_DIR_POINTER_FILE);
+  cachedPointer = await join(base, POINTER_FILE);
 
   let root: string;
   if (await exists(cachedPointer)) {
@@ -74,7 +88,7 @@ async function resolveDataRoot(): Promise<string> {
 
 /** 默认数据根目录 = appDataDir() + "DailyTodo" */
 export async function defaultDataRootPath(): Promise<string> {
-  return join(await appDataDir(), DATA_DIR_NAME);
+  return join(await appDataDir(), DEFAULT_DIR_NAME);
 }
 
 /**
@@ -119,7 +133,7 @@ export function isPathWithin(child: string, parent: string): boolean {
 /** 数据目录指针文件路径（appDataDir()/data-dir，数据目录之外） */
 export async function pointerFilePath(): Promise<string> {
   if (cachedPointer === null) {
-    cachedPointer = await join(await appDataDir(), DATA_DIR_POINTER_FILE);
+    cachedPointer = await join(await appDataDir(), POINTER_FILE);
   }
   return cachedPointer;
 }
@@ -160,9 +174,19 @@ export async function ensureDirectories(): Promise<void> {
   if (!(await exists(backup))) await mkdir(backup, { recursive: true });
 }
 
-/** <数据根目录>/tasks.json */
+/** <数据根目录>/tasks.json（release 单文件存储；dev 仅在首次迁移时读取旧格式） */
 export async function tasksFilePath(): Promise<string> {
   return join(await dataRoot(), TASKS_FILE);
+}
+
+/** dev 构建：每种任务类型独立存放的子目录 <数据根目录>/tasks */
+export async function tasksDirPath(): Promise<string> {
+  return join(await dataRoot(), TASKS_DIR);
+}
+
+/** dev 构建：单类型任务文件 <数据根目录>/tasks/<type>.json */
+export async function taskTypeFilePath(type: string): Promise<string> {
+  return join(await tasksDirPath(), `${type}${TASK_TYPE_FILE_SUFFIX}`);
 }
 
 /** <数据根目录>/settings.json */

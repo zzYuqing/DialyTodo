@@ -2,7 +2,7 @@
 
 import type { CreateTaskInput, Reminder, Schedule, Task, TaskEdit } from "@/types";
 import { nowIso } from "./date";
-import { isLongDdlTask } from "./ddl";
+import { isLongTermOnce } from "./ddl";
 
 /** 生成任务 ID。使用 WebView2 内置的 crypto.randomUUID，不引入 uuid 依赖。 */
 export function generateTaskId(): string {
@@ -28,22 +28,24 @@ export function createTask(input: CreateTaskInput, id: string = generateTaskId()
  * 切换某一天的完成状态。
  * 取消完成时直接删除 instances 里的日期键，避免无限累积无效记录（沿用上一版设计）。
  *
- * DDL 判定统一走 ddl.ts 的 isLongDdlTask（once 且 endDate ≠ null 且 endDate ≠ startDate）：
- * 勾选时同步设置 completedAt = dateKey（永久完成）；取消勾选时清零 completedAt。
- * 起止同日的 once 任务不算 DDL，不写 completedAt。其他模式按原语义工作。
+ * 跨天的一次性长期任务判定统一走 ddl.ts 的 isLongTermOnce（once 且 endDate ≠ startDate，
+ * 含 endDate === null 的「未指定截止日」长期任务）：
+ * 勾选时同步设置 completedAt = dateKey（永久完成，此后不再出现在未来日期）；
+ * 取消勾选时清零 completedAt（任务重新回到每天待办）。
+ * 起止同日的 once 任务是单日任务，不写 completedAt。其他周期类型按原语义逐日记录。
  */
 export function toggleTaskDone(task: Task, dateKey: string, done: boolean): Task {
   const instances = { ...task.instances };
-  const isDdlOnce = isLongDdlTask(task.schedule);
+  const isLongOnce = isLongTermOnce(task.schedule);
 
   if (done) {
     instances[dateKey] = { done: true, doneAt: nowIso() };
-    if (isDdlOnce) return { ...task, instances, completedAt: dateKey };
+    if (isLongOnce) return { ...task, instances, completedAt: dateKey };
     return { ...task, instances };
   }
 
   delete instances[dateKey];
-  if (isDdlOnce) return { ...task, instances, completedAt: null };
+  if (isLongOnce) return { ...task, instances, completedAt: null };
   return { ...task, instances };
 }
 

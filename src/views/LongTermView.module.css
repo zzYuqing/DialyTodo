@@ -1,0 +1,200 @@
+/* 长期任务预览页布局：头部（标题+统计）+ 居中可滚动内容区（三组卡片）。
+   配色与间距对齐 TodoView / TaskItem，沿用「墨绿工房」低饱和令牌。 */
+
+.view {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 20px 12px;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 28px;
+  color: var(--dt-text);
+}
+
+.context {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--dt-text-muted);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stat {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--dt-border);
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+  white-space: nowrap;
+}
+
+.statAll {
+  color: var(--dt-text);
+}
+
+.statPending {
+  color: var(--dt-accent);
+  background: var(--dt-accent-soft);
+  border-color: transparent;
+}
+
+.statOverdue {
+  color: var(--dt-danger-contrast);
+  background: var(--dt-danger);
+  border-color: transparent;
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--dt-text-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* 分组卡片：左缘 3px 状态色条，整体轻投影 */
+.group {
+  background: var(--dt-panel);
+  border: 1px solid var(--dt-border);
+  border-radius: 12px;
+  box-shadow: var(--dt-shadow-sm);
+  overflow: hidden;
+}
+
+.group_pending {
+  border-left: 3px solid var(--dt-accent);
+}
+
+.group_overdue {
+  border-left: 3px solid var(--dt-danger);
+}
+
+.group_done {
+  border-left: 3px solid var(--dt-contrib-2);
+}
+
+.groupHead {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: var(--dt-text);
+  font-family: inherit;
+}
+
+.groupHead:hover {
+  background: var(--dt-panel-2);
+}
+
+.chevron {
+  display: inline-flex;
+  color: var(--dt-text-muted);
+  transition: transform 150ms ease;
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+.groupIcon {
+  display: inline-flex;
+  color: var(--dt-text-muted);
+}
+
+.group_pending .groupIcon {
+  color: var(--dt-accent);
+}
+
+.group_overdue .groupIcon {
+  color: var(--dt-danger);
+}
+
+.group_done .groupIcon {
+  color: var(--dt-contrib-3);
+}
+
+.groupTitle {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.groupCount {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  border-radius: 999px;
+  background: var(--dt-panel-2);
+  color: var(--dt-text-muted);
+}
+
+.groupHint {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--dt-text-muted);
+}
+
+.groupEmpty {
+  margin: 0;
+  padding: 10px 16px 16px;
+  font-size: 13px;
+  color: var(--dt-text-muted);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

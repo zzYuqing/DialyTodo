@@ -1,4 +1,4 @@
-// 职责：左侧 56px 窄侧栏，承担视图切换职责（TodoView / ArchiveView / SettingsView）。
+// 职责：左侧 56px 窄侧栏，承担视图切换职责（TodoView / 长期任务 / SettingsView）。
 // 设计要点：
 // - 图标为主、文字为辅（hover 出现 tooltip 与 label）。
 // - 当前选中项由 useViewStore.view 决定。
@@ -8,7 +8,7 @@
 import type { ComponentType } from "react";
 import { useViewStore } from "@/stores";
 import type { ViewName } from "@/stores";
-import { ArchiveIcon, SettingsIcon, TodoIcon } from "@/components/Icons";
+import { LongTermIcon, SettingsIcon, TodoIcon } from "@/components/Icons";
 import styles from "./Sidebar.module.css";
 
 interface TabDef {
@@ -20,7 +20,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { view: "todo", label: "Todo", icon: TodoIcon },
-  { view: "archive", label: "归档", icon: ArchiveIcon },
+  { view: "longterm", label: "长期", icon: LongTermIcon },
   { view: "settings", label: "设置", icon: SettingsIcon },
 ];
 

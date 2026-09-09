@@ -1,0 +1,40 @@
+/* 长期任务行：仅补充预览页专属视觉，卡片本体（圆角/阴影/勾选圈/徽标）复用 TaskItem.module.css。 */
+
+/* 左侧状态色条：3px，按分组色调取色，呼应整体「状态分层」语言 */
+.bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 10px 0 0 10px;
+  background: transparent;
+}
+
+.bar_pending {
+  background: var(--dt-accent);
+}
+
+.bar_overdue {
+  background: var(--dt-danger);
+}
+
+.bar_done {
+  background: var(--dt-contrib-2);
+}
+
+/* 起→止区间徽标：用比周期徽标稍深的底，区分两类信息 */
+.range {
+  background: var(--dt-panel-2);
+}
+
+/* 剩余/逾期天数：默认跟随徽标中性色；逾期才用红色通道 */
+.days {
+  font-variant-numeric: tabular-nums;
+}
+
+.days_overdue {
+  color: var(--dt-danger-contrast);
+  background: var(--dt-danger);
+  border-color: transparent;
+}
