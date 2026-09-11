@@ -24,12 +24,11 @@ import {
 import {
   defaultSettings,
   isAppSettings,
-  isTasksFile,
-  normalizeTask,
+  parseTasksFileCompatible,
   parseTasksValueTolerant,
   validateTaskOfType,
 } from "@/lib";
-import type { AppSettings, LoadResult, ParsedImport, Task } from "@/types";
+import type { AppSettings, LoadResult, ParsedImport, Task, TasksFile } from "@/types";
 import {
   backupDirPath,
   ensureDirectories,
@@ -157,6 +156,9 @@ export async function loadSettings(): Promise<AppSettings> {
         const merged: unknown = {
           ...defaultSettings(),
           ...record,
+          // 版本号一律抬到当前：settings 的演进方式是「新增字段由出厂默认值补齐」，
+          // 没有迁移函数，抬版本即完成升级，下次保存写出的文件也就带上了当前版本。
+          version: CURRENT_VERSION,
         };
         if (isAppSettings(merged)) return merged;
       }
@@ -197,7 +199,11 @@ export async function dailyBackup(today: string): Promise<boolean> {
  * 尝试读取并校验一个 tasks 格式的文件（主文件与备份共用）。
  * 不存在、无法解析、结构或版本不合法，一律返回 null。
  *
- * 读出的任务统一过 normalizeTask 补齐新增字段：completedAt 是阶段 6 才加的，
+ * 版本闸门走 parseTasksFileCompatible（最低兼容 + 迁移），不是精确相等：
+ * 覆盖 exe 不会碰到数据文件，真正丢数据的途径是「新 exe 读不懂旧版本文件 → 判废 →
+ * 空启动 → 首次写入覆盖」，主文件与备份同一判定、备份也救不了。这里换成兼容解析即掐断该链路。
+ *
+ * 读出的任务会经 migrateTasksFile 统一 normalize 补齐新增字段：completedAt 是阶段 6 才加的，
  * 存量文件里整个字段缺失。光放宽校验不够 —— 内存里留着 undefined 会让
  * TaskItem 的 `completedAt !== null` 把「从未完成」误判成「已完成」。
  */
@@ -205,16 +211,11 @@ async function tryParseTasksFile(path: string): Promise<Task[] | null> {
   try {
     if (!(await exists(path))) return null;
     const parsed: unknown = JSON.parse(await readTextFile(path));
-    return isTasksFile(parsed) ? parsed.tasks.map(normalizeTask) : null;
+    return parseTasksFileCompatible(parsed)?.tasks ?? null;
   } catch {
     return null;
   }
 }
-
-/**
- * 补齐存量数据缺失的可选字段的 normalizeTask 已移至 @/lib（validate.ts），
- * storage 与迁移路由共用同一份实现，避免重复定义漂移。
- */
 
 /** 从最近的一份可用备份恢复，逐份回退，全部失败返回 null */
 async function loadFromBackup(): Promise<Task[] | null> {
@@ -262,10 +263,13 @@ export async function exportBackup(targetPath: string): Promise<void> {
 export async function parseImportFile(sourcePath: string): Promise<ParsedImport> {
   try {
     const parsed: unknown = JSON.parse(await readTextFile(sourcePath));
-    if (!isTasksFile(parsed)) {
-      return { valid: false, tasks: [], error: "文件格式不正确或版本不匹配" };
+    // 导入旧版本导出的备份属于正常场景，走兼容解析（能迁移就读进来），
+    // 只有低于最低兼容版本或结构非法才拒绝。
+    const file = parseTasksFileCompatible(parsed);
+    if (file === null) {
+      return { valid: false, tasks: [], error: "文件格式不正确或版本过低" };
     }
-    return { valid: true, tasks: parsed.tasks, error: null };
+    return { valid: true, tasks: file.tasks, error: null };
   } catch {
     return { valid: false, tasks: [], error: "文件无法读取或不是合法 JSON" };
   }

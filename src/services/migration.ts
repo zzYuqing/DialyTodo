@@ -11,7 +11,7 @@ import {
   TASKS_FILE,
   TMP_FILE_SUFFIX,
 } from "@/constants";
-import { isTasksFile } from "@/lib";
+import { parseTasksFileCompatible } from "@/lib";
 import {
   authorizeDirectory,
   clearDataRootCache,
@@ -203,8 +203,9 @@ async function verifyTarget(src: string, dst: string, copied: CopyCount): Promis
 /** 解析 tasks.json 中的任务数；结构非法时抛错，由调用方按校验失败处理 */
 function tasksCount(content: string): number {
   const parsed: unknown = JSON.parse(content);
-  if (!isTasksFile(parsed)) throw new Error("invalid tasks file");
-  return parsed.tasks.length;
+  const file = parseTasksFileCompatible(parsed);
+  if (file === null) throw new Error("invalid tasks file");
+  return file.tasks.length;
 }
 
 /** 删除源目录全部内容，最后删除目录本身。返回未能删除的条目名列表（空 = 全删干净） */

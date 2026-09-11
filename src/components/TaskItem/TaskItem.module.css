@@ -154,6 +154,13 @@
   border-color: transparent;
 }
 
+/* 剩余天数徽章：数字用等宽字形，避免「剩 1 天 / 剩 12 天」宽度跳动。
+   保持中性色 —— 紧迫度已由整行底色表达；红色通道只留给「已过期」。
+   与预览页 LongTermTaskRow 的 .days 同口径。 */
+.days {
+  font-variant-numeric: tabular-nums;
+}
+
 .date {
   font-size: 11px;
   color: var(--dt-text-muted);

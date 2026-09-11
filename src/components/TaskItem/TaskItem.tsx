@@ -13,7 +13,8 @@
 //   起止同日的 once 任务不算 DDL，不染红、不显示「已过期」。
 // - 「已过期」仅在其 endDate 当天、且未完成时成立（isOverdueDdl）；
 //   超过 endDate 的任务由 occursOn/isWithinRange 过滤，不会出现在日清单。
-// - 紧迫度走整条左侧色条 + 标题色阶（低饱和暖灰，避红橙），不染徽章；
+// - 紧迫度走整行底色 + 左侧色条 + 标题色阶（低饱和暖灰，避红橙），不染徽章；
+//   未完成且未到截止日的长期 DDL 追加「剩 N 天」徽章（中性色，数字等宽）；
 //   「已过期」走独立红徽章，置于周期徽章右侧、日期之前。
 
 import { memo } from "react";
@@ -22,6 +23,7 @@ import {
   daysBetweenKeys,
   formatMonthDay,
   isDoneOn,
+  isLongDdlTask,
   isLongTermOnce,
   isOverdueDdl,
   ddlUrgencyFor,
@@ -77,10 +79,19 @@ export const TaskItem = memo(function TaskItem({
   // 已过期：长期 DDL 在结束日当天且未完成（独立于档位，走红徽章）
   const overdue = isOverdueDdl(task, dateKey);
 
+  // 剩余天数：仅长期 DDL（有 endDate 才算得出）且未完成时显示，形如「剩 3 天」。
+  // 与「已过期」互斥 —— 截止日当天由 isOverdueDdl 走红徽章，不在此重复表达。
+  const endDate = task.schedule.endDate;
+  const daysLeft =
+    isLongDdlTask(task.schedule) && !isDdlCompleted && endDate != null
+      ? daysBetweenKeys(dateKey, endDate)
+      : null;
+  const daysLeftText = daysLeft !== null && daysLeft > 0 ? `剩 ${daysLeft} 天` : null;
+
   // 完成态追加文字：完成时距 DDL 的剩余天数（endDate - completedAt）
   const daysAhead =
-    isDdlCompletedDay && task.schedule.endDate != null && task.completedAt != null
-      ? daysBetweenKeys(task.completedAt, task.schedule.endDate)
+    isDdlCompletedDay && endDate != null && task.completedAt != null
+      ? daysBetweenKeys(task.completedAt, endDate)
       : null;
 
   // 过去格子文案：任务已在某日永久关闭，本行早于完成日 —— 标注具体完成日。
@@ -139,6 +150,9 @@ export const TaskItem = memo(function TaskItem({
           <span className={styles.badge}>{scheduleLabel}</span>
           {overdue && (
             <span className={`${styles.badge} ${styles.badgeExpired}`}>已过期</span>
+          )}
+          {daysLeftText !== null && (
+            <span className={`${styles.badge} ${styles.days}`}>{daysLeftText}</span>
           )}
           {completedDateText !== null && (
             <span className={`${styles.badge} ${styles.badgeCompletion}`}>

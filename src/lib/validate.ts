@@ -121,6 +121,28 @@ export function parseTasksValueTolerant(value: unknown): TasksFile | null {
 }
 
 /**
+ * release 路径的任务文件解析（主文件 / 备份 / 导入文件共用）。
+ *
+ * 结构校验仍逐条过 isTask，但版本只要求达到 MIN_SUPPORTED_VERSION，
+ * 再经 migrateTasksFile 逐级升到 CURRENT_VERSION。
+ *
+ * 目的：release 的 exe 升级是「覆盖同一个 exe 文件」，数据文件在 %APPDATA% 下、不在安装位置，
+ * 覆盖本身碰不到它 —— 真正会毁掉旧数据的是「新 exe 读不懂旧格式 → 判废 → 空启动 → 首次写入覆盖」。
+ * 把闸门换成最低兼容 + 迁移，就是掐断这条链路。
+ *
+ * 注意与 parseTasksValueTolerant 的分工：那个函数不做逐条结构校验（dev per-type 靠
+ * 单条隔离 + quarantine 兜底）；这个用于 release 单文件，必须保留整体结构校验。
+ */
+export function parseTasksFileCompatible(value: unknown): TasksFile | null {
+  if (typeof value !== "object" || value === null) return null;
+  const candidate = value as Partial<TasksFile>;
+  if (typeof candidate.version !== "number") return null;
+  if (!Array.isArray(candidate.tasks)) return null;
+  if (!candidate.tasks.every(isTask)) return null;
+  return migrateTasksFile({ version: candidate.version, tasks: candidate.tasks });
+}
+
+/**
  * 补齐存量数据缺失的可选字段，使内存态与 Task 类型定义一致。
  * - completedAt：阶段 6 新增，老数据整个字段缺失；
  * - schedule.endDate：老字段，但放宽校验后理论上允许缺失，一并归一。
@@ -136,24 +158,15 @@ export function normalizeTask(task: Task): Task {
   };
 }
 
-/**
- * 校验 tasks.json 的顶层结构。
- * version 不匹配一律判为非法 —— 调用方会据此尝试读最近一份备份（提示词 4.3）。
- */
-export function isTasksFile(value: unknown): value is TasksFile {
-  if (typeof value !== "object" || value === null) return false;
-  const candidate = value as Partial<TasksFile>;
-  if (candidate.version !== CURRENT_VERSION) return false;
-  if (!Array.isArray(candidate.tasks)) return false;
-  return candidate.tasks.every(isTask);
-}
-
 /** 校验 settings.json 的结构 */
 export function isAppSettings(value: unknown): value is AppSettings {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as Partial<AppSettings>;
 
-  if (candidate.version !== CURRENT_VERSION) return false;
+  // 版本号只要求「是数字」，不要求等于 CURRENT_VERSION。
+  // settings 的演进方式是「新增字段由出厂默认值补齐」（见 loadSettings 的 merge），没有迁移函数，
+  // 若这里要求精确相等，bump 版本会让老版本设置整份判废 —— 主题 / 自启动 / 布局等偏好全部回出厂。
+  if (typeof candidate.version !== "number") return false;
   if (candidate.theme !== "light" && candidate.theme !== "dark") return false;
   if (typeof candidate.alwaysOnTop !== "boolean") return false;
   if (candidate.layout !== "full" && candidate.layout !== "simple" && candidate.layout !== "mini") {
