@@ -5,7 +5,7 @@ export type ThemeMode = "light" | "dark";
 
 /**
  * 窗口界面模式（提示词 5.5）。
- * full = 完整布局（侧栏 + 贡献墙 + 设置/归档）；simple = 仅当日待办（含新建按钮）；
+ * full = 完整布局（侧栏 + 贡献墙 + 长期任务页 + 设置）；simple = 仅当日待办（含新建按钮）；
  * mini = 迷你条（暂未开放，接口保留）。
  */
 export type LayoutMode = "full" | "simple" | "mini";

@@ -76,6 +76,22 @@ export function formatMonthDay(key: string): string {
   return `${date.getMonth() + 1}月${date.getDate()}日`;
 }
 
+/**
+ * ISO8601 完成时刻 → 「9月5日 14:30」本地文案，用于子任务的完成时间徽章。
+ * 传入 null / 非法字符串原样返回 null（不在 UI 里强行渲染）。
+ * 与 dayjs / format 等库统一为本地时区小时分钟，不带秒。
+ */
+export function formatDoneAt(iso: string | null | undefined): string | null {
+  if (iso == null) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const hour = `${date.getHours()}`.padStart(2, "0");
+  const minute = `${date.getMinutes()}`.padStart(2, "0");
+  return `${month}月${day}日 ${hour}:${minute}`;
+}
+
 /** 形如「9月2日 周三」的展示文案 */
 export function formatDateLabel(key: string): string {
   const date = fromDateKey(key);

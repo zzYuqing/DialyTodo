@@ -241,7 +241,7 @@ export function SettingsView() {
             <Text size="xs" className={styles.muted}>
               {layout === "simple"
                 ? "简易：仅显示当日待办，窗口更小，仍可手动调整尺寸。"
-                : "完整：侧栏、贡献墙、归档与设置页齐全。"}
+                : "完整：侧栏、贡献墙、长期任务页与设置页齐全。"}
             </Text>
           </Stack>
 
@@ -332,7 +332,7 @@ export function SettingsView() {
             <Code className={styles.path}>{targetDir ?? "…"}</Code>
           </Text>
           <Text size="xs" className={styles.muted}>
-            迁移内容：tasks.json（任务与归档历史）、settings.json（设置）、backup/（每日备份）、
+            迁移内容：tasks.json（任务与完成历史）、settings.json（设置）、backup/（每日备份）、
             holidays_*.json（节假日缓存）。应用无需重启，迁移后读写自动指向新目录。
           </Text>
           <Text size="sm" c="red" fw={500}>

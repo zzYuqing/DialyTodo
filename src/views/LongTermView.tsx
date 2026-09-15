@@ -1,8 +1,8 @@
 // 职责：长期任务预览页 —— 汇总所有跨天的一次性长期任务
 // （isLongTermOnce：once 且 endDate ≠ startDate，含 endDate === null 的「未指定截止日」长期任务），
-// 按 待完成 / 已逾期 / 已完成 三组展示，支持勾选完成、编辑、归档。
-// 设计：三组为可折叠分组卡片，左侧 3px 色条区分状态，组头带图标+计数+提示；
-// 行内复用 TaskItem 卡片视觉（见 LongTermTaskRow）。归档（已删除）任务不计入。
+// 按 待完成 / 已逾期 / 已完成 三组归类，支持勾选完成、编辑、删除。
+// 设计：左侧 168px 竖排状态导航（图标 + 名称 + 计数）一次只选一组，右侧列表区占满剩余高度独立滚动，
+// 组内条数再多也能滚到底；行内复用 TaskItem 卡片视觉（见 LongTermTaskRow）。已删除任务不计入。
 
 import { useMemo, useState, type ComponentType } from "react";
 import { AlertIcon, CheckCircleIcon, ClockIcon } from "@/components/Icons";
@@ -10,32 +10,65 @@ import {
   EditTaskModal,
   type TaskModalTarget,
 } from "@/components/EditTaskModal/EditTaskModal";
+import { LongTermTaskRow } from "@/components/LongTermTaskRow/LongTermTaskRow";
 import {
-  LongTermTaskRow,
-  type LongTermTone,
-} from "@/components/LongTermTaskRow/LongTermTaskRow";
-import {
+  buildTaskMap,
+  isComposite,
   isLongTermOnce,
+  isRootTask,
   longTermBucket,
   sortByCompletedAtDesc,
   sortByEndDateAsc,
   todayKey,
 } from "@/lib";
 import { useTaskStore } from "@/stores";
-import type { Task, TaskEdit } from "@/types";
+import type { CompositeTarget, TaskSubmitPayload } from "@/types";
 import styles from "./LongTermView.module.css";
 
+type Bucket = "pending" | "overdue" | "done";
+
 interface SectionDef {
-  tone: LongTermTone;
   title: string;
   icon: ComponentType<{ size?: number }>;
   hint: string;
+  /** 该组为空、但整体有长期任务时的文案 */
+  empty: string;
 }
 
-const SECTIONS: Record<"pending" | "overdue" | "done", SectionDef> = {
-  pending: { tone: "pending", title: "待完成", icon: ClockIcon, hint: "按截止日由近到远" },
-  overdue: { tone: "overdue", title: "已逾期", icon: AlertIcon, hint: "截止日已过，尽快处理" },
-  done: { tone: "done", title: "已完成", icon: CheckCircleIcon, hint: "按完成时间由新到旧" },
+/** 导航顺序：关注度高在前 */
+const SECTION_ORDER: Bucket[] = ["pending", "overdue", "done"];
+
+const SECTIONS: Record<Bucket, SectionDef> = {
+  pending: {
+    title: "待完成",
+    icon: ClockIcon,
+    hint: "按截止日由近到远",
+    empty: "没有待完成的长期任务",
+  },
+  overdue: {
+    title: "已逾期",
+    icon: AlertIcon,
+    hint: "截止日已过，尽快处理",
+    empty: "没有已逾期的长期任务",
+  },
+  done: {
+    title: "已完成",
+    icon: CheckCircleIcon,
+    hint: "按完成时间由新到旧",
+    empty: "还没有已完成的长期任务",
+  },
+};
+
+/** 整体一条长期任务都没有时的说明 */
+const NO_TASK_TEXT =
+  "还没有长期任务。在「待办」页新建任务时，把结束日期设得比起始日晚，" +
+  "或关掉「指定结束日期」让它每天出现、直到你勾掉为止。";
+
+/** 色调 → CSS 类（显式映射，禁止动态拼接类名） */
+const TONE_CLASS: Record<Bucket, string> = {
+  pending: styles.tone_pending,
+  overdue: styles.tone_overdue,
+  done: styles.tone_done,
 };
 
 export function LongTermView() {
@@ -43,13 +76,46 @@ export function LongTermView() {
   const setDone = useTaskStore((s) => s.setDone);
   const removeTask = useTaskStore((s) => s.removeTask);
   const updateTask = useTaskStore((s) => s.updateTask);
+  const updateComposite = useTaskStore((s) => s.updateComposite);
+  const setSubtaskDone = useTaskStore((s) => s.setSubtaskDone);
+  const removeSubtask = useTaskStore((s) => s.removeSubtask);
+  const reorderSubtasks = useTaskStore((s) => s.reorderSubtasks);
+  const addSubtask = useTaskStore((s) => s.addSubtask);
+  const attachToComposite = useTaskStore((s) => s.attachToComposite);
 
   const today = todayKey();
   const [target, setTarget] = useState<TaskModalTarget | null>(null);
+  // 默认落在「待完成」，逾期数量由左栏红色计数提示，不自动跳转
+  const [active, setActive] = useState<Bucket>("pending");
+  // 展开的是哪个任务集；用 Set 支持多个同时展开
+  const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(() => new Set<string>());
 
-  const { pending, overdue, done, total } = useMemo(() => {
-    const longTerm = tasks.filter((t) => isLongTermOnce(t.schedule) && !t.archived);
-    const pick = (bucket: "pending" | "overdue" | "done") =>
+  const taskMap = useMemo(() => buildTaskMap(tasks), [tasks]);
+
+  // 右键菜单「添加到任务集」的候选：所有未删除的任务集（整页只建一份，
+  // 「本行当前属于哪个」由行内拿 parentId 比）
+  const compositeTargets = useMemo<CompositeTarget[]>(
+    () =>
+      tasks
+        .filter((task) => isComposite(task) && !task.archived)
+        .map((task) => ({ id: task.id, title: task.title })),
+    [tasks],
+  );
+
+  const toggleExpand = (id: string) => {
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const buckets = useMemo(() => {
+    // 长期页同样要过滤顶层：子任务（含 endDate 为 null 的）在 schedule 上
+    // 也满足 isLongTermOnce，不过滤就会既出现在任务集的展开区、又出现在列表里。
+    const longTerm = tasks.filter((t) => isRootTask(t) && isLongTermOnce(t.schedule) && !t.archived);
+    const pick = (bucket: Bucket) =>
       longTerm
         .filter((t) => longTermBucket(t, today) === bucket)
         .sort(bucket === "done" ? sortByCompletedAtDesc : sortByEndDateAsc);
@@ -61,22 +127,40 @@ export function LongTermView() {
     };
   }, [tasks, today]);
 
-  const handleSubmit = (edit: TaskEdit) => {
-    if (target === null) return;
-    if (target.kind === "edit") void updateTask(target.task.id, edit);
+  const handleSubmit = (payload: TaskSubmitPayload) => {
+    if (target === null || target.kind !== "edit") return;
+    if (payload.kind === "composite") void updateComposite(target.task.id, payload.edit);
+    else void updateTask(target.task.id, payload.edit);
   };
 
   const handleArchive = (id: string) => {
-    if (window.confirm("归档后任务将从列表移除，但保留历史完成记录。确定？")) {
+    if (window.confirm("删除后任务及其历史完成记录将一并移除，不可恢复。确定？")) {
       void removeTask(id);
     }
   };
 
-  const groups: { def: SectionDef; items: Task[] }[] = [
-    { def: SECTIONS.pending, items: pending },
-    { def: SECTIONS.overdue, items: overdue },
-    { def: SECTIONS.done, items: done },
-  ];
+  const handleRemoveSubtask = (parentId: string, childId: string) => {
+    if (window.confirm("该子任务将从任务集中删除，不可恢复。确定？")) {
+      void removeSubtask(parentId, childId);
+    }
+  };
+
+  /** 右键「添加到任务集」：收编后它会从长期任务列表移进任务集展开区，先讲清后果 */
+  const handleAttachToComposite = (childId: string, parentId: string) => {
+    const child = tasks.find((task) => task.id === childId);
+    const parent = tasks.find((task) => task.id === parentId);
+    if (child === undefined || parent === undefined) return;
+    const ok = window.confirm(
+      `把「${child.title}」加入任务集「${parent.title}」。\n` +
+        "之后它会从长期任务列表移入该任务集的展开区，截止日若超出任务集区间会自动收敛。\n" +
+        "确定？",
+    );
+    if (ok) void attachToComposite(parentId, childId);
+  };
+
+  const def = SECTIONS[active];
+  const items = buckets[active];
+  const PanelIcon = def.icon;
 
   return (
     <section className={styles.view}>
@@ -85,112 +169,95 @@ export function LongTermView() {
           <h1 className={styles.title}>长期任务</h1>
           <p className={styles.context}>起始日开始执行的一次性长期任务（含无截止日）</p>
         </div>
-        <div className={styles.summary}>
-          <span className={`${styles.stat} ${styles.statAll}`}>全部 {total}</span>
-          <span className={`${styles.stat} ${styles.statPending}`}>待完成 {pending.length}</span>
-          <span className={`${styles.stat} ${styles.statOverdue}`}>已逾期 {overdue.length}</span>
-        </div>
+        <span className={`${styles.stat} ${styles.statAll}`}>全部 {buckets.total}</span>
       </header>
 
-      <div className={styles.content}>
-        {total === 0 ? (
-          <p className={styles.empty}>
-            还没有长期任务。在「待办」页新建任务时，把结束日期设得比起始日晚，
-            或关掉「指定结束日期」让它每天出现、直到你勾掉为止。
-          </p>
-        ) : (
-          groups.map(({ def, items }) => (
-            <LongTermSection
-              key={def.tone}
-              def={def}
-              items={items}
-              today={today}
-              onToggleDone={(id, d) => void setDone(id, today, d)}
-              onEdit={(t) => setTarget({ kind: "edit", task: t })}
-              onRemove={handleArchive}
-            />
-          ))
-        )}
+      <div className={styles.body}>
+        <nav className={styles.nav} aria-label="长期任务状态切换">
+          {SECTION_ORDER.map((key) => {
+            const item = SECTIONS[key];
+            const Icon = item.icon;
+            const isActive = key === active;
+            const count = buckets[key].length;
+            return (
+              <button
+                key={key}
+                type="button"
+                className={[
+                  styles.navItem,
+                  TONE_CLASS[key],
+                  isActive ? styles.navItemActive : "",
+                ]
+                  .filter((c) => c !== "")
+                  .join(" ")}
+                onClick={() => setActive(key)}
+                aria-current={isActive ? "true" : undefined}
+              >
+                <span className={styles.navIcon} aria-hidden="true">
+                  <Icon size={16} />
+                </span>
+                <span className={styles.navLabel}>{item.title}</span>
+                <span
+                  className={`${styles.navCount}${
+                    key === "overdue" && count > 0 ? ` ${styles.navCountAlert}` : ""
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <section className={styles.panel} aria-label={def.title}>
+          <div className={styles.panelHead}>
+            <span className={`${styles.panelIcon} ${TONE_CLASS[active]}`} aria-hidden="true">
+              <PanelIcon size={16} />
+            </span>
+            <span className={styles.panelTitle}>{def.title}</span>
+            <span className={styles.panelCount}>{items.length}</span>
+            <span className={styles.panelHint}>{def.hint}</span>
+          </div>
+
+          {items.length === 0 ? (
+            <p className={styles.empty}>{buckets.total === 0 ? NO_TASK_TEXT : def.empty}</p>
+          ) : (
+            <div className={styles.listScroll}>
+              <ul className={styles.list}>
+                {items.map((task) => (
+                  <LongTermTaskRow
+                    key={task.id}
+                    task={task}
+                    tone={active}
+                    today={today}
+                    taskMap={taskMap}
+                    expanded={expandedIds.has(task.id)}
+                    onToggleExpand={toggleExpand}
+                    onToggleSubtask={(parentId, childId, done) =>
+                      void setSubtaskDone(parentId, childId, done)
+                    }
+                    onRemoveSubtask={handleRemoveSubtask}
+                    onReorderSubtasks={(parentId, ids) => void reorderSubtasks(parentId, ids)}
+                    onAddSubtask={(parentId, title) => void addSubtask(parentId, title)}
+                    compositeTargets={compositeTargets}
+                    onAttachToComposite={handleAttachToComposite}
+                    onToggleDone={(id, d) => void setDone(id, today, d)}
+                    onEdit={(t) => setTarget({ kind: "edit", task: t })}
+                    onRemove={handleArchive}
+                  />
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
       </div>
 
       <EditTaskModal
         target={target}
+        tasks={tasks}
         onSubmit={handleSubmit}
-        onArchive={handleArchive}
         onClose={() => setTarget(null)}
       />
-    </section>
-  );
-}
-
-interface LongTermSectionProps {
-  def: SectionDef;
-  items: Task[];
-  today: string;
-  onToggleDone: (id: string, done: boolean) => void;
-  onEdit: (task: Task) => void;
-  onRemove: (id: string) => void;
-}
-
-function LongTermSection({
-  def,
-  items,
-  today,
-  onToggleDone,
-  onEdit,
-  onRemove,
-}: LongTermSectionProps) {
-  const [open, setOpen] = useState(true);
-  const Icon = def.icon;
-
-  return (
-    <section className={`${styles.group} ${styles[`group_${def.tone}`]}`}>
-      <button
-        type="button"
-        className={styles.groupHead}
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-      >
-        <span className={`${styles.chevron} ${open ? styles.chevronOpen : ""}`} aria-hidden="true">
-          <svg
-            viewBox="0 0 16 16"
-            width={14}
-            height={14}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M4 6l4 4 4-4" />
-          </svg>
-        </span>
-        <span className={styles.groupIcon} aria-hidden="true">
-          <Icon size={16} />
-        </span>
-        <span className={styles.groupTitle}>{def.title}</span>
-        <span className={styles.groupCount}>{items.length}</span>
-        <span className={styles.groupHint}>{def.hint}</span>
-      </button>
-
-      {open &&
-        (items.length === 0 ? (
-          <p className={styles.groupEmpty}>暂无{def.title}的长期任务</p>
-        ) : (
-          <ul className={styles.list}>
-            {items.map((task) => (
-              <LongTermTaskRow
-                key={task.id}
-                task={task}
-                tone={def.tone}
-                today={today}
-                onToggleDone={onToggleDone}
-                onEdit={onEdit}
-                onRemove={onRemove}
-              />
-            ))}
-          </ul>
-        ))}
     </section>
   );
 }

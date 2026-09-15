@@ -1,0 +1,93 @@
+/* 右键菜单浮层：固定定位 + 高层级，样式与卡片同调（面板色 / 边框 / 大阴影） */
+
+.menu {
+  position: fixed;
+  /* 低于 Mantine Modal（默认 200）但高于页面里所有浮层（FAB 10、日历 5） */
+  z-index: 60;
+  min-width: 180px;
+  max-width: 280px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--dt-panel);
+  border: 1px solid var(--dt-border);
+  border-radius: 10px;
+  box-shadow: var(--dt-shadow-lg);
+}
+
+.group + .group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--dt-border);
+}
+
+.groupTitle {
+  padding: 4px 8px 2px;
+  font-size: 11px;
+  color: var(--dt-text-muted);
+}
+
+.empty {
+  margin: 0;
+  padding: 4px 8px 6px;
+  font-size: 12px;
+  color: var(--dt-text-muted);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.item:hover {
+  background: var(--dt-panel-2);
+}
+
+.item.danger:hover {
+  color: var(--dt-danger);
+}
+
+.item.disabled {
+  color: var(--dt-text-muted);
+  cursor: default;
+}
+
+.item.disabled:hover {
+  background: transparent;
+  color: var(--dt-text-muted);
+}
+
+/* 打勾位：固定宽度，有勾没勾都占位，标签左边缘才不会跳动 */
+.check {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  color: var(--dt-accent);
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.hint {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--dt-text-muted);
+}

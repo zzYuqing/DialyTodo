@@ -16,6 +16,107 @@
   transform: translateY(-1px);
 }
 
+/* ── 复合任务（任务集）──
+   只在 li 上放开 wrap，让展开区换行到下一"虚拟行"；不动 .row 本身的横向 flex，
+   非复合任务的行布局一个像素都不受影响。 */
+.compositeRow {
+  flex-wrap: wrap;
+  column-gap: 12px;
+  row-gap: 0;
+}
+
+.expand {
+  flex: 1 0 100%;
+  width: 100%;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--dt-border);
+}
+
+.expandButton {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  cursor: pointer;
+  transition: color 120ms ease, background-color 120ms ease, transform 120ms ease;
+}
+
+.expandButton:hover {
+  background: var(--dt-panel-2);
+  color: var(--dt-text);
+}
+
+/* 展开时箭头旋转 90° 指向下方 */
+.expandButtonOpen {
+  transform: rotate(90deg);
+}
+
+/* 进度：N/M 徽标 + 薄进度条。放在正文底部，不抢标题的视觉权重 */
+.progressBadge {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--dt-accent);
+}
+
+.progressRow {
+  margin-top: 6px;
+}
+
+.progressTrack {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--dt-accent-soft);
+  overflow: hidden;
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--dt-accent);
+  transition: width 200ms ease;
+}
+
+/* 拖拽排序：可拖动的行用抓握手型光标提示 */
+.draggable {
+  cursor: grab;
+}
+
+.draggable:active {
+  cursor: grabbing;
+}
+
+/* 正被拖起的一行：原位浮起并跟随鼠标（位移由内联 transform 给出）。
+   transform 不参与布局，所以原位自动留空；这里只加「浮起来」的观感。
+   内联样式的优先级高于 .row:hover，无需担心 hover 位移打架。
+   拖拽中必须关掉过渡 —— 否则行会慢半拍跟不上鼠标。 */
+.row.dragging {
+  z-index: 2;
+  box-shadow: var(--dt-shadow-lg);
+  cursor: grabbing;
+  user-select: none;
+  transition: none;
+}
+
+/* 放置目标：插入线画在上方还是下方，取决于前移还是后移 */
+.dropAbove {
+  box-shadow: var(--dt-shadow-md), inset 0 2px 0 0 var(--dt-accent);
+}
+
+.dropBelow {
+  box-shadow: var(--dt-shadow-md), inset 0 -2px 0 0 var(--dt-accent);
+}
+
 .row.done {
   opacity: 0.55;
 }

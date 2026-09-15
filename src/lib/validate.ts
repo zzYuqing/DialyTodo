@@ -5,7 +5,15 @@ import { CURRENT_VERSION, HOLIDAY_URL_TEMPLATE, MIN_SUPPORTED_VERSION } from "@/
 import type { AppSettings, DayRecord, Reminder, Schedule, Task, TasksFile } from "@/types";
 
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const SCHEDULE_TYPE_SET = new Set(["once", "workday", "weekend", "daily"]);
+const SCHEDULE_TYPE_SET = new Set(["once", "workday", "weekend", "daily", "weekly"]);
+
+/** 星期序号数组：元素必须是 0（周一）到 6（周日）的整数 */
+function isWeekdays(value: unknown): value is number[] {
+  return (
+    Array.isArray(value) &&
+    value.every((day) => typeof day === "number" && Number.isInteger(day) && day >= 0 && day <= 6)
+  );
+}
 
 /** 是否为合法日期键 YYYY-MM-DD */
 export function isDateKey(value: unknown): value is string {
@@ -20,6 +28,8 @@ function isSchedule(value: unknown): value is Schedule {
   // 用 != null 同时放过 null 与 undefined：老数据可能整个缺 endDate 字段，
   // 严格写 !== null 会让 undefined 走进 isDateKey 并被判非法，导致整份文件被误判损坏。
   if (candidate.endDate != null && !isDateKey(candidate.endDate)) return false;
+  // weekdays 是 weekly 专属字段，存量数据整个缺失；存在时必须合法，缺失放行（由 normalize 补 []）
+  if (candidate.weekdays != null && !isWeekdays(candidate.weekdays)) return false;
   return true;
 }
 
@@ -34,6 +44,27 @@ function isDayRecord(value: unknown): value is DayRecord {
   const candidate = value as Partial<DayRecord>;
   if (typeof candidate.done !== "boolean") return false;
   return candidate.doneAt === null || typeof candidate.doneAt === "string";
+}
+
+/**
+ * 复合任务三个新字段的结构校验。
+ * 用 != null 放过「整个字段缺失」的存量数据，存在时才校验类型 —— 与 completedAt 同样的理由：
+ * 严格写 !== null 会让老数据整份被判废。
+ *
+ * 注意这里**只做单条粒度的类型校验**：children 指向的任务是否存在、children 与 parentId
+ * 是否互相一致，都需要全表上下文，属于 syncChildrenIndex 的职责（载入 / 导入时自愈)。
+ */
+function hasValidCompositeFields(candidate: Partial<Task>): boolean {
+  if (candidate.kind != null && candidate.kind !== "single" && candidate.kind !== "composite") {
+    return false;
+  }
+  if (candidate.children != null) {
+    if (!Array.isArray(candidate.children)) return false;
+    if (!candidate.children.every((id) => typeof id === "string")) return false;
+  }
+  if (candidate.parentId != null && typeof candidate.parentId !== "string") return false;
+  if (candidate.childDoneAt != null && typeof candidate.childDoneAt !== "string") return false;
+  return true;
 }
 
 /** 是否为合法的任务对象 */
@@ -54,13 +85,14 @@ export function isTask(value: unknown): value is Task {
   if (candidate.completedAt != null && !isDateKey(candidate.completedAt)) return false;
 
   if (typeof candidate.instances !== "object" || candidate.instances === null) return false;
-  return Object.values(candidate.instances).every(isDayRecord);
+  if (!Object.values(candidate.instances).every(isDayRecord)) return false;
+  return hasValidCompositeFields(candidate);
 }
 
 /**
  * 按指定类型校验任务。与 isTask 的区别：schedule.type 只要求等于传入的 type，
- * 不再依赖全局 SCHEDULE_TYPE_SET 白名单 —— 新增任务类型时只需登记自己的校验分支，
- * 已有类型的判断逻辑完全不动（满足「新增类型不影响旧 task」）。基础字段校验与 isTask 保持一致。
+ * 新增任务类型时只需登记自己的校验分支，已有类型的判断逻辑完全不动
+ * （满足「新增类型不影响旧 task」）。基础字段校验与 isTask 保持一致。
  */
 export function validateTaskOfType(type: string, value: unknown): value is Task {
   if (typeof value !== "object" || value === null) return false;
@@ -74,12 +106,13 @@ export function validateTaskOfType(type: string, value: unknown): value is Task 
   if (candidate.schedule.type !== type) return false;
   if (!isDateKey(candidate.schedule.startDate)) return false;
   if (candidate.schedule.endDate != null && !isDateKey(candidate.schedule.endDate)) return false;
+  if (candidate.schedule.weekdays != null && !isWeekdays(candidate.schedule.weekdays)) return false;
   if (!isReminder(candidate.reminder)) return false;
   if (typeof candidate.archived !== "boolean") return false;
   if (candidate.completedAt != null && !isDateKey(candidate.completedAt)) return false;
   if (typeof candidate.instances !== "object" || candidate.instances === null) return false;
   if (!Object.values(candidate.instances).every(isDayRecord)) return false;
-  return true;
+  return hasValidCompositeFields(candidate);
 }
 
 /**
@@ -145,16 +178,30 @@ export function parseTasksFileCompatible(value: unknown): TasksFile | null {
 /**
  * 补齐存量数据缺失的可选字段，使内存态与 Task 类型定义一致。
  * - completedAt：阶段 6 新增，老数据整个字段缺失；
- * - schedule.endDate：老字段，但放宽校验后理论上允许缺失，一并归一。
- * 两者缺失时下游都用 `!== null` 判空，undefined 会被误读成「有值」。
+ * - schedule.endDate：老字段，但放宽校验后理论上允许缺失，一并归一；
+ * - schedule.weekdays：阶段 7 随 weekly 周期新增，老数据整个字段缺失。
+ * 三者缺失时下游都用 `!== null` 判空，undefined 会被误读成「有值」；
+ * weekdays 补 [] 后 occursOn 的 includes 判定天然不命中，非 weekly 任务行为不变。
  *
  * 归入纯函数校验层（与 isTask / normalize 同处），由 storage 与迁移路由共用。
  */
 export function normalizeTask(task: Task): Task {
+  const kind = task.kind === "composite" ? "composite" : "single";
+  const composite = kind === "composite";
   return {
     ...task,
+    kind,
+    // children 只对任务集有意义：非 composite 一律归一成 undefined（不落盘），
+    // 保证「有 children 数组」等价于「是任务集」这条语义不被脏数据破坏。
+    children: composite ? (Array.isArray(task.children) ? task.children : []) : undefined,
+    parentId: task.parentId ?? null,
+    childDoneAt: task.childDoneAt ?? null,
     completedAt: task.completedAt ?? null,
-    schedule: { ...task.schedule, endDate: task.schedule.endDate ?? null },
+    schedule: {
+      ...task.schedule,
+      endDate: task.schedule.endDate ?? null,
+      weekdays: task.schedule.weekdays ?? [],
+    },
   };
 }
 

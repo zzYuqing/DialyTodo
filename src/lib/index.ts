@@ -9,3 +9,4 @@ export * from "./completion";
 export * from "./task";
 export * from "./validate";
 export * from "./ddl";
+export * from "./composite";

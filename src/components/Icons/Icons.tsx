@@ -93,7 +93,7 @@ export function EditIcon({ size }: IconProps) {
   );
 }
 
-/** 归档动作：垃圾桶（与侧栏收纳箱区分，操作态用立体的桶） */
+/** 删除动作：垃圾桶（与侧栏收纳箱区分，操作态用立体的桶） */
 export function TrashIcon({ size }: IconProps) {
   return (
     <svg {...base(size)}>
@@ -129,6 +129,29 @@ export function CheckIcon({ size }: IconProps) {
   return (
     <svg {...base(size)}>
       <path d="M3 8.5l3.5 3.5L13 5" />
+    </svg>
+  );
+}
+
+/** 展开 / 收起：向右的尖角（展开态由 CSS 旋转 90° 表达） */
+export function ChevronRightIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M6 3.5l5 4.5-5 4.5" />
+    </svg>
+  );
+}
+
+/** 拖拽把手：六个点的点阵 */
+export function GripIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)} strokeWidth={0} fill="currentColor">
+      <circle cx="6" cy="4.5" r="1" />
+      <circle cx="10" cy="4.5" r="1" />
+      <circle cx="6" cy="8" r="1" />
+      <circle cx="10" cy="8" r="1" />
+      <circle cx="6" cy="11.5" r="1" />
+      <circle cx="10" cy="11.5" r="1" />
     </svg>
   );
 }

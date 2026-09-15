@@ -8,6 +8,7 @@ import type { ContributionLevel } from "@/constants";
 import type { Task } from "@/types";
 import { occursOn, type WorkdayChecker } from "./schedule";
 import { isOverdueDdl } from "./ddl";
+import { isRootTask } from "./composite";
 
 export interface DayCompletion {
   /** 当日应完成任务数 */
@@ -27,17 +28,18 @@ export interface DayCompletion {
 
 /**
  * 收集某一天应出现的全部任务。
- * 思路：先按 schedule 判定该日期是否应出现，再跳过已归档任务
- * （删除语义为归档，归档任务不计入待办与完成率分母，提示词 5.1）。
+ * 思路：先按 schedule 判定该日期是否应出现，再跳过已删除任务。
  */
 export function collectTasksOfDay(
   tasks: Task[],
   dateKey: string,
   isWorkday: WorkdayChecker,
 ): Task[] {
+  // 顶层过滤：子任务不单独出现在日清单顶层 —— 它的展示入口只有父任务的展开区，
+  // 放出来会导致同一条任务出现两次。读 task.parentId 是 O(1)（由 syncChildrenIndex 保证准确）。
   return tasks.filter(
     (task) =>
-      !task.archived && occursOn(task.schedule, dateKey, isWorkday, task.completedAt),
+      isRootTask(task) && !task.archived && occursOn(task.schedule, dateKey, isWorkday, task.completedAt),
   );
 }
 

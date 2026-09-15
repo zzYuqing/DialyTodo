@@ -2,7 +2,7 @@
 
 import type { CreateTaskInput, Reminder, Schedule, Task, TaskEdit } from "@/types";
 import { nowIso } from "./date";
-import { isLongTermOnce } from "./ddl";
+import { isActiveDdlTask, isLongTermOnce } from "./ddl";
 
 /** 生成任务 ID。使用 WebView2 内置的 crypto.randomUUID，不引入 uuid 依赖。 */
 export function generateTaskId(): string {
@@ -69,16 +69,6 @@ export function updateTaskReminder(task: Task, reminder: Reminder): Task {
   return { ...task, reminder };
 }
 
-/** 删除即归档：置 archived = true，保留 instances 历史，贡献墙不会缺洞（提示词 5.1） */
-export function archiveTask(task: Task): Task {
-  return { ...task, archived: true };
-}
-
-/** 从归档列表恢复 */
-export function restoreTask(task: Task): Task {
-  return { ...task, archived: false };
-}
-
 /** 应用表单提交值：一次性写入 title / note / schedule / reminder（避免多次落盘） */
 export function applyTaskEdit(task: Task, edit: TaskEdit): Task {
   return { ...task, title: edit.title, note: edit.note, schedule: edit.schedule, reminder: edit.reminder };
@@ -87,4 +77,25 @@ export function applyTaskEdit(task: Task, edit: TaskEdit): Task {
 /** 按创建时间升序排列，保证列表顺序稳定 */
 export function sortTasksByCreatedAt(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+/**
+ * 日清单里「未完成任务」的排序：手动排过序的（order 为数字）按升序在前，
+ * 没排过的走默认规则 —— 活跃 DDL 置顶，其余保持创建顺序。
+ *
+ * 分段而非统一 comparator 的原因：order 只覆盖用户真正拖过的那部分，
+ * 存量任务（order 缺失）仍要享受 DDL 置顶，两者不能混在一起比较。
+ * 已完成的任务不进本函数，由调用方统一沉底。
+ */
+export function sortUnfinishedTasks(tasks: Task[]): Task[] {
+  const manual: Task[] = [];
+  const ddl: Task[] = [];
+  const rest: Task[] = [];
+  for (const task of tasks) {
+    if (typeof task.order === "number") manual.push(task);
+    else if (isActiveDdlTask(task)) ddl.push(task);
+    else rest.push(task);
+  }
+  manual.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  return [...manual, ...ddl, ...rest];
 }

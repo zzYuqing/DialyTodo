@@ -1,0 +1,230 @@
+.panel {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.empty {
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--dt-text-muted);
+}
+
+/* 子任务行：比 TaskItem 更紧凑，不显示周期徽标与提醒 */
+
+.row {
+  /* relative 是必须的：插入指示线用 ::before / ::after 绝对定位绘制 */
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: var(--dt-panel-2);
+  border: 1px solid transparent;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.row:hover {
+  border-color: var(--dt-border);
+}
+
+/* 拖拽中的行提升一层，与其他行拉开层次 */
+.dragging {
+  z-index: 2;
+  position: relative;
+  box-shadow: var(--dt-shadow-md);
+  border-color: var(--dt-border);
+}
+
+.draggable {
+  cursor: grab;
+  touch-action: none;
+}
+
+/* 插入指示线：CSS Modules 里自绘元素，不用伪元素，避免与其他修饰符冲突 */
+.dropAbove::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: -3px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--dt-accent);
+}
+
+.dropBelow::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: -3px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--dt-accent);
+}
+
+.grip {
+  display: flex;
+  align-items: center;
+  color: var(--dt-text-muted);
+  opacity: 0.55;
+  flex-shrink: 0;
+}
+
+/* 已完成的行不参与拖拽，占位保持左侧缩进对齐 */
+.gripPlaceholder {
+  width: 12px;
+  flex-shrink: 0;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  border: 1.5px solid var(--dt-border);
+  background: transparent;
+  color: var(--dt-accent-contrast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.checkbox[aria-pressed="true"] {
+  background: var(--dt-accent);
+  border-color: var(--dt-accent);
+}
+
+.checkbox[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.title {
+  font-size: 13px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+/* 截止日默认中性；过期才走红，其余贴近文字弱化色 */
+.due {
+  color: var(--dt-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.toneNone {
+  color: var(--dt-text-muted);
+}
+
+.toneSoon {
+  color: var(--dt-text);
+}
+
+.toneToday {
+  color: var(--dt-accent);
+  font-weight: 600;
+}
+
+.toneOverdue {
+  color: var(--dt-danger);
+  font-weight: 600;
+}
+
+.noDate {
+  color: var(--dt-text-muted);
+  opacity: 0.7;
+}
+
+.doneBadge {
+  color: var(--dt-accent);
+}
+
+/* 完成态整体弱化 + 标题删除线，视觉语言与 TaskItem 保持一致 */
+.done .title {
+  text-decoration: line-through;
+  color: var(--dt-text-muted);
+}
+
+.remove {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, background-color 120ms ease;
+}
+
+.row:hover .remove {
+  opacity: 1;
+}
+
+.remove:hover {
+  background: var(--dt-accent-soft);
+  color: var(--dt-danger);
+}
+
+/* 「+ 添加子任务」入口：列表末尾的轻量按钮，点开变输入框 */
+.addToggle {
+  margin-top: 2px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.addToggle:hover {
+  background: var(--dt-panel-2);
+  color: var(--dt-text);
+}
+
+.addForm {
+  margin-top: 2px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.addInput {
+  flex: 1;
+}
+

@@ -39,3 +39,8 @@
   margin: 0 auto;
   list-style: none;
 }
+
+/* 拖拽进行中：整列禁止选中，避免拖动时糊出一片文字选区 */
+.dragging {
+  user-select: none;
+}

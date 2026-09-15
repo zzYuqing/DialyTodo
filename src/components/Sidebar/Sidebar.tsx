@@ -2,8 +2,7 @@
 // 设计要点：
 // - 图标为主、文字为辅（hover 出现 tooltip 与 label）。
 // - 当前选中项由 useViewStore.view 决定。
-// - 日视与月视已合并为 Todo 单页，日历导航由该页左栏的「月历化贡献墙」承担，侧栏不再分两个 Tab。
-// - 贡献墙已并入 Todo 页左栏（views/TodoView/CalendarRail），不再作为独立常驻组件。
+// - 日历导航由 Todo 页左栏的「月历化贡献墙」承担（views/TodoView/CalendarRail）。
 
 import type { ComponentType } from "react";
 import { useViewStore } from "@/stores";

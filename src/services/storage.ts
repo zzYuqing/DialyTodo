@@ -26,6 +26,7 @@ import {
   isAppSettings,
   parseTasksFileCompatible,
   parseTasksValueTolerant,
+  syncChildrenIndex,
   validateTaskOfType,
 } from "@/lib";
 import type { AppSettings, LoadResult, ParsedImport, Task, TasksFile } from "@/types";
@@ -285,7 +286,9 @@ export function mergeTasks(current: Task[], incoming: Task[]): Task[] {
   for (const task of incoming) {
     if (!map.has(task.id)) map.set(task.id, task);
   }
-  return [...map.values()];
+  // 合并后关系的两侧可能与父 / 子不在同一份数据里，跑一次自愈：
+  // 以 children 为准重建 parentId，找不到父的任务一律降级回普通顶层任务（不会消失）。
+  return syncChildrenIndex([...map.values()]);
 }
 
 // ============================================================================

@@ -3,15 +3,29 @@
 // 设计要点（沿用上一版 ScheduleRule）：工作日判定由外部回调注入，
 // 使本模块与节假日服务解耦 —— 单测时传 () => true 即可覆盖全部周期分支。
 
+import { SCHEDULE_TYPE_LABELS, WEEKDAY_SHORT_LABELS } from "@/constants";
 import type { Schedule } from "@/types";
+import { weekdayIndexOf } from "./date";
 
 /** 工作日判定回调，由节假日服务提供 */
 export type WorkdayChecker = (dateKey: string) => boolean;
 
 /**
+ * 周期规则的人类可读文案：weekly 具体到星期（如「每周一、五」），其余类型用常量表。
+ * 徽标展示统一走这里，新增周期类型时只需在本函数补一个分支。
+ */
+export function describeSchedule(schedule: Schedule): string {
+  if (schedule.type !== "weekly") return SCHEDULE_TYPE_LABELS[schedule.type];
+  const days = [...(schedule.weekdays ?? [])].sort((a, b) => a - b);
+  if (days.length === 0) return "每周（未选日期）";
+  return `每周${days.map((day) => WEEKDAY_SHORT_LABELS[day]).join("、")}`;
+}
+
+/**
  * 判断任务在给定日期是否应出现。
  * 思路：先做日期区间过滤（startDate / endDate），再按周期类型分派；
- * workday / weekend 依赖外部传入的工作日判定（含调休逻辑）。
+ * workday / weekend 依赖外部传入的工作日判定（含调休逻辑）；
+ * weekly（每周指定几天）按用户显式勾选的星期命中，与节假日 / 调休无关，不调 isWorkday。
  *
  * 「一次性任务 = 长期任务」语义（阶段 7 起）：schedule.type === "once" 的任务从 startDate
  * 起每天都出现，直到被完成（勾选即关闭）。endDate 只是可选封顶：
@@ -42,6 +56,10 @@ export function occursOn(
       return isWorkday(dateKey);
     case "weekend":
       return !isWorkday(dateKey);
+    case "weekly":
+      // 每周指定几天：取该日期的周一制星期序号，命中 weekdays 即出现。
+      // weekdays 与日历/节假日无关（用户显式指定星期），因此不调 isWorkday。
+      return (schedule.weekdays ?? []).includes(weekdayIndexOf(dateKey));
     default:
       return false;
   }

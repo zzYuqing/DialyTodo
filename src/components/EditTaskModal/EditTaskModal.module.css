@@ -13,3 +13,86 @@
   display: flex;
   align-items: center;
 }
+
+/* 每周指定的星期选择区：标签 + 一排 Chip + 未选日期时的错误提示 */
+.weekdayBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.weekdayLabel {
+  font-size: 12px;
+  color: var(--dt-text-muted);
+}
+
+.weekdayError {
+  font-size: 12px;
+  color: var(--dt-danger);
+}
+
+/* 说明性文案：比错误轻，用弱化色，不抢占用户注意力 */
+.hint {
+  font-size: 12px;
+  color: var(--dt-text-muted);
+}
+
+/* 子任务编辑区：标题行 + 逐条卡片 + 底部提示 */
+.subtaskBlock {
+  border: 1px solid var(--dt-border);
+  border-radius: 10px;
+  padding: 10px;
+  background: var(--dt-panel-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subtaskTitle {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 单条子任务卡片：标题 + 截止日 + 删除占一行，备注单独一行 */
+.subtaskRow {
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--dt-panel);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 已勾选完成的子任务行：整体弱化（标题/截止日已锁定只读） */
+.subtaskRowDone {
+  opacity: 0.7;
+}
+
+/* 「已勾选完成」提示行：贴底显示，弱化色 */
+.subtaskDoneHint {
+  font-size: 11px;
+  color: var(--dt-text-muted);
+}
+
+/* 子任务行的「是否设置结束日期」开关 + 日期选择器：水平排列，
+   容器固定宽度，开关关闭时日期选择器不渲染但空间保留，
+   让左侧标题 TextInput 始终保持同一长度，不随开关状态跳动。 */
+.subtaskEndDate {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 204px;
+  flex-shrink: 0;
+}
+
+.subtaskError {
+  font-size: 12px;
+  color: var(--dt-danger);
+}
+
+/* 自动裁剪的一次性提示：属告知而非报错，用中性弱化色 */
+.subtaskNotice {
+  font-size: 12px;
+  color: var(--dt-text-muted);
+}

@@ -4,16 +4,26 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import {
+  addSubtask,
+  applyCompositeSubtasks,
   applyTaskEdit,
-  archiveTask,
+  attachExistingTask,
+  clampSubtaskDueDates,
   createTask,
-  restoreTask,
+  deriveCompositeCompletion,
+  detachSubtask,
+  generateTaskId,
+  isComposite,
+  nowIso,
+  reorderSubtasks,
   sortTasksByCreatedAt,
+  syncChildrenIndex,
+  toggleSubtask,
   toggleTaskDone,
   todayKey,
 } from "@/lib";
 import { dailyBackup, loadTasks, saveTasks } from "@/services";
-import type { CreateTaskInput, Task, TaskEdit } from "@/types";
+import type { CompositeEdit, CreateTaskInput, Task, TaskEdit } from "@/types";
 
 interface TaskState {
   tasks: Task[];
@@ -27,9 +37,32 @@ interface TaskState {
   addTask: (input: CreateTaskInput) => Promise<void>;
   updateTask: (id: string, edit: TaskEdit) => Promise<void>;
   setDone: (id: string, dateKey: string, done: boolean) => Promise<void>;
-  /** 删除语义为归档（提示词 5.1） */
+  /** 删除任务（硬删除）。任务集删除时连带删除其全部子任务 */
   removeTask: (id: string) => Promise<void>;
-  restoreArchived: (id: string) => Promise<void>;
+
+  // ── 复合任务（任务集）──
+  /** 新建复合任务：创建任务集实体 + 首屏给出的子任务实体，一步落盘 */
+  addComposite: (edit: CompositeEdit) => Promise<void>;
+  /** 编辑复合任务：父字段 + 子任务群（新增 / 改名 / 改截止日 / 删除）+ DDL 收敛 */
+  updateComposite: (id: string, edit: CompositeEdit) => Promise<void>;
+  /** 勾选 / 取消单个子任务。写 childDoneAt，父任务的完成态由 lib 推导 */
+  setSubtaskDone: (parentId: string, childId: string, done: boolean) => Promise<void>;
+  /** 删除单个子任务：摘关系 + 硬删除（否则它会以普通任务身份复活在日清单） */
+  removeSubtask: (parentId: string, childId: string) => Promise<void>;
+  /**
+   * 在既有任务集里直接追加一条子任务（主页展开区「+」入口）。
+   * 与 EditTaskModal 走同一条子任务构造口径，但只追加单条不动其他子任务。
+   */
+  addSubtask: (parentId: string, title: string) => Promise<void>;
+  /** 展开区拖拽排序：ids 是该父此刻全部子任务的新顺序 */
+  reorderSubtasks: (parentId: string, ids: string[]) => Promise<void>;
+  /** 把一条已存在的普通任务收编进任务集（右键菜单「添加到任务集」） */
+  attachToComposite: (parentId: string, childId: string) => Promise<void>;
+  /**
+   * 手动排序：ids 是拖动后未完成区的新顺序，按下标写回各任务的 order 并落盘。
+   * 只改出现在 ids 里的任务，其余（已完成 / 不在当天的）保持原值。
+   */
+  reorderTasks: (ids: string[]) => Promise<void>;
 }
 
 export const useTaskStore = create<TaskState>()(
@@ -41,15 +74,26 @@ export const useTaskStore = create<TaskState>()(
 
     async initialize() {
       const { result, tasks } = await loadTasks();
+      // 载入后自愈：以 children 为准全量重建 parentId，并清掉幽灵 id。
+      // 之后整份内存数据里「是否为顶层」的判断就可以无条件信任 parentId。
+      let cleaned = sortTasksByCreatedAt(syncChildrenIndex(tasks));
+      // 一次性数据迁移：旧版本里 archived=true 的任务一律硬删除。
+      const archivedCount = cleaned.filter((t) => t.archived === true).length;
+      if (archivedCount > 0) {
+        cleaned = cleaned.filter((t) => t.archived !== true);
+      }
       set({
-        tasks: sortTasksByCreatedAt(tasks),
+        tasks: cleaned,
         loaded: true,
         loadError: result.error,
         corruptedBackupPath: result.corruptedBackupPath,
       });
 
       // 只在数据可用时才备份，避免把损坏数据写进备份
-      if (result.ok) await dailyBackup(todayKey());
+      if (result.ok) {
+        if (archivedCount > 0) await saveTasks(cleaned);
+        await dailyBackup(todayKey());
+      }
     },
 
 async addTask(input) {
@@ -74,13 +118,136 @@ async addTask(input) {
     },
 
     async removeTask(id) {
-      const next = get().tasks.map((task) => (task.id === id ? archiveTask(task) : task));
+      const parent = get().tasks.find((task) => task.id === id);
+      // 任务集连带硬删除其全部子任务：否则子任务会因为无人收录而降级回普通任务重新冒到日清单。
+      // 删子任务前先读 children，因为 filter 掉父之后子任务的 parentId 还指向已删的 id，
+      // syncChildrenIndex 下次启动会把它们降级回顶层 —— 不删就会复活。
+      const childIds = parent !== undefined && isComposite(parent) ? new Set(parent.children ?? []) : null;
+      const next =
+        childIds === null
+          ? get().tasks.filter((task) => task.id !== id)
+          : get().tasks.filter((task) => task.id !== id && !childIds.has(task.id));
       set({ tasks: next });
       await saveTasks(next);
     },
 
-    async restoreArchived(id) {
-      const next = get().tasks.map((task) => (task.id === id ? restoreTask(task) : task));
+    async addComposite(edit) {
+      const parentId = generateTaskId();
+      const newIds = edit.subtasks
+        .filter((draft) => draft.id === undefined)
+        .map(() => generateTaskId());
+      const parent: Task = {
+        ...createTask(
+          {
+            title: edit.title,
+            note: edit.note,
+            schedule: edit.schedule,
+            reminder: edit.reminder,
+          },
+          parentId,
+        ),
+        kind: "composite",
+        children: [],
+        parentId: null,
+        childDoneAt: null,
+      };
+      const next = applyCompositeSubtasks(
+        [...get().tasks, parent],
+        parentId,
+        edit.subtasks,
+        newIds,
+        edit.schedule.startDate,
+        nowIso(),
+      );
+      set({ tasks: next });
+      await saveTasks(next);
+    },
+
+    async updateComposite(id, edit) {
+      const current = get().tasks.find((task) => task.id === id);
+      if (current === undefined) return;
+      const newIds = edit.subtasks
+        .filter((draft) => draft.id === undefined)
+        .map(() => generateTaskId());
+      // 先写父字段（维持与既有 updateTask 同一条链路），再做 DDL 收敛与子任务群同步
+      const edited = get().tasks.map((task) =>
+        task.id === id
+          ? { ...applyTaskEdit(task, edit), kind: "composite" as const, children: current.children }
+          : task,
+      );
+      const parentAfterEdit = edited.find((task) => task.id === id);
+      if (parentAfterEdit === undefined) return;
+      const clamped = clampSubtaskDueDates(
+        edited,
+        parentAfterEdit,
+        edit.schedule.startDate,
+        edit.schedule.endDate,
+      );
+      // 子任务群变动后重跑推导：新增一条未完成子任务要让父「取消完成」，
+      // 删掉最后一条未完成的则要让父「补上完成」
+      const next = deriveCompositeCompletion(
+        applyCompositeSubtasks(
+          clamped.tasks,
+          id,
+          edit.subtasks,
+          newIds,
+          edit.schedule.startDate,
+          nowIso(),
+        ),
+        id,
+      );
+      set({ tasks: next });
+      await saveTasks(next);
+    },
+
+    async setSubtaskDone(parentId, childId, done) {
+      const next = toggleSubtask(get().tasks, parentId, childId, done, nowIso());
+      set({ tasks: next });
+      await saveTasks(next);
+    },
+
+    async removeSubtask(parentId, childId) {
+      const detached = detachSubtask(get().tasks, parentId, childId);
+      if (detached === get().tasks) return;
+      // 摘关系后从数组里硬删除：已不在任何 children 里，留着会以普通任务身份重新出现在日清单顶层
+      const removed = detached.filter((task) => task.id !== childId);
+      // 移走的可能正是最后一条未完成的子任务，父的完成态要跟着重算
+      const next = deriveCompositeCompletion(removed, parentId);
+      set({ tasks: next });
+      await saveTasks(next);
+    },
+
+    async addSubtask(parentId, title) {
+      const parent = get().tasks.find((task) => task.id === parentId);
+      if (parent === undefined || !isComposite(parent)) return;
+      const trimmed = title.trim();
+      if (trimmed.length === 0) return;
+      const childId = generateTaskId();
+      const next = addSubtask(get().tasks, parentId, childId, trimmed, nowIso());
+      set({ tasks: next });
+      await saveTasks(next);
+    },
+
+    async reorderSubtasks(parentId, ids) {
+      const next = reorderSubtasks(get().tasks, parentId, ids);
+      set({ tasks: next });
+      await saveTasks(next);
+    },
+
+    async attachToComposite(parentId, childId) {
+      const next = attachExistingTask(get().tasks, parentId, childId);
+      // 原样返回 = 目标非法或已是成员，不写盘
+      if (next === get().tasks) return;
+      set({ tasks: next });
+      await saveTasks(next);
+    },
+
+    async reorderTasks(ids) {
+      const rank = new Map(ids.map((id, index) => [id, index]));
+      const next = get().tasks.map((task) => {
+        const order = rank.get(task.id);
+        return order === undefined ? task : { ...task, order };
+      });
       set({ tasks: next });
       await saveTasks(next);
     },

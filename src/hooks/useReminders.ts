@@ -1,9 +1,12 @@
 // 职责：把提醒调度接到任务数据上（提示词 5.2）。
 // 订阅任务列表与当天的工作日判定，变化即重排提醒；跨午夜自动重排次日。
 // 提醒依赖进程存活：托盘常驻时正常，完全退出后不再提醒（reminderService 已注明）。
+//
+// 子任务不单独提醒：它已经在任务集的展开区里表达，再响一次就是重复。
+// 这里按顶层过滤，而不是收编时把 reminder.enabled 改成 false —— 后者会悄悄改掉用户设过的值。
 
 import { useEffect, useState } from "react";
-import { todayKey } from "@/lib";
+import { isRootTask, todayKey } from "@/lib";
 import { clearReminders, scheduleReminders } from "@/services";
 import { useTaskStore } from "@/stores";
 import { useWorkdayChecker } from "./useWorkdayChecker";
@@ -18,7 +21,12 @@ export function useReminders(): void {
   const isWorkday = useWorkdayChecker([dayKey]);
 
   useEffect(() => {
-    scheduleReminders(tasks, isWorkday, dayKey, () => setDayKey(todayKey()));
+    scheduleReminders(
+      tasks.filter(isRootTask),
+      isWorkday,
+      dayKey,
+      () => setDayKey(todayKey()),
+    );
     return () => clearReminders();
   }, [tasks, isWorkday, dayKey]);
 }

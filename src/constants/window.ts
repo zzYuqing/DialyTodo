@@ -2,7 +2,7 @@
 // 尺寸均为逻辑像素。FULL_* / SIMPLE_* 与窗口界面模式一一对应；
 // MINI_* 保留给迷你模式（暂未开放，接口不删）。
 
-/** 完整模式：侧栏 + 贡献墙 + 设置/归档的完整布局 */
+/** 完整模式：侧栏 + 贡献墙 + 长期任务页 + 设置的完整布局 */
 export const FULL_WIDTH = 980;
 export const FULL_HEIGHT = 680;
 export const FULL_MIN_WIDTH = 760;

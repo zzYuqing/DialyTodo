@@ -47,7 +47,7 @@ export function isOverdueDdl(task: Task, dateKey: string): boolean {
   );
 }
 
-/** 活跃 DDL：长期 DDL 且未完成、未归档（用于日清单置顶） */
+/** 活跃 DDL：长期 DDL 且未完成、未删除（用于日清单置顶） */
 export function isActiveDdlTask(task: Task): boolean {
   return isLongDdlTask(task.schedule) && task.completedAt == null && !task.archived;
 }
@@ -80,7 +80,7 @@ export type LongTermBucket = "pending" | "overdue" | "done";
  * - overdue：截止日已过去且未完成（today > endDate）；
  * - pending：尚未完成且未过截止日。
  * 与日清单的 isOverdueDdl（仅在 endDate 当天标记「已过期」）口径不同。
- * 调用方需先过滤掉 archived（已归档/删除）任务。
+ * 调用方需先过滤掉已删除任务。
  */
 export function longTermBucket(task: Task, today: string): LongTermBucket {
   if (task.completedAt != null) return "done";

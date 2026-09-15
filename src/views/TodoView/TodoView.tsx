@@ -3,7 +3,7 @@
 // - 页面标题恒为选中日期：‹ › 翻天（改 selectedDate），今天按钮回跳（已在今天时禁用）；
 // - 左栏 CalendarRail 承担全部日历职责（月/年两种粒度的「月历化贡献墙」导航），
 //   右侧 DayMode 永远展示 selectedDate 的单日清单 —— 没有日/月模式切换；
-// - AddTaskFab 在右栏内（DayMode 挂载），新建、编辑、归档等完整交互都在右栏完成。
+// - AddTaskFab 在右栏内（DayMode 挂载），新建、编辑、删除等完整交互都在右栏完成。
 
 import { addDaysToKey, calcDayCompletion, formatDateLabel, todayKey } from "@/lib";
 import { useTaskStore, useViewStore } from "@/stores";
