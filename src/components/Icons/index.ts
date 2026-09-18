@@ -8,6 +8,7 @@ export {
   EditIcon,
   GripIcon,
   LongTermIcon,
+  NoteIcon,
   PlusIcon,
   SettingsIcon,
   TodoIcon,

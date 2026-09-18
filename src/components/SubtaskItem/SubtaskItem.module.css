@@ -32,12 +32,19 @@
   border-color: var(--dt-border);
 }
 
-/* 拖拽中的行提升一层，与其他行拉开层次 */
+/* 拖拽中的行：提升一层 + 半透明，让下层目标行的插入指示线能透出来。
+ * 同时缩一点宽度（通过内联 transform: scale 实现，配合这里的 transform-origin）
+ * 避免悬浮条首尾两端把指示线彻底盖住。pointer-events: none 防御性地阻止
+ * 拖拽中的幽灵行吃掉任何命中测试（window 上的 pointermove 不依赖它）。 */
 .dragging {
   z-index: 2;
   position: relative;
   box-shadow: var(--dt-shadow-md);
   border-color: var(--dt-border);
+  opacity: 0.75;
+  pointer-events: none;
+  transform-origin: center;
+  transition: none;
 }
 
 .draggable {
@@ -107,18 +114,26 @@
   opacity: 0.5;
 }
 
-.body {
+/* 主区：标题行 + 可选的展开备注，纵向堆叠、占满剩余宽度 */
+.main {
   flex: 1;
   min-width: 0;
   display: flex;
+  flex-direction: column;
+}
+
+.body {
+  display: flex;
   align-items: baseline;
   gap: 8px;
+  min-width: 0;
   overflow: hidden;
 }
 
 .title {
   font-size: 13px;
   line-height: 1.4;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -163,6 +178,85 @@
 
 .doneBadge {
   color: var(--dt-accent);
+}
+
+/* 备注折叠胶囊：默认只露一行截断预览，点击后胶囊自身原地展开为多行文本块（方案 C 原地展开）。
+ * 视觉同源父任务行 .note（--dt-text-muted / 12px / 行高 1.5）。 */
+.notePill {
+  display: inline-flex;
+  align-items: flex-start;
+  align-self: flex-start;
+  gap: 4px;
+  max-width: 80%;
+  margin-top: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--dt-border);
+  border-radius: 999px;
+  background: var(--dt-bg);
+  color: var(--dt-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease, border-radius 120ms ease;
+}
+
+.notePill:hover {
+  color: var(--dt-text);
+  border-color: var(--dt-accent);
+}
+
+/* 短备注：单行就能放完，不需要展开按钮/箭头，也不给 hover 高亮 */
+.notePillStatic {
+  cursor: default;
+}
+
+.notePillStatic:hover {
+  color: var(--dt-text-muted);
+  border-color: var(--dt-border);
+}
+
+/* 展开态：胶囊变成占满 80% 宽度的圆角矩形，容纳多行备注 */
+.notePillOpen {
+  width: 80%;
+  border-radius: 10px;
+  padding: 5px 8px;
+}
+
+.noteIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.noteText {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.noteTextOpen {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.noteChevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-top: 1px;
+  transition: transform 150ms ease;
+}
+
+.noteChevronOpen {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-top: 1px;
+  transform: rotate(90deg);
+  transition: transform 150ms ease;
 }
 
 /* 完成态整体弱化 + 标题删除线，视觉语言与 TaskItem 保持一致 */

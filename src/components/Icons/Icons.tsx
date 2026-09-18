@@ -133,6 +133,15 @@ export function CheckIcon({ size }: IconProps) {
   );
 }
 
+/** 备注：对话气泡（子任务备注折叠胶囊用） */
+export function NoteIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M3 3.5h10a1 1 0 011 1V9a1 1 0 01-1 1H7.5L5 12.5V10H3a1 1 0 01-1-1V4.5a1 1 0 011-1z" />
+    </svg>
+  );
+}
+
 /** 展开 / 收起：向右的尖角（展开态由 CSS 旋转 90° 表达） */
 export function ChevronRightIcon({ size }: IconProps) {
   return (

@@ -250,7 +250,9 @@ export const TaskItem = memo(function TaskItem({
     <li
       className={rowClasses.join(" ")}
       // 拖拽中整行跟着鼠标走：transform 不参与布局，原位自然留空作为「落点参考」
-      style={drag?.dragging === true ? { transform: `translateY(${drag.offsetY}px)` } : undefined}
+      style={drag?.dragging === true
+        ? { transform: `translateY(${drag.offsetY}px) scale(0.9)` }
+        : undefined}
       onPointerDown={
         drag === undefined ? undefined : (event) => drag.onPointerDown(drag.index, event)
       }

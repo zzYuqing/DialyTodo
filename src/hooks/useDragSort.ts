@@ -64,7 +64,7 @@ export function useDragSort<T extends { id: string }>(
   };
 
   /** 用各行的实际矩形高度判定插入位置：比按固定行高估算稳，能兼容备注换行导致的行高不一 */
-  const resolveDropIndex = (clientY: number, from: number, dy: number): number => {
+  const resolveDropIndex = (clientY: number, from: number): number => {
     const list = listRef.current;
     if (list === null) return from;
     const children = Array.from(list.children) as HTMLElement[];
@@ -74,9 +74,10 @@ export function useDragSort<T extends { id: string }>(
       .map((node) => node.getBoundingClientRect());
     if (spans.length === 0) return from;
 
-    const startRect = spans[from];
-    const draggedCenter =
-      startRect !== undefined ? startRect.top + startRect.height / 2 + dy : clientY;
+    // 直接用鼠标 Y 坐标作为放置判定基准。
+    // 注意不能用 startRect.top + dy 之类的计算——getBoundingClientRect() 返回的是
+    // transform 生效后的矩形，再加 dy 会导致偏移量翻倍（用户拖 2 格，计算以为拖了 4 格）。
+    const draggedCenter = clientY;
 
     let target = from;
     for (let index = 0; index < spans.length; index += 1) {
@@ -112,7 +113,7 @@ export function useDragSort<T extends { id: string }>(
       if (current === null) return;
       const dy = moveEvent.clientY - current.startY;
       const dragging = Math.abs(dy) >= DRAG_THRESHOLD_PX;
-      update({ ...current, dy, to: dragging ? resolveDropIndex(moveEvent.clientY, current.from, dy) : current.from });
+      update({ ...current, dy, to: dragging ? resolveDropIndex(moveEvent.clientY, current.from) : current.from });
     };
 
     const onUp = () => {

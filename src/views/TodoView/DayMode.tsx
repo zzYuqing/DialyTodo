@@ -154,6 +154,23 @@ export function DayMode() {
   };
 
   /**
+   * 拖起的是「展开中」的任务集时，先收起它的展开区。
+   * 展开区挂在父行 <li> 内部，拖起来会跟着整行一起位移，
+   * 既挡住后面的行，也让按行高判定插入位置的结果失真。
+   * 收起是单向的：拖完落位后不自动还原，避免刚排好的顺序又被撑开的面板打乱。
+   */
+  const collapseDraggedComposite = (index: number) => {
+    const dragged = unfinishedRef.current[index];
+    if (dragged === undefined || !isComposite(dragged)) return;
+    setExpandedIds((current) => {
+      if (!current.has(dragged.id)) return current;
+      const next = new Set(current);
+      next.delete(dragged.id);
+      return next;
+    });
+  };
+
+  /**
    * 按下即挂 window 上的 move / up 监听（而不是只听 li 的 onPointerMove）：
    * 鼠标甩得快时会离开原行，挂在 li 上就再也收不到事件，拖拽会卡住。
    * 也不用 setPointerCapture —— 它会把 click / dblclick 一并重定向到 li，
@@ -173,6 +190,8 @@ export function DayMode() {
         // 没越过阈值就不动状态：单击勾选、双击编辑照常工作
         if (Math.abs(moveEvent.clientY - startY) < DRAG_THRESHOLD_PX) return;
         window.getSelection()?.removeAllRanges();
+        // 越过阈值才算真在拖：此刻收起被拖任务集的展开区，松手后不再自动展开
+        collapseDraggedComposite(state.from);
       }
       const dy = moveEvent.clientY - startY;
       const to = resolveDropIndex(moveEvent.clientY, state.from, dy);
