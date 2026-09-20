@@ -135,11 +135,6 @@
   border-color: var(--dt-accent);
 }
 
-/* 今天：内圈描边（可与选中叠加） */
-.cellToday {
-  box-shadow: inset 0 0 0 1.5px var(--dt-accent);
-}
-
 /* 未来日期：空心描边（透明填充 + 虚线边），读作「待填空槽」，与过去空日(level-0)及绿色数据档区分；可点 */
 .cellFuture {
   border: 1.5px dashed var(--dt-contrib-future);

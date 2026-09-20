@@ -140,3 +140,16 @@ export function getContributionDays(months: number, now: Date = new Date()): str
   const start = startOfWeek(windowStart, { weekStartsOn: 1 });
   return eachDayOfInterval({ start, end: now }).map(toDateKey);
 }
+
+/**
+ * 生成「今天所在自然年」的剩余日期（明天 → 12 月 31 日），不含今天。
+ * 用途：月粒度迷你月历会把整年 12 个月都画出来，未来月份需要查询「当天待办多少 / 有无当日截止」，
+ * 因此这些日期也要参与批量完成度计算（它们的 done 恒为 0，不影响色阶分档的 maxDone）。
+ * 今天已是 12 月 31 日（无剩余日期）时返回空数组。
+ */
+export function getYearRemainingDays(now: Date = new Date()): string[] {
+  const startKey = addDaysToKey(toDateKey(now), 1);
+  const endKey = toDateKey(new Date(now.getFullYear(), 11, 31));
+  if (startKey > endKey) return [];
+  return eachDayOfInterval({ start: fromDateKey(startKey), end: fromDateKey(endKey) }).map(toDateKey);
+}

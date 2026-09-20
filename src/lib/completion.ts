@@ -20,8 +20,11 @@ export interface DayCompletion {
   /** 贡献墙色阶档位；仅在批量窗口计算（calcDaysCompletion）时有效，单日计算无窗口上下文故为 0 */
   level: ContributionLevel;
   /**
-   * 当天过期的 DDL 任务数。仅在 dateKey === schedule.endDate 且 completedAt === null 时为 1，
-   * 贡献墙用此字段决定右下角是否显示过期角标。其他日期恒为 0。
+   * DDL 任务「截止日命中当天且尚未完成」的数量（判定见 ddl.ts 的 isOverdueDdl）。
+   * 口径本身与日期的先后无关，因此两种读法共用同一字段：
+   * - 过去 / 今天 → 「已过期」条数，贡献墙用它决定右下角是否显示过期角标；
+   * - 未来日期 → 「当日截止」条数，贡献墙未来格用它提示当天有几项到期。
+   * 未命中截止日的日期恒为 0。
    */
   expiredDdlCount: number;
 }

@@ -13,7 +13,12 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useWorkdayChecker } from "@/hooks";
-import { calcDaysCompletion, getContributionDays, type DayCompletion } from "@/lib";
+import {
+  calcDaysCompletion,
+  getContributionDays,
+  getYearRemainingDays,
+  type DayCompletion,
+} from "@/lib";
 import { useTaskStore, useViewStore } from "@/stores";
 import { RAIL_WIDTH_MAX, RAIL_WIDTH_MIN } from "@/stores";
 import {
@@ -45,10 +50,15 @@ export function CalendarRail() {
 
   // 日期序列不随任何视图状态变化，应用会话内只需计算一次
   const days = useMemo(() => getContributionDays(CONTRIBUTION_YEAR_MONTHS), []);
-  const isWorkday = useWorkdayChecker(days);
+  // 未来日期（今天所在自然年的剩余天）：月粒度会把整年 12 个月都画出来，
+  // 未来格要显示「待完成 N 项 / X 项当日截止」，故一并参与批量计算。
+  // 这些天的 done 恒为 0，不会抬高色阶分档用的 maxDone，色阶语义不变。
+  const futureDays = useMemo(() => getYearRemainingDays(), []);
+  const allDays = useMemo(() => [...days, ...futureDays], [days, futureDays]);
+  const isWorkday = useWorkdayChecker(allDays);
   const completions = useMemo(
-    () => calcDaysCompletion(tasks, days, isWorkday),
-    [tasks, days, isWorkday],
+    () => calcDaysCompletion(tasks, allDays, isWorkday),
+    [tasks, allDays, isWorkday],
   );
 
   const totalDone = useMemo(
