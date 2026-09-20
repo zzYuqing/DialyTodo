@@ -5,6 +5,7 @@ export {
   CheckIcon,
   ChevronRightIcon,
   ClockIcon,
+  CloseIcon,
   EditIcon,
   GripIcon,
   LongTermIcon,

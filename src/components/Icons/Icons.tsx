@@ -164,3 +164,12 @@ export function GripIcon({ size }: IconProps) {
     </svg>
   );
 }
+
+/** 清除 / 关闭：两条交叉线（截止日胶囊里的清除键用） */
+export function CloseIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" />
+    </svg>
+  );
+}

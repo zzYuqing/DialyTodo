@@ -8,7 +8,7 @@ import type { ContributionLevel } from "@/constants";
 import type { Task } from "@/types";
 import { occursOn, type WorkdayChecker } from "./schedule";
 import { isOverdueDdl } from "./ddl";
-import { isRootTask } from "./composite";
+import { isComposite, isRootTask } from "./composite";
 
 export interface DayCompletion {
   /** 当日应完成任务数 */
@@ -85,6 +85,14 @@ export const EMPTY_COMPLETION: DayCompletion = {
  * 批量计算多天的完成情况，返回「日期键 -> 完成情况」映射（月历与贡献墙共用）。
  * 思路：先逐日计算 total/done/ratio，再在窗口内按「单日完成数量」分档色阶：
  * 0 项为 0 档，其余按 maxDone 等分为 1-4 档，完成越多档位越高。
+ *
+ * 贡献墙口径修正（需求：任务集只有子任务完成才算完成数，父任务不算）：
+ * 父任务的完成是 deriveCompositeCompletion 派生的聚合值（写入父 instances 的「最后完成日」），
+ * 等于其子任务完成的汇总，不能和子任务各按实际完成日的计数重复相加。
+ * 因此每格 done 在分档前做「减去父聚合 + 加上子任务按日完成」的修正，
+ * 让贡献墙如实反映「当天实际勾掉了几项子任务」。
+ * 该修正只作用在批量版（贡献墙），calcDayCompletion（日清单 statsLine）保持原口径，
+ * 以免与日清单里看不到子任务勾选的视觉脱节。
  */
 export function calcDaysCompletion(
   tasks: Task[],
@@ -96,12 +104,54 @@ export function calcDaysCompletion(
     result[key] = calcDayCompletion(tasks, key, isWorkday);
   }
 
+  const subtaskByDay = subtaskDoneByDay(tasks);
+  const compositeByDay = compositeDoneByDay(tasks);
+  for (const key of dateKeys) {
+    const base = result[key];
+    const adjusted = base.done - (compositeByDay.get(key) ?? 0) + (subtaskByDay.get(key) ?? 0);
+    result[key] = { ...base, done: Math.max(0, adjusted) };
+  }
+
   const maxDone = Math.max(0, ...Object.values(result).map((c) => c.done));
   for (const key of dateKeys) {
     result[key].level = countToLevel(result[key].done, maxDone);
   }
 
   return result;
+}
+
+/**
+ * 每位子任务按「完成日」分布的计数（贡献墙专用）。
+ * 子任务不出现在日清单顶层，但完成事件写在 childDoneAt；
+ * childDoneAt 一律是 new Date().toISOString()（UTC Z 结尾），切片取日期，
+ * 与 deriveCompositeCompletion 写入父 instances 的日期口径完全一致，父子不串日。
+ */
+function subtaskDoneByDay(tasks: Task[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const task of tasks) {
+    if (isRootTask(task)) continue; // 仅子任务参与，跳过顶层任务与任务集父
+    const at = task.childDoneAt;
+    if (at == null) continue;
+    const day = at.slice(0, 10);
+    if (day.length !== 10) continue;
+    map.set(day, (map.get(day) ?? 0) + 1);
+  }
+  return map;
+}
+
+/**
+ * 每位任务集父任务的聚合完成按「完成日」分布的计数（贡献墙专用，用于剔除重复计）。
+ * 父 instances 里 done 的格子，就是它当初被推导写入「整体完成」的那天。
+ */
+function compositeDoneByDay(tasks: Task[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const task of tasks) {
+    if (!isComposite(task)) continue;
+    for (const [day, inst] of Object.entries(task.instances)) {
+      if (inst.done) map.set(day, (map.get(day) ?? 0) + 1);
+    }
+  }
+  return map;
 }
 
 /**

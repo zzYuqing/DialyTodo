@@ -37,9 +37,9 @@
   color: var(--dt-text-muted);
 }
 
-/* 子任务编辑区：标题行 + 逐条卡片 + 底部提示 */
+/* 子任务编辑区：外层只做浅底分组，不再描边 —— 描边让给卡片。
+   两层都描边会形成「框里框」，一圈就够。 */
 .subtaskBlock {
-  border: 1px solid var(--dt-border);
   border-radius: 10px;
   padding: 10px;
   background: var(--dt-panel-2);
@@ -48,12 +48,21 @@
   gap: 8px;
 }
 
+/* 区块标题与表单里其他 label 同号同重（Mantine 的 Input label 为 14px / 500），
+   原先 13px / 600 比它下面的「整体起始日期」还重，层级是反的。 */
 .subtaskTitle {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
 }
 
-/* 单条子任务卡片：标题 + 截止日 + 删除占一行，备注单独一行 */
+.subtaskCount {
+  font-size: 12px;
+  color: var(--dt-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 单条子任务卡片：第一行 = 序号 + 标题 + 截止日 + 删除，第二行 = 备注。
+   卡片是这一块里唯一的描边盒，一条 = 一盒。 */
 .subtaskRow {
   border: 1px solid var(--dt-border);
   border-radius: 8px;
@@ -62,6 +71,26 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+/* 标题行：一行里四个控件的横向排布 */
+.subtaskHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 序号：给每行一个固定锚点。placeholder 一输入就没了，不能只靠它认第几条。 */
+.subtaskIndex {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--dt-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.subtaskName {
+  flex: 1;
+  min-width: 0;
 }
 
 /* 已勾选完成的子任务行：整体弱化（标题/截止日已锁定只读） */
@@ -75,15 +104,145 @@
   color: var(--dt-text-muted);
 }
 
-/* 子任务行的「是否设置结束日期」开关 + 日期选择器：水平排列，
-   容器固定宽度，开关关闭时日期选择器不渲染但空间保留，
-   让左侧标题 TextInput 始终保持同一长度，不随开关状态跳动。 */
-.subtaskEndDate {
+/* 截止日未设置：虚线胶囊，点一下设为整体起始日。
+   原先是 Switch + 定宽 204px 的占位容器（为了不跳动而预留空间），
+   关掉时右侧就留一片空白；这里换成自适应宽度，控件多宽占多宽，标题输入自动让位。 */
+.dueAdd {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px dashed var(--dt-border-strong);
+  border-radius: 999px;
+  background: transparent;
+  /* 标签用 --dt-text 而不是 weak 色：它替换掉的那个 Switch 标签是高对比正文，
+     虚化靠的是虚线轮廓 + 小字号，不是靠压低文字对比度（--dt-text-muted 只有 4.14:1，不够正文 AA）。 */
+  color: var(--dt-text);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.dueAdd:hover:not(:disabled) {
+  border-style: solid;
+  border-color: var(--dt-accent);
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+}
+
+.dueAdd:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* 截止日已设置：浅绿胶囊包住一枚无边框日期输入 + 清除键。
+   日期文字走 --dt-text 而不是强调绿：12px 属正文，绿在浅绿底上只有 4.55:1，
+   贴着及格线，不值得为一点色感冒对比度风险。 */
+.dueSet {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
-  width: 204px;
+  gap: 2px;
+  height: 26px;
+  padding: 0 4px 0 10px;
+  border-radius: 999px;
+  background: var(--dt-accent-soft);
+}
+
+/* Mantine 的 unstyled 变体已把内边距 / 边框 / 底色置空，
+   这里只需压掉它默认的 30px 高度，让输入服从胶囊的 26px。 */
+.dueInput {
   flex-shrink: 0;
+  width: 108px;
+}
+
+.dueInput input {
+  min-height: 0;
+  height: 20px;
+  font-size: 12px;
+  color: var(--dt-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 清除截止日：18px 的小叉，静息弱化，hover 转危险色 */
+.dueClear {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--dt-text-muted);
+  cursor: pointer;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.dueClear:hover {
+  background: var(--dt-panel);
+  color: var(--dt-danger);
+}
+
+/* 备注条：无边框 + 极浅底 + 前置图标 —— 读作「这一条的补充说明」，不是第二个输入框。
+   原先它也是一个全宽描边输入框，跟标题长得一模一样，看不出哪个是主体。
+   始终渲染，不做「有内容才出现」的条件分支，避免同一张卡里的字段空值策略不一致。 */
+.subtaskNote {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--dt-panel-2);
+  color: var(--dt-text-muted);
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+
+/* 无边框输入没有自带聚焦态，补一圈内描边，键盘用户才看得到焦点落在哪 */
+.subtaskNote:focus-within {
+  background: var(--dt-panel);
+  box-shadow: inset 0 0 0 1px var(--dt-accent);
+}
+
+.subtaskNoteIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.subtaskNoteInput {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 删除：图标按钮。静息态就是弱化灰（4.14:1，过非文字元素 3:1 的门槛），hover 才转危险色。
+   取代原先常驻的红色「删除」二字 —— 那个红字是整行最抢眼的东西，可它只是个次要操作。 */
+.subtaskRemove {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  cursor: pointer;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.subtaskRemove:hover {
+  background: var(--dt-accent-soft);
+  color: var(--dt-danger);
+}
+
+.subtaskRemove:focus-visible {
+  outline: 2px solid var(--dt-accent);
+  outline-offset: 1px;
 }
 
 .subtaskError {

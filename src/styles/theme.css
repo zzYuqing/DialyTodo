@@ -14,6 +14,9 @@
   --dt-text: #2a332b;
   --dt-text-muted: #75806f;
   --dt-border: rgba(45, 60, 50, 0.12);
+  /* 交互控件的描边：--dt-border 只有 12% 透明度，画虚线胶囊几乎看不见，
+     凡是「控件边界」而非「区域分隔线」的描边走这一档。 */
+  --dt-border-strong: rgba(45, 60, 50, 0.3);
   --dt-accent: #2c7a53;
   --dt-accent-contrast: #ffffff;
   --dt-accent-soft: rgba(44, 122, 83, 0.1);
@@ -72,6 +75,7 @@ html[data-theme="dark"] {
   --dt-text: #e3e8e3;
   --dt-text-muted: #96a196;
   --dt-border: rgba(255, 255, 255, 0.1);
+  --dt-border-strong: rgba(255, 255, 255, 0.22);
   --dt-accent: #57b385;
   --dt-accent-contrast: #0e1511;
   --dt-accent-soft: rgba(87, 179, 133, 0.14);

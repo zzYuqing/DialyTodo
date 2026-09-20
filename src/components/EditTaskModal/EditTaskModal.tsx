@@ -38,6 +38,7 @@ import {
   todayKey,
   weekdayIndexOf,
 } from "@/lib";
+import { CloseIcon, NoteIcon, PlusIcon, TrashIcon } from "@/components/Icons";
 import styles from "./EditTaskModal.module.css";
 
 /** 模态目标：新建时只需一个默认起始日，编辑时需要完整任务 */
@@ -221,6 +222,12 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
         : `已将 ${count} 个子任务的截止日同步调整为 ${nextEnd === null ? "无截止日" : nextEnd}（跟随整体截止日）`,
     );
     return next;
+  };
+
+  /** 就地改一条子任务草稿：标题 / 截止日 / 备注三个字段共用这一个入口，
+      否则同一段 setSubtasks(map) 要在下面重复四遍。 */
+  const patchSubtask = (index: number, patch: Partial<SubtaskDraft>) => {
+    setSubtasks((current) => current.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   };
 
   const handleEndDateChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -466,15 +473,22 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
           </Group>
 
           {/* 子任务编辑区：只有任务集才有。
-              每条子任务 = 标题 + 备注 + 截止日，顺序即显示顺序（拖动 / 删除在列表页做）。
-              父的整体截止日开启时子任务必填截止日，这里逐行给出具体问题。 */}
+              每条子任务 = 序号 + 标题 + 截止日 + 备注，顺序即显示顺序（拖动在列表页做）。
+              父的整体截止日开启时子任务必填截止日，这里逐行给出具体问题。
+              层级：标题输入保留描边（主），备注退成无边框浅底条（次），
+              截止日收成一枚胶囊，删除收成图标 —— 一行里不再有四个同权重的控件。 */}
           {isCompositeForm && (
             <div className={styles.subtaskBlock}>
-              <Group justify="space-between" align="center">
-                <div className={styles.subtaskTitle}>子任务</div>
+              <Group justify="space-between" align="center" gap={6}>
+                <Group gap={6} align="baseline">
+                  <span className={styles.subtaskTitle}>子任务</span>
+                  <span className={styles.subtaskCount}>{subtasks.length} 条</span>
+                </Group>
                 <Button
                   size="compact-xs"
-                  variant="default"
+                  variant="subtle"
+                  color="gray"
+                  leftSection={<PlusIcon size={12} />}
                   onClick={() => setSubtasks((current) => [...current, emptyDraft()])}
                 >
                   添加子任务
@@ -488,7 +502,7 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
               <Stack gap={6}>
                 {subtasks.map((draft, index) => {
                   // 父有截止日时子任务必填截止日（subtaskIssue 强制），
-                  // 这时开关锁定为开 + 禁用，避免关掉后立刻出现校验错误。
+                  // 这时不给「清除截止日」，避免清掉后立刻出现校验错误。
                   const endDateLocked = parentEnd !== null;
                   // 已勾选完成的子任务：标题与截止日锁定只读，仅备注可编辑。
                   // 防止「已完成」状态被改标题/截止日造成历史完成态对不上的语义漂移。
@@ -498,83 +512,86 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
                       key={draft.id ?? `new-${index}`}
                       className={`${styles.subtaskRow}${doneLocked ? ` ${styles.subtaskRowDone}` : ""}`}
                     >
-                      <Group align="flex-start" wrap="nowrap" gap="xs">
+                      <div className={styles.subtaskHead}>
+                        {/* 序号常驻：placeholder 输入后就消失，靠它才能一眼认出这是第几条 */}
+                        <span className={styles.subtaskIndex}>
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
                         <TextInput
-                          style={{ flex: 1 }}
+                          className={styles.subtaskName}
                           placeholder={`子任务 ${index + 1}`}
                           value={draft.title}
                           maxLength={120}
                           readOnly={doneLocked}
-                          onChange={(e) =>
-                            setSubtasks((current) =>
-                              current.map((item, i) =>
-                                i === index ? { ...item, title: e.currentTarget.value } : item,
-                              ),
-                            )
-                          }
+                          onChange={(e) => patchSubtask(index, { title: e.currentTarget.value })}
                         />
-                        <div className={styles.subtaskEndDate}>
-                          <Switch
-                            size="xs"
-                            label="截止"
-                            checked={draft.endDate !== null}
-                            disabled={endDateLocked || doneLocked}
-                            onChange={(e) => {
-                              const enabled = e.currentTarget.checked;
-                              setSubtasks((current) =>
-                                current.map((item, i) =>
-                                  i === index
-                                    ? {
-                                        ...item,
-                                        endDate: enabled ? (item.endDate ?? startDate) : null,
-                                      }
-                                    : item,
-                                ),
-                              );
-                            }}
-                          />
-                          {draft.endDate !== null && (
+                        {/* 截止日：未设置 = 虚线胶囊，点一下设为整体起始日；
+                            已设置 = 浅绿胶囊内嵌无边框日期输入 + 清除键。
+                            父任务有整体截止日时不允许清除（endDateLocked），
+                            已勾选完成的行整体只读（doneLocked）。 */}
+                        {draft.endDate === null ? (
+                          <button
+                            type="button"
+                            className={styles.dueAdd}
+                            disabled={doneLocked}
+                            onClick={() => patchSubtask(index, { endDate: startDate })}
+                          >
+                            <PlusIcon size={11} />
+                            截止
+                          </button>
+                        ) : (
+                          <div className={styles.dueSet}>
                             <TextInput
                               type="date"
-                              w={148}
                               size="xs"
+                              variant="unstyled"
+                              className={styles.dueInput}
                               value={draft.endDate}
                               readOnly={doneLocked}
                               onChange={(e) =>
-                                setSubtasks((current) =>
-                                  current.map((item, i) =>
-                                    i === index
-                                      ? { ...item, endDate: e.currentTarget.value || null }
-                                      : item,
-                                  ),
-                                )
+                                patchSubtask(index, { endDate: e.currentTarget.value || null })
                               }
                             />
-                          )}
-                        </div>
-                        <Button
-                          variant="subtle"
-                          color="red"
-                          size="compact-xs"
+                            {!endDateLocked && !doneLocked && (
+                              <button
+                                type="button"
+                                className={styles.dueClear}
+                                aria-label="清除截止日"
+                                title="清除截止日"
+                                onClick={() => patchSubtask(index, { endDate: null })}
+                              >
+                                <CloseIcon size={11} />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          className={styles.subtaskRemove}
+                          aria-label="删除这条子任务"
+                          title="删除这条子任务"
                           onClick={() =>
                             setSubtasks((current) => current.filter((_, i) => i !== index))
                           }
                         >
-                          删除
-                        </Button>
-                      </Group>
-                      <TextInput
-                        placeholder="备注（可选）"
-                        size="xs"
-                        value={draft.note}
-                        onChange={(e) =>
-                          setSubtasks((current) =>
-                            current.map((item, i) =>
-                              i === index ? { ...item, note: e.currentTarget.value } : item,
-                            ),
-                          )
-                        }
-                      />
+                          <TrashIcon size={13} />
+                        </button>
+                      </div>
+                      {/* 备注条：不描边、不加 label，退成卡片里的第二行补充说明。
+                          始终渲染，不做「有内容才出现」的条件分支。 */}
+                      <div className={styles.subtaskNote}>
+                        <span className={styles.subtaskNoteIcon}>
+                          <NoteIcon size={11} />
+                        </span>
+                        <TextInput
+                          variant="unstyled"
+                          size="xs"
+                          className={styles.subtaskNoteInput}
+                          placeholder="备注（可选）"
+                          value={draft.note}
+                          onChange={(e) => patchSubtask(index, { note: e.currentTarget.value })}
+                        />
+                      </div>
                       {doneLocked && (
                         <div className={styles.subtaskDoneHint}>已勾选完成，标题与截止日不可改</div>
                       )}

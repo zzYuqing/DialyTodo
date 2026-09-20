@@ -11,6 +11,21 @@ import { useEffect, useRef, useState, type PointerEvent, type RefObject } from "
 /** 小于这个位移（px）视为点击而非拖拽，避免和 tick 交互抢手势 */
 const DRAG_THRESHOLD_PX = 4;
 
+/**
+ * 浏览器默认把「按下 + 移动」解释成文本选择：不拦的话，从一行按下再往下拖，
+ * 途经的所有文字都会被刷成蓝底选区（选区起点在按下处，终点跟着鼠标走）。
+ * selectstart 是 cancelable 的，拦它最精准 ——
+ * 不动 mousedown / click / focus，所以行内按钮、:active 的 grabbing 光标都不受影响。
+ */
+function blockSelectStart(event: Event): void {
+  event.preventDefault();
+}
+
+/** 清掉按下之前就存在的选区，免得它跟着本次拖拽一路被刷蓝 */
+function clearSelection(): void {
+  window.getSelection()?.removeAllRanges();
+}
+
 interface DragState {
   /** 起始行在可排序区间的序号 */
   from: number;
@@ -112,7 +127,10 @@ export function useDragSort<T extends { id: string }>(
       const current = dragRef.current;
       if (current === null) return;
       const dy = moveEvent.clientY - current.startY;
+      const wasDragging = Math.abs(current.dy) >= DRAG_THRESHOLD_PX;
       const dragging = Math.abs(dy) >= DRAG_THRESHOLD_PX;
+      // 只在刚跨过阈值这一刻清一次：此后 selectstart 已被拦住，不会再产生新选区
+      if (dragging && !wasDragging) clearSelection();
       update({ ...current, dy, to: dragging ? resolveDropIndex(moveEvent.clientY, current.from) : current.from });
     };
 
@@ -128,9 +146,12 @@ export function useDragSort<T extends { id: string }>(
       finish(current);
     };
 
+    // selectstart 的拦截只在本手势期间有效，松手即摘，拖完仍可正常选中复制文本
+    window.addEventListener("selectstart", blockSelectStart);
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     detachRef.current = () => {
+      window.removeEventListener("selectstart", blockSelectStart);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };

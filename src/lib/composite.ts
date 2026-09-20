@@ -77,6 +77,8 @@ export function subtaskProgressOf(map: TaskMap, parent: Task): SubtaskProgress {
 /**
  * 展示口径的排序：未完成的在前（保持 children 原序），已完成的恒沉底。
  * 与既有 sortUnfinishedTasks 的分区思路一致，但不需要 order 字段。
+ * 已完成区再按完成时间升序（早完成的在上），便于对照先后。
+ * childDoneAt 一律是 new Date().toISOString()（UTC Z 结尾），字典序等价于时间序。
  */
 export function sortSubtasksForDisplay(subtasks: Task[]): Task[] {
   const undone: Task[] = [];
@@ -85,6 +87,7 @@ export function sortSubtasksForDisplay(subtasks: Task[]): Task[] {
     if (task.childDoneAt == null) undone.push(task);
     else done.push(task);
   }
+  done.sort((a, b) => (a.childDoneAt ?? "").localeCompare(b.childDoneAt ?? ""));
   return [...undone, ...done];
 }
 

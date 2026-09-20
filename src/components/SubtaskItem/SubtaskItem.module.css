@@ -41,6 +41,8 @@
   position: relative;
   box-shadow: var(--dt-shadow-md);
   border-color: var(--dt-border);
+  /* 与 TaskItem 的 .row.dragging 同口径：被拖起的行不参与文本选择 */
+  user-select: none;
   opacity: 0.75;
   pointer-events: none;
   transform-origin: center;
