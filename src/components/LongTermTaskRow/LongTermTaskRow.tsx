@@ -9,6 +9,7 @@ import {
   describeSchedule,
   isComposite,
   subtaskProgressOf,
+  type SubtaskEdit,
   type TaskMap,
 } from "@/lib";
 import {
@@ -46,6 +47,8 @@ interface LongTermTaskRowProps {
   onToggleSubtask?: (parentId: string, childId: string, done: boolean) => void;
   onRemoveSubtask?: (parentId: string, childId: string) => void;
   onReorderSubtasks?: (parentId: string, ids: string[]) => void;
+  /** 行内编辑单条子任务：改标题 / 备注 / 截止日 */
+  onEditSubtask?: (parentId: string, childId: string, edit: SubtaskEdit) => void;
   /** 列表末尾「+ 添加子任务」入口提交时调用 */
   onAddSubtask?: (parentId: string, title: string) => void;
   /** 右键菜单里可收编本行的任务集；省略则不显示「添加到任务集」分组 */
@@ -74,6 +77,7 @@ export const LongTermTaskRow = memo(function LongTermTaskRow({
   onToggleSubtask,
   onRemoveSubtask,
   onReorderSubtasks,
+  onEditSubtask,
   onAddSubtask,
   compositeTargets,
   onAttachToComposite,
@@ -281,6 +285,7 @@ export const LongTermTaskRow = memo(function LongTermTaskRow({
             onToggleSubtask={onToggleSubtask ?? (() => undefined)}
             onRemoveSubtask={onRemoveSubtask ?? (() => undefined)}
             onReorderSubtasks={onReorderSubtasks ?? (() => undefined)}
+            onEditSubtask={onEditSubtask ?? (() => undefined)}
             onAddSubtask={onAddSubtask ?? (() => undefined)}
           />
         </div>

@@ -49,6 +49,7 @@ export function DayMode() {
   const setSubtaskDone = useTaskStore((s) => s.setSubtaskDone);
   const removeSubtask = useTaskStore((s) => s.removeSubtask);
   const reorderSubtasks = useTaskStore((s) => s.reorderSubtasks);
+  const editSubtask = useTaskStore((s) => s.editSubtask);
   const addSubtask = useTaskStore((s) => s.addSubtask);
   const attachToComposite = useTaskStore((s) => s.attachToComposite);
 
@@ -308,6 +309,7 @@ export function DayMode() {
               }
               onRemoveSubtask={handleRemoveSubtask}
               onReorderSubtasks={(parentId, ids) => void reorderSubtasks(parentId, ids)}
+              onEditSubtask={(parentId, childId, edit) => void editSubtask(parentId, childId, edit)}
               onAddSubtask={(parentId, title) => void addSubtask(parentId, title)}
               compositeTargets={compositeTargets}
               onAttachToComposite={handleAttachToComposite}

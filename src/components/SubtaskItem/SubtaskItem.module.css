@@ -324,3 +324,210 @@
   flex: 1;
 }
 
+/* ── 行内编辑态 ── */
+
+/* 编辑表单容器：纵向堆叠（标题行 + 备注行 + 锁定提示），占满剩余宽度 */
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* 首行：标题输入 + 截止日胶囊并排，标题占满、胶囊自适应宽度 */
+.editLine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* 标题输入：有描边（主体），与「备注」的幽灵态拉开层级 */
+.editTitle {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 截止日未设置：虚线胶囊，点一下设为父起始日。
+   标签用 --dt-text 而不是弱化色：替换掉的开关是高对比正文，
+   虚化靠虚线轮廓 + 小字号，不是靠压低文字对比度。 */
+.dueAdd {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px dashed var(--dt-border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dt-text);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.dueAdd:hover:not(:disabled) {
+  border-style: solid;
+  border-color: var(--dt-accent);
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+}
+
+.dueAdd:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* 截止日已设置：浅绿胶囊包住一枚无边框日期输入 + 清除键 */
+.dueSet {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 26px;
+  padding: 0 4px 0 10px;
+  border-radius: 999px;
+  background: var(--dt-accent-soft);
+}
+
+/* Mantine 的 unstyled 变体已把内边距 / 边框 / 底色置空，这里只需压掉默认高度 */
+.dueInput {
+  flex-shrink: 0;
+  width: 108px;
+}
+
+.dueInput input {
+  min-height: 0;
+  height: 20px;
+  font-size: 12px;
+  color: var(--dt-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 清除截止日：18px 小叉，静息弱化，hover 转危险色 */
+.dueClear {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--dt-text-muted);
+  cursor: pointer;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.dueClear:hover {
+  background: var(--dt-panel);
+  color: var(--dt-danger);
+}
+
+/* 备注条：无边框 + 极浅底 + 前置图标 —— 读作「这一条的补充说明」，不是第二个输入框 */
+.editNote {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--dt-panel-2);
+  color: var(--dt-text-muted);
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+
+/* 无边框输入没有自带聚焦态，补一圈内描边，键盘用户才看得到焦点落在哪 */
+.editNote:focus-within {
+  background: var(--dt-panel);
+  box-shadow: inset 0 0 0 1px var(--dt-accent);
+}
+
+.editNoteInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--dt-text);
+}
+
+/* 已勾选完成时的锁定提示，贴底弱化显示 */
+.doneHint {
+  font-size: 11px;
+  color: var(--dt-text-muted);
+}
+
+/* 编辑态右侧操作：保存（绿）+ 取消（灰），替换查看态的编辑/删除 */
+.editActions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.editSave {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-accent);
+  cursor: pointer;
+  transition: background-color 120ms ease, opacity 120ms ease;
+}
+
+.editSave:hover:not(:disabled) {
+  background: var(--dt-accent-soft);
+}
+
+.editSaveDisabled {
+  color: var(--dt-text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.editCancel {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.editCancel:hover {
+  background: var(--dt-panel-2);
+  color: var(--dt-text);
+}
+
+/* 查看态的编辑（铅笔）图标：常驻、弱化，hover 显形为强调色 */
+.editBtn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.editBtn:hover {
+  background: var(--dt-panel-2);
+  color: var(--dt-accent);
+}
+
+

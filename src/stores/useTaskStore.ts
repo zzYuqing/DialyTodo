@@ -12,6 +12,7 @@ import {
   createTask,
   deriveCompositeCompletion,
   detachSubtask,
+  editSubtask,
   generateTaskId,
   isComposite,
   nowIso,
@@ -24,6 +25,7 @@ import {
 } from "@/lib";
 import { dailyBackup, loadTasks, saveTasks } from "@/services";
 import type { CompositeEdit, CreateTaskInput, Task, TaskEdit } from "@/types";
+import type { SubtaskEdit } from "@/lib";
 
 interface TaskState {
   tasks: Task[];
@@ -56,6 +58,8 @@ interface TaskState {
   addSubtask: (parentId: string, title: string) => Promise<void>;
   /** 展开区拖拽排序：ids 是该父此刻全部子任务的新顺序 */
   reorderSubtasks: (parentId: string, ids: string[]) => Promise<void>;
+  /** 行内编辑单条子任务：改标题 / 备注 / 截止日（截止日收敛到父区间） */
+  editSubtask: (parentId: string, childId: string, edit: SubtaskEdit) => Promise<void>;
   /** 把一条已存在的普通任务收编进任务集（右键菜单「添加到任务集」） */
   attachToComposite: (parentId: string, childId: string) => Promise<void>;
   /**
@@ -230,6 +234,16 @@ async addTask(input) {
 
     async reorderSubtasks(parentId, ids) {
       const next = reorderSubtasks(get().tasks, parentId, ids);
+      set({ tasks: next });
+      await saveTasks(next);
+    },
+
+    async editSubtask(parentId, childId, edit) {
+      const trimmed = edit.title.trim();
+      if (trimmed.length === 0) return;
+      const next = editSubtask(get().tasks, parentId, childId, { ...edit, title: trimmed });
+      // 原样返回 = 目标非法或子不在成员里，不写盘
+      if (next === get().tasks) return;
       set({ tasks: next });
       await saveTasks(next);
     },

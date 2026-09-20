@@ -37,6 +37,7 @@ import {
   subtaskProgressOf,
   ddlUrgencyFor,
   type DdlUrgency,
+  type SubtaskEdit,
   type TaskMap,
 } from "@/lib";
 import {
@@ -94,6 +95,8 @@ interface TaskItemProps {
   onToggleSubtask?: (parentId: string, childId: string, done: boolean) => void;
   onRemoveSubtask?: (parentId: string, childId: string) => void;
   onReorderSubtasks?: (parentId: string, ids: string[]) => void;
+  /** 行内编辑单条子任务：改标题 / 备注 / 截止日 */
+  onEditSubtask?: (parentId: string, childId: string, edit: SubtaskEdit) => void;
   /** 列表末尾「+ 添加子任务」入口提交时调用 */
   onAddSubtask?: (parentId: string, title: string) => void;
   /**
@@ -128,6 +131,7 @@ export const TaskItem = memo(function TaskItem({
   onToggleSubtask,
   onRemoveSubtask,
   onReorderSubtasks,
+  onEditSubtask,
   onAddSubtask,
   compositeTargets,
   onAttachToComposite,
@@ -217,7 +221,8 @@ export const TaskItem = memo(function TaskItem({
     isLongDdlTask(task.schedule) && !isDdlCompleted && endDate != null
       ? daysBetweenKeys(dateKey, endDate)
       : null;
-  const daysLeftText = daysLeft !== null && daysLeft > 0 ? `剩 ${daysLeft} 天` : null;
+  // 「剩 N 天」含截止日当天的 0 天；但与「已过期」互斥（仅过去日标记已过期），故排除 overdue。
+  const daysLeftText = daysLeft !== null && !overdue && daysLeft >= 0 ? `剩 ${daysLeft} 天` : null;
 
   // 完成态追加文字：完成时距 DDL 的剩余天数（endDate - completedAt）
   const daysAhead =
@@ -389,6 +394,7 @@ export const TaskItem = memo(function TaskItem({
             onToggleSubtask={onToggleSubtask ?? (() => undefined)}
             onRemoveSubtask={onRemoveSubtask ?? (() => undefined)}
             onReorderSubtasks={onReorderSubtasks ?? (() => undefined)}
+            onEditSubtask={onEditSubtask ?? (() => undefined)}
             onAddSubtask={onAddSubtask ?? (() => undefined)}
           />
         </div>

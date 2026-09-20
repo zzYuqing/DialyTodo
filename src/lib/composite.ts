@@ -505,6 +505,52 @@ export function addSubtask(
   return deriveCompositeCompletion(patched, parentId);
 }
 
+/** 行内编辑器提交单条子任务的入参。截止日会被收敛到父区间内 */
+export interface SubtaskEdit {
+  title: string;
+  note: string;
+  /** 截止日；null = 无截止日 */
+  endDate: string | null;
+}
+
+/**
+ * 行内编辑单条子任务：改标题 / 备注 / 截止日，复用「单条写入」语义（与 toggleSubtask / addSubtask 同类）。
+ * - 已完成子任务（childDoneAt != null）标题与截止日锁定，只改备注 —— 与表单端 doneLocked 一致，
+ *   防止「已完成」状态被改标题 / 截止日造成历史完成态对不上的语义漂移；
+ * - 截止日一律经 clampEndDateWithin 收敛到父区间 [父起始, 父截止]，避免脱离父任务约束；
+ * - startDate 恒为父起始（子任务起自父起始），不在此改动；
+ * - 改截止日不影响完成推导（仅看 childDoneAt），仍跑一遍 deriveCompositeCompletion 保持与其他入口一致。
+ * 非法目标（父不是 composite / 子不在成员里 / 子不存在）原样返回，供 store 识别「无变化」跳过写盘。
+ */
+export function editSubtask(
+  tasks: Task[],
+  parentId: string,
+  childId: string,
+  edit: SubtaskEdit,
+): Task[] {
+  const parent = tasks.find((task) => task.id === parentId);
+  if (parent === undefined || !isComposite(parent)) return tasks;
+  if (!childIdsOf(parent).includes(childId)) return tasks;
+  const child = tasks.find((task) => task.id === childId);
+  if (child === undefined) return tasks;
+
+  const locked = child.childDoneAt != null;
+  const parentStart = parent.schedule.startDate;
+  const parentEnd = parent.schedule.endDate;
+  const next = patchTask(tasks, childId, (task) => ({
+    ...task,
+    title: locked ? task.title : edit.title,
+    note: edit.note,
+    schedule: {
+      ...task.schedule,
+      endDate: locked
+        ? task.schedule.endDate
+        : clampEndDateWithin(edit.endDate, parentStart, parentEnd),
+    },
+  }));
+  return deriveCompositeCompletion(next, parentId);
+}
+
 /** 复合任务表单的整体提交入口：父字段 + 子任务群一起落 */
 export function applyCompositeEdit(
   tasks: Task[],

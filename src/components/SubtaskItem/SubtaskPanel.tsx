@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import { TextInput } from "@mantine/core";
 import { PlusIcon } from "@/components/Icons";
 import type { Task } from "@/types";
-import { childTasksOf, sortSubtasksForDisplay, type TaskMap } from "@/lib";
+import { childTasksOf, sortSubtasksForDisplay, type SubtaskEdit, type TaskMap } from "@/lib";
 import { useDragSort } from "@/hooks";
 import { SubtaskItem } from "./SubtaskItem";
 import styles from "./SubtaskItem.module.css";
@@ -23,6 +23,8 @@ interface SubtaskPanelProps {
   onToggleSubtask: (parentId: string, childId: string, done: boolean) => void;
   onRemoveSubtask: (parentId: string, childId: string) => void;
   onReorderSubtasks: (parentId: string, ids: string[]) => void;
+  /** 行内编辑单条子任务：改标题 / 备注 / 截止日 */
+  onEditSubtask?: (parentId: string, childId: string, edit: SubtaskEdit) => void;
   /** 列表末尾「+ 添加子任务」入口提交时调用 */
   onAddSubtask: (parentId: string, title: string) => void;
 }
@@ -35,6 +37,7 @@ export function SubtaskPanel({
   onToggleSubtask,
   onRemoveSubtask,
   onReorderSubtasks,
+  onEditSubtask,
   onAddSubtask,
 }: SubtaskPanelProps) {
   // 展示口径排序：未完成在前（保持 children 原序），已完成恒沉底
@@ -102,9 +105,16 @@ export function SubtaskPanel({
             key={child.id}
             task={child}
             dateKey={dateKey}
+            parentStart={parent.schedule.startDate}
+            parentEnd={parent.schedule.endDate}
             disabledDone={disabledDone}
             onToggleDone={(childId, done) => onToggleSubtask(parent.id, childId, done)}
             onRemove={(childId) => onRemoveSubtask(parent.id, childId)}
+            onEdit={
+              onEditSubtask !== undefined
+                ? (childId, edit) => onEditSubtask(parent.id, childId, edit)
+                : undefined
+            }
             drag={canDrag ? getHandle(index) : undefined}
           />
         );

@@ -2,14 +2,15 @@
 // 起止同日的 once 任务不算长期 DDL（不染红、不显示「已过期」）。
 // 注：endDate === null 的 once 任务同属长期任务（未指定截止日，见 isLongTermOnce），
 //     但没有截止日可算，因此不参与任何 DDL 专属表现（紧迫度染色 / 已过期徽章）。
-// 真正的 DDL（endDate ≠ startDate）「已过期」仅在其 endDate 当天、且未完成时成立；
+// 真正的 DDL（endDate ≠ startDate）「已过期」仅在「过去日期」视图、其 endDate 当天且未完成时成立；
+// 今天或未来的截止日当天一律不算过期（显示「剩 0 天」而非「已过期」），因为还未真正越过截止点。
 // 超过 endDate 的任务由 occursOn / isWithinRange 过滤，不会出现在日清单，故无需在此处理。
 //
 // 纯函数，不碰 IO、不依赖 @tauri-apps/*、react、zustand。
 // 直接 import @/lib/date 取 daysBetweenKeys，避免经 @/lib 索引造成循环依赖。
 
 import type { Schedule, Task } from "@/types";
-import { daysBetweenKeys } from "@/lib/date";
+import { daysBetweenKeys, todayKey } from "@/lib/date";
 
 /** DDL 行展示的紧迫度档位（基于 dateKey 与 schedule.endDate 的差值） */
 export type DdlUrgency = "overdue" | "today" | "imminent" | "soon" | "far" | null;
@@ -38,13 +39,16 @@ export function isLongTermOnce(schedule: Schedule): boolean {
   return schedule.type === "once" && schedule.endDate !== schedule.startDate;
 }
 
-/** 已过期判定：长期 DDL 任务在结束日当天且尚未完成 */
+/**
+ * 已过期判定：长期 DDL 任务在「过去日期」视图下、其 endDate 当天且尚未完成。
+ * 锚定真实今天（todayKey）：今天或未来的截止日当天不算过期——那时只是「剩 0 天」，
+ * 真正越过截止点（endDate 已落入过去）且仍在该过去视图中，才显示「已过期」。
+ */
 export function isOverdueDdl(task: Task, dateKey: string): boolean {
-  return (
-    isLongDdlTask(task.schedule) &&
-    dateKey === task.schedule.endDate &&
-    task.completedAt == null
-  );
+  if (!isLongDdlTask(task.schedule)) return false;
+  const endDate = task.schedule.endDate;
+  if (endDate == null) return false;
+  return dateKey === endDate && dateKey < todayKey() && task.completedAt == null;
 }
 
 /** 活跃 DDL：长期 DDL 且未完成、未删除（用于日清单置顶） */
