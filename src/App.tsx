@@ -3,7 +3,7 @@
 // 视图区按 useViewStore.view 渲染对应视图组件；App 只负责装配与初始化副作用。
 
 import { useEffect, type JSX } from "react";
-import { Sidebar, TitleBar } from "@/components";
+import { Sidebar, TitleBar, WindowResizer } from "@/components";
 import {
   ExperienceView,
   LongTermView,
@@ -62,6 +62,7 @@ export default function App() {
   if (layout === "simple") {
     return (
       <div className={styles.app}>
+        <WindowResizer />
         <SimpleModeView />
       </div>
     );
@@ -71,6 +72,7 @@ export default function App() {
 
   return (
     <div className={styles.app}>
+      <WindowResizer />
       <TitleBar />
       <div className={styles.shell}>
         <Sidebar />

@@ -1,0 +1,82 @@
+/* 覆盖整窗的透明层：自身不拦截事件（pointer-events:none），
+ * 只有各方向手柄重新打开 pointer-events，避免挡住内部正常交互。
+ * 必须挂在 position:relative 的 .app 内（见 App.module.css）。 */
+.layer {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+
+/* 单个方向手柄：绝对定位贴边/贴角，pointer-events 重新打开以接收拖拽。
+ * 边宽 4px、角 12px，足够抓取又不明显侵占内容。 */
+.handle {
+  position: absolute;
+  pointer-events: auto;
+}
+
+/* 四边：两端各内缩 12px 避让四角手柄，避免与角重叠抢命中 */
+.north {
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 4px;
+  cursor: ns-resize;
+}
+
+.south {
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 4px;
+  cursor: ns-resize;
+}
+
+.east {
+  top: 12px;
+  bottom: 12px;
+  right: 0;
+  width: 4px;
+  cursor: ew-resize;
+}
+
+.west {
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: 4px;
+  cursor: ew-resize;
+}
+
+/* 四角：12x12 方块，光标方向按对角规则（NW/SE 一组、NE/SW 一组） */
+.northEast {
+  top: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  cursor: nesw-resize;
+}
+
+.northWest {
+  top: 0;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  cursor: nwse-resize;
+}
+
+.southEast {
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  cursor: nwse-resize;
+}
+
+.southWest {
+  bottom: 0;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  cursor: nesw-resize;
+}

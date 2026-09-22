@@ -216,6 +216,10 @@
 .listScroll {
   flex: 1;
   min-height: 0;
+  /* 作为 .panel(flex column) 的子项，cross axis 水平；默认 min-width:auto
+     会阻止其收缩到 min-content 之下，任务集展开后子任务行把 min-content
+     撑大，列表区拒绝收缩。放开下限，让展开区跟随窗口宽度重排。 */
+  min-width: 0;
   overflow-y: auto;
   padding: 12px 16px 24px;
 }
@@ -224,6 +228,10 @@
   list-style: none;
   margin: 0;
   padding: 0;
+  /* 作为 .listScroll(flex column) 的子项，默认 min-width:auto 阻止其收缩到
+     min-content 之下；任务集展开后子任务行撑大 min-content，列表拒绝收缩。
+     放开下限，让行随列表宽度重排。 */
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;

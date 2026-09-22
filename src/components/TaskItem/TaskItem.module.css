@@ -20,12 +20,20 @@
    只在 li 上放开 wrap，让展开区换行到下一"虚拟行"；不动 .row 本身的横向 flex，
    非复合任务的行布局一个像素都不受影响。 */
 .compositeRow {
+  /* 任务集行是 ul.list(flex column) 的子项，默认 min-width:auto 会阻止它
+     收缩到自身内容最小宽度之下；展开子任务后 min-content 骤增，导致整列
+     在窄窗口拒绝收缩。显式 0 放开下限，让其跟随列表宽度重排。 */
+  min-width: 0;
   flex-wrap: wrap;
   column-gap: 12px;
   row-gap: 0;
 }
 
 .expand {
+  /* 展开区是 .compositeRow(flex-wrap) 的子项，flex:1 0 100% 换行占满整行；
+     但默认 min-width:auto 会阻止其收缩到 min-content 之下，子任务行的
+     最小宽度会把它撑开，进而撑开整列。放开下限，使其跟随父行宽度重排。 */
+  min-width: 0;
   flex: 1 0 100%;
   width: 100%;
   margin-top: 10px;

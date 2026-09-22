@@ -2,6 +2,10 @@
 .mode {
   position: relative;
   flex: 1;
+  /* 右栏是 .body(flex row) 的子项，默认 min-width:auto 阻止其收缩到
+     min-content 之下；任务集展开后 min-content 变大，右栏拒绝收缩，
+     把 ul.list 的 max-width:720 顶成恒定卡死。放开下限让其跟随窗口。 */
+  min-width: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -30,6 +34,10 @@
 .list {
   flex: 1;
   min-height: 0;
+  /* 作为 .mode(flex column) 的子项，默认 min-width:auto 会阻止其收缩到
+     min-content 之下；任务集展开行把 min-content 撑大后，列表拒绝收缩，
+     横向被 computed 成 auto 出现滚动条。放开下限，让列表跟随窗口变窄。 */
+  min-width: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;

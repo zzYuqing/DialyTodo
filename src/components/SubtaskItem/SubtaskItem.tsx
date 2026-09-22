@@ -257,7 +257,11 @@ export const SubtaskItem = memo(function SubtaskItem({
         ) : (
           <>
             <div className={styles.body}>
-              <span className={styles.title}>{task.title}</span>
+              {/* 标题：单行省略号保持行布局紧凑；原生 title 让鼠标悬停时浮出完整标题，
+                  避免过长标题被硬截断后无从查看（对应「悬浮显示全标题文本」）。 */}
+              <span className={styles.title} title={task.title}>
+                {task.title}
+              </span>
               <span className={styles.meta}>
                 {endDate === null ? (
                   <span className={styles.noDate}>无截止日</span>

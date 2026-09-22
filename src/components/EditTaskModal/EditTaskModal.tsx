@@ -108,7 +108,7 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
   /** 每周指定哪几天，0 = 周一 … 6 = 周日；仅 weekly 使用 */
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [startDate, setStartDate] = useState(todayKey());
-  const [endDateEnabled, setEndDateEnabled] = useState(true);
+  const [endDateEnabled, setEndDateEnabled] = useState(false);
   const [endDate, setEndDate] = useState(todayKey());
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState(DEFAULT_REMINDER_TIME);
@@ -173,8 +173,9 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
     // 默认预选起始日所在的星期，避免新建 weekly 时留空
     setWeekdays([weekdayIndexOf(target.startDate)]);
     setStartDate(target.startDate);
-    // 新建默认「是」，结束日期 = 起始日期（DDL 当天）
-    setEndDateEnabled(true);
+    // 新建默认「否」：不设置截止日期（endDate=null，等价于无 DDL）。
+    // 若用户手动打开「是否设置结束日期」开关，则结束日期从起始日期起填。
+    setEndDateEnabled(false);
     setEndDate(target.startDate);
     setReminderEnabled(false);
     setReminderTime(DEFAULT_REMINDER_TIME);

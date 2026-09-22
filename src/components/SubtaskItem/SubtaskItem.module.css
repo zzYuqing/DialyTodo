@@ -509,7 +509,7 @@
   color: var(--dt-text);
 }
 
-/* 查看态的编辑（铅笔）图标：常驻、弱化，hover 显形为强调色 */
+/* 查看态编辑（铅笔）图标：默认隐藏，与删除图标同口径，鼠标移到条目上才显形 */
 .editBtn {
   flex-shrink: 0;
   width: 20px;
@@ -522,7 +522,12 @@
   background: transparent;
   color: var(--dt-text-muted);
   cursor: pointer;
-  transition: background-color 120ms ease, color 120ms ease;
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, background-color 120ms ease;
+}
+
+.row:hover .editBtn {
+  opacity: 1;
 }
 
 .editBtn:hover {
