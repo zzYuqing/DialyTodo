@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>桌宠素材 · 边缘与尺寸验证</title>
+<style>
+  body { margin: 0; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; background: #f3f1ea; color: #2a332b; }
+  h2 { margin: 24px 24px 8px; font-size: 15px; font-weight: 600; }
+  p.hint { margin: 0 24px 16px; font-size: 12px; color: #75806f; }
+  .row { display: flex; flex-wrap: wrap; gap: 16px; margin: 0 24px 8px; }
+  .cell {
+    flex: 1 1 220px; min-height: 300px; border-radius: 10px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+    padding: 16px; box-sizing: border-box;
+  }
+  .cell img { image-rendering: auto; }
+  .cell .label { font-size: 11px; opacity: .75; text-align: center; }
+  /* 模拟各类桌面壁纸 */
+  .bg-dark   { background: #1e2420; }                                  /* 深墨绿暗色壁纸 */
+  .bg-light  { background: #f7f5ef; }                                  /* 浅米白亮色壁纸 */
+  .bg-photo  { background: linear-gradient(135deg, #3a6ea5 0%, #79b3d7 45%, #f0d9a8 100%); } /* 风景照片感 */
+  .bg-plaid  { background: repeating-conic-gradient(#d8636b 0% 25%, #f4a7ad 0% 50%) 0 0 / 28px 28px; } /* 高对比花壁纸 */
+</style>
+</head>
+<body>
+
+<h2>① 边缘白边检查（重点看深色与花壁纸）</h2>
+<p class="hint">抠图残留的半透明白边在深色背景上会显示为一圈灰晕；这两格里机器人轮廓应干净利落。</p>
+<div class="row">
+  <div class="cell bg-dark">
+    <img src="pet-master.png" width="200" alt="">
+    <div class="label">深色壁纸 #1e2420</div>
+  </div>
+  <div class="cell bg-plaid">
+    <img src="pet-master.png" width="200" alt="">
+    <div class="label">高对比花壁纸</div>
+  </div>
+</div>
+
+<h2>② 实际显示尺寸测试</h2>
+<p class="hint">桌宠默认 160px，可缩至 96px。重点看 96px 下天线与五官是否仍可辨。</p>
+<div class="row">
+  <div class="cell bg-dark">
+    <img src="pet-master.png" width="160" alt="">
+    <div class="label">160px · 默认</div>
+  </div>
+  <div class="cell bg-dark">
+    <img src="pet-master.png" width="128" alt="">
+    <div class="label">128px</div>
+  </div>
+  <div class="cell bg-dark">
+    <img src="pet-master.png" width="96" alt="">
+    <div class="label">96px</div>
+  </div>
+</div>
+
+</body>
+</html>

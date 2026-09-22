@@ -3,6 +3,7 @@
 
 export * from "./paths";
 export * from "./storage";
+export * from "./experienceService";
 export * from "./holidayService";
 export * from "./reminderService";
 export * from "./migration";

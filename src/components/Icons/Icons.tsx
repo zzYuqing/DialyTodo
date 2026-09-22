@@ -173,3 +173,33 @@ export function CloseIcon({ size }: IconProps) {
     </svg>
   );
 }
+
+/** 经验：打开的书本（知识沉淀语义） */
+export function ExperienceIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M3 4.2c0-1 1-1.7 2.2-1.7h3.8v10.5H5.2C4 13 3 12.3 3 11.3z" />
+      <path d="M13 4.2c0-1-1-1.7-2.2-1.7H7v10.5h3.8c1.2 0 2.2-.7 2.2-1.7z" />
+    </svg>
+  );
+}
+
+/** 工具：扳手（上班好用工具集合语义） */
+export function ToolsIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M11.5 4.2a2.7 2.7 0 00-3.6 3.6l-3.4 3.4a1.5 1.5 0 102.1 2.1l3.4-3.4a2.7 2.7 0 003.6-3.6l-1.5 1.5-1.6-1.6z" />
+    </svg>
+  );
+}
+
+/** 上传：向上箭头 + 底横（选择本地 .md 文件灌入文档） */
+export function UploadIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M8 11V3" />
+      <path d="M5 6l3-3 3 3" />
+      <path d="M3.5 12.5h9" />
+    </svg>
+  );
+}

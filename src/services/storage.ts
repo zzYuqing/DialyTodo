@@ -11,7 +11,6 @@ import {
   readTextFile,
   remove,
   rename,
-  writeTextFile,
 } from "@tauri-apps/plugin-fs";
 import {
   BACKUP_FILE_PREFIX,
@@ -19,7 +18,6 @@ import {
   CURRENT_VERSION,
   QUARANTINE_SUFFIX,
   TASK_TYPE_FILE_SUFFIX,
-  TMP_FILE_SUFFIX,
 } from "@/constants";
 import {
   defaultSettings,
@@ -39,19 +37,7 @@ import {
   tasksFilePath,
   taskTypeFilePath,
 } from "./paths";
-
-/**
- * 原子写入：先写临时文件，再 rename 原地替换目标。
- * 关键：不先删除目标——rename 在 POSIX 与 Windows（MoveFileEx MOVEFILE_REPLACE_EXISTING）
- * 上都是原子替换。这样即便写入过程中进程崩溃，目标文件始终停在「旧完整版」或「新完整版」之一，
- * 绝不会留下半截文件导致整份数据损坏。
- * 旧实现先 remove 再 rename 会在两步之间留出「目标不存在」的空窗，崩溃即丢数据，故移除该步骤。
- */
-async function atomicWrite(path: string, content: string): Promise<void> {
-  const tmpPath = `${path}${TMP_FILE_SUFFIX}`;
-  await writeTextFile(tmpPath, content);
-  await rename(tmpPath, path);
-}
+import { atomicWrite } from "./atomicWrite";
 
 /**
  * 启动加载任务数据。

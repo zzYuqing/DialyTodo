@@ -26,6 +26,7 @@ pub fn run() {
             commands::toggle_pet_window,
             commands::set_pet_ignore_cursor,
             commands::quit_app,
+            commands::restart_app,
             commands::authorize_dir,
         ])
         .setup(setup_app)
@@ -80,11 +81,14 @@ fn apply_window_effect(app: &tauri::AppHandle) {
 fn build_tray_menu(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let show_item = MenuItemBuilder::with_id("show", "打开主窗口").build(app)?;
     let pet_item = MenuItemBuilder::with_id("pet", "显示 / 隐藏桌宠").build(app)?;
+    let restart_item = MenuItemBuilder::with_id("restart", "重启").build(app)?;
     let quit_item = MenuItemBuilder::with_id("quit", "退出").build(app)?;
 
     let menu = MenuBuilder::new(app)
         .item(&show_item)
         .item(&pet_item)
+        .separator()
+        .item(&restart_item)
         .separator()
         .item(&quit_item)
         .build()?;
@@ -107,6 +111,7 @@ fn build_tray_menu(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error
         .on_menu_event(|app, event| match event.id.as_ref() {
             "show" => focus_main_window(app),
             "pet" => commands::toggle_pet_window(app.clone()),
+            "restart" => commands::restart_app(app.clone()),
             "quit" => commands::quit_app(app.clone()),
             _ => {}
         })

@@ -4,22 +4,32 @@
 
 import { useEffect, type JSX } from "react";
 import { Sidebar, TitleBar } from "@/components";
-import { LongTermView, SettingsView, SimpleModeView, TodoView } from "@/views";
+import {
+  ExperienceView,
+  LongTermView,
+  SettingsView,
+  SimpleModeView,
+  TodoView,
+  ToolsView,
+} from "@/views";
 import { useReminders, useWindowMode } from "@/hooks";
-import { useSettingsStore, useTaskStore, useViewStore } from "@/stores";
+import { useExperienceStore, useSettingsStore, useTaskStore, useViewStore } from "@/stores";
 import type { ViewName } from "@/stores";
 import styles from "./App.module.css";
 
 /** 视图名 → 组件，避免每次渲染重建对象 */
 const VIEW_COMPONENTS: Record<ViewName, () => JSX.Element> = {
   todo: () => <TodoView />,
+  experience: () => <ExperienceView />,
   longterm: () => <LongTermView />,
+  tools: () => <ToolsView />,
   settings: () => <SettingsView />,
 };
 
 export default function App() {
   const initializeSettings = useSettingsStore((s) => s.initialize);
   const initializeTasks = useTaskStore((s) => s.initialize);
+  const initializeExperiences = useExperienceStore((s) => s.initialize);
   const loadError = useTaskStore((s) => s.loadError);
   const corruptedBackupPath = useTaskStore((s) => s.corruptedBackupPath);
   const view = useViewStore((s) => s.view);
@@ -32,7 +42,11 @@ export default function App() {
   useEffect(() => {
     const init = async () => {
       try {
-        await Promise.all([initializeSettings(), initializeTasks()]);
+        await Promise.all([
+          initializeSettings(),
+          initializeTasks(),
+          initializeExperiences(),
+        ]);
       } catch (err) {
         useTaskStore.setState({
           loaded: true,
@@ -42,7 +56,7 @@ export default function App() {
       }
     };
     void init();
-  }, [initializeSettings, initializeTasks]);
+  }, [initializeSettings, initializeTasks, initializeExperiences]);
 
   // 简易模式走独立布局：不渲染侧栏与视图区，只显示当日待办
   if (layout === "simple") {

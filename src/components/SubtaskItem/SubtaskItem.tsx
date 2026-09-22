@@ -178,7 +178,13 @@ export const SubtaskItem = memo(function SubtaskItem({
                 maxLength={120}
                 readOnly={doneLocked}
                 autoFocus
-                onChange={(e) => setDraft((d) => ({ ...d, title: e.currentTarget.value }))}
+                onChange={(e) => {
+                  // 必须在事件处理函数内同步读出值：setDraft 的函数式 updater 会被延后执行，
+                  // 那时 e.currentTarget 已被 DOM 复位为 null，再读 .value 会抛
+                  // "Cannot read properties of null (reading 'value')"。
+                  const next = e.currentTarget.value;
+                  setDraft((d) => ({ ...d, title: next }));
+                }}
                 onKeyDown={handleEditKey}
                 onPointerDown={(e) => e.stopPropagation()}
               />
@@ -205,9 +211,11 @@ export const SubtaskItem = memo(function SubtaskItem({
                     className={styles.dueInput}
                     value={draft.endDate}
                     readOnly={doneLocked}
-                    onChange={(e) =>
-                      setDraft((d) => ({ ...d, endDate: e.currentTarget.value || null }))
-                    }
+                    onChange={(e) => {
+                      // 同步读出，避免 updater 延后执行时 e.currentTarget 已被复位为 null
+                      const next = e.currentTarget.value || null;
+                      setDraft((d) => ({ ...d, endDate: next }));
+                    }}
                     onPointerDown={(e) => e.stopPropagation()}
                   />
                   {!endLocked && !doneLocked && (
@@ -235,7 +243,11 @@ export const SubtaskItem = memo(function SubtaskItem({
                 className={styles.editNoteInput}
                 placeholder="备注（可选）"
                 value={draft.note}
-                onChange={(e) => setDraft((d) => ({ ...d, note: e.currentTarget.value }))}
+                onChange={(e) => {
+                  // 同步读出，避免 updater 延后执行时 e.currentTarget 已被复位为 null
+                  const next = e.currentTarget.value;
+                  setDraft((d) => ({ ...d, note: next }));
+                }}
                 onKeyDown={handleEditKey}
                 onPointerDown={(e) => e.stopPropagation()}
               />

@@ -6,3 +6,5 @@ export { TodoView } from "./TodoView";
 export { LongTermView } from "./LongTermView";
 export { SettingsView } from "./SettingsView";
 export { SimpleModeView } from "./SimpleModeView/SimpleModeView";
+export { ExperienceView } from "./ExperienceView";
+export { ToolsView } from "./ToolsView";

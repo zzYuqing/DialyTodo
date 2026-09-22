@@ -1,0 +1,162 @@
+/* 经验「类型」管理弹窗：每行 = 色点 + 名称输入 + 条数 + 上移下移删除；点色点展开色板 */
+
+.hint {
+  font-size: 12px;
+  color: var(--dt-text-muted);
+  line-height: 1.5;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 46vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.row {
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  background: var(--dt-panel);
+  padding: 6px 8px;
+}
+
+.rowMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.colorDot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: none;
+  flex-shrink: 0;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 120ms ease;
+}
+
+.colorDot:hover {
+  transform: scale(1.15);
+}
+
+.nameInput {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-text);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 4px 6px;
+  outline: none;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.nameInput:hover {
+  border-color: var(--dt-border);
+}
+
+.nameInput:focus {
+  border-color: var(--dt-accent);
+  background: var(--dt-bg);
+}
+
+.count {
+  font-size: 12px;
+  color: var(--dt-text-muted);
+  flex-shrink: 0;
+  min-width: 38px;
+  text-align: right;
+}
+
+.iconBtn,
+.iconBtnDanger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.iconBtn:hover:not(:disabled) {
+  background: var(--dt-panel-2);
+  color: var(--dt-text);
+}
+
+.iconBtnDanger:hover:not(:disabled) {
+  background: var(--dt-accent-soft);
+  color: var(--dt-danger);
+}
+
+.iconBtn:disabled,
+.iconBtnDanger:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* 复用同一个 ChevronRight，靠旋转表达上下（与 TaskItem 折叠箭头同套路） */
+.arrowUp,
+.arrowDown {
+  display: inline-flex;
+}
+
+.arrowUp {
+  transform: rotate(-90deg);
+}
+
+.arrowDown {
+  transform: rotate(90deg);
+}
+
+.palette {
+  margin-top: 6px;
+  padding: 6px 2px 2px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-top: 1px dashed var(--dt-border);
+}
+
+.swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  box-shadow: 0 0 0 1px var(--dt-border);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 120ms ease;
+}
+
+.swatch:hover {
+  transform: scale(1.15);
+}
+
+.swatchActive {
+  box-shadow: 0 0 0 2px var(--dt-accent);
+}
+
+.addRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.addDot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}

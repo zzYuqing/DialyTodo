@@ -56,3 +56,22 @@ pub fn authorize_dir(app: tauri::AppHandle, path: String) -> Result<(), String> 
         .allow_directory(path, true)
         .map_err(|err| err.to_string())
 }
+
+/// 重启应用：先脱离当前进程树拉起一个新实例，再退出当前实例（托盘菜单「重启」用）。
+/// 为何必须 Rust：拉起新进程并终止自身属于宿主进程能力，WebView 做不到。
+/// 用 `cmd /c start` 启动使新实例不被父进程 job 一并结束，拉起成功后再退出当前实例。
+#[tauri::command]
+pub fn restart_app(app: tauri::AppHandle) {
+    use std::process::Command;
+
+    if let Ok(exe) = std::env::current_exe() {
+        let exe_str = exe.to_string_lossy().to_string();
+        let args = vec!["/C".to_string(), "start".to_string(), "".to_string(), exe_str];
+        if Command::new("cmd").args(args).spawn().is_ok() {
+            if let Some(pet) = app.get_webview_window("pet") {
+                let _ = pet.destroy();
+            }
+            app.exit(0);
+        }
+    }
+}

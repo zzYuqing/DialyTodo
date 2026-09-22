@@ -7,9 +7,12 @@ import "@mantine/core/styles.css";
 import "@/styles/theme.css";
 import "@/styles/global.css";
 import App from "./App";
+import { ErrorBoundary } from "@/components/ErrorBoundary/ErrorBoundary";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <MantineProvider defaultColorScheme="light">
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </MantineProvider>,
 );

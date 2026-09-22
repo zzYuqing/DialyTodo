@@ -4,6 +4,7 @@
 
 import ReactDOM from "react-dom/client";
 import styles from "./pet.module.css";
+import { ErrorBoundary } from "@/components/ErrorBoundary/ErrorBoundary";
 
 function PetApp() {
   return (
@@ -13,4 +14,8 @@ function PetApp() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("pet-root") as HTMLElement).render(<PetApp />);
+ReactDOM.createRoot(document.getElementById("pet-root") as HTMLElement).render(
+  <ErrorBoundary>
+    <PetApp />
+  </ErrorBoundary>,
+);

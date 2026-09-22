@@ -1,0 +1,416 @@
+/* 经验页：顶部标题 + 分类筛选 + 左日期导航 / 右卡片列表 */
+.wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 16px 20px;
+  gap: 12px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.titleIcon {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+.muted {
+  color: var(--dt-text-muted);
+}
+
+/* 分类筛选 chips */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--dt-border);
+  border-radius: 999px;
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.chip:hover {
+  color: var(--dt-text);
+  border-color: var(--dt-border-strong);
+}
+
+.chipActive {
+  color: var(--dt-accent);
+  border-color: var(--dt-accent);
+  background: var(--dt-accent-soft);
+}
+
+.chipDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chipManage {
+  border-style: dashed;
+  border-color: var(--dt-border-strong);
+  color: var(--dt-text-muted);
+}
+
+.chipManage:hover {
+  color: var(--dt-text);
+  border-color: var(--dt-border-strong);
+}
+
+/* 主体：左右分栏（左栏要放得下单行标题，宽度比原先略宽） */
+.body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 16px;
+  min-height: 0;
+}
+
+/* 左：日期导航 */
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.railAll {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+
+.railAll:hover {
+  background: var(--dt-panel-2);
+}
+
+.railGroup {
+  margin-top: 8px;
+}
+
+.railGroupTitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dt-text-muted);
+  padding: 2px 10px;
+}
+
+.railItem {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.railItem:hover {
+  background: var(--dt-panel-2);
+}
+
+.railItemActive {
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+}
+
+.railDay {
+  font-size: 13px;
+}
+
+.railWeek {
+  font-size: 11px;
+  color: var(--dt-text-muted);
+}
+
+.railCount {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--dt-panel-2);
+  color: var(--dt-text-muted);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.railItemActive .railCount {
+  background: var(--dt-accent);
+  color: var(--dt-accent-contrast);
+}
+
+/* 日期行 + 其下标题子列表 */
+.railDayBlock {
+  margin-bottom: 2px;
+}
+
+.railEntries {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 0 4px 14px;
+}
+
+.railEntry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  padding: 3px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.railEntry:hover {
+  background: var(--dt-panel-2);
+  color: var(--dt-text);
+}
+
+.railEntryActive {
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+}
+
+.railEntryDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.railEntryTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 右：卡片列表 */
+.list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 4px;
+}
+
+.empty {
+  color: var(--dt-text-muted);
+  font-size: 13px;
+  padding: 24px 8px;
+}
+
+.card {
+  border: 1px solid var(--dt-border);
+  border-radius: 10px;
+  background: var(--dt-panel);
+  padding: 12px 14px;
+  box-shadow: var(--dt-shadow-sm);
+}
+
+/* 左栏点标题定位到这一张：只提层级，不换底色 */
+.cardFocused {
+  border-color: var(--dt-accent);
+  box-shadow: var(--dt-shadow-md);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cardCat {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+.cardDate {
+  font-size: 12px;
+  color: var(--dt-text-muted);
+}
+
+.cardActions {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+}
+
+.linkBtn {
+  border: none;
+  background: transparent;
+  color: var(--dt-accent);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.linkBtn:hover {
+  text-decoration: underline;
+}
+
+.linkBtnDanger {
+  border: none;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.linkBtnDanger:hover {
+  color: var(--dt-danger);
+}
+
+.cardTitle {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dt-text);
+  line-height: 1.4;
+}
+
+.cardContent {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--dt-text-muted);
+  line-height: 1.6;
+}
+
+/* 卡片正文内的 Markdown 渲染排版（react-markdown 输出标准标签，用 :global 约束） */
+.cardContent :global(h1),
+.cardContent :global(h2),
+.cardContent :global(h3) {
+  margin: 10px 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dt-text);
+  line-height: 1.4;
+}
+
+.cardContent :global(h1):first-child,
+.cardContent :global(h2):first-child,
+.cardContent :global(h3):first-child {
+  margin-top: 0;
+}
+
+.cardContent :global(p) {
+  margin: 4px 0;
+}
+
+.cardContent :global(ul),
+.cardContent :global(ol) {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.cardContent :global(li) {
+  margin: 2px 0;
+}
+
+.cardContent :global(code) {
+  background: var(--dt-panel-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: var(--font-family-monospace, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12px;
+  color: var(--dt-text);
+}
+
+.cardContent :global(pre) {
+  background: var(--dt-panel-2);
+  padding: 10px 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.cardContent :global(pre code) {
+  background: transparent;
+  padding: 0;
+}
+
+.cardContent :global(blockquote) {
+  margin: 6px 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--dt-border-strong);
+  color: var(--dt-text-muted);
+}
+
+.cardContent :global(table) {
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 12px;
+}
+
+.cardContent :global(th),
+.cardContent :global(td) {
+  border: 1px solid var(--dt-border);
+  padding: 4px 8px;
+  text-align: left;
+}
+
+.cardContent :global(a) {
+  color: var(--dt-accent);
+  text-decoration: underline;
+}
+
+.cardContent :global(hr) {
+  border: none;
+  border-top: 1px solid var(--dt-border);
+  margin: 8px 0;
+}

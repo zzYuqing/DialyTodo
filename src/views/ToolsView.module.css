@@ -1,0 +1,33 @@
+/* 工具页：占位白板，纵向留白布局 */
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.title {
+  font-size: 16px;
+}
+
+.muted {
+  color: var(--dt-text-muted);
+}
+
+/* 虚线白板：占据剩余高度，居中提示文字 */
+.board {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dt-panel-2);
+  border-style: dashed;
+  border-color: var(--dt-border-strong);
+}
+
+.placeholder {
+  color: var(--dt-text-muted);
+  font-size: 14px;
+}
