@@ -77,6 +77,16 @@ export function formatMonthDay(key: string): string {
 }
 
 /**
+ * 形如「9/5」的紧凑月日文案。
+ * 只用于空间紧张的单行区间摘要（完成时间轴的折叠节点要同时放区间 + 条数 + 动作）；
+ * 单条日期的展示仍用 formatMonthDay，两者不混用。
+ */
+export function formatShortMonthDay(key: string): string {
+  const date = fromDateKey(key);
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+/**
  * ISO8601 完成时刻 → 「9月5日 14:30」本地文案，用于子任务的完成时间徽章。
  * 传入 null / 非法字符串原样返回 null（不在 UI 里强行渲染）。
  * 与 dayjs / format 等库统一为本地时区小时分钟，不带秒。
@@ -90,6 +100,35 @@ export function formatDoneAt(iso: string | null | undefined): string | null {
   const hour = `${date.getHours()}`.padStart(2, "0");
   const minute = `${date.getMinutes()}`.padStart(2, "0");
   return `${month}月${day}日 ${hour}:${minute}`;
+}
+
+/**
+ * ISO8601 完成时刻 → 本地「日期键 + HH:mm」，供「修改完成时间」表单回填输入框。
+ * 与 formatDoneAt 同源（本地时区、不带秒），null / 非法字符串返回 null，由调用方决定兜底。
+ */
+export function splitDoneAt(iso: string | null | undefined): { dateKey: string; time: string } | null {
+  if (iso == null) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return { dateKey: toDateKey(date), time: format(date, "HH:mm") };
+}
+
+/**
+ * 本地日期键 + HH:mm → ISO8601 时刻，是 splitDoneAt 的逆运算。
+ * 任一输入非法（空日期 / 非 HH:mm）返回 null，由调用方保留原值。
+ */
+export function joinDoneAt(dateKey: string, time: string): string | null {
+  // 与 millisecondsUntil 同款解析口径：Number("") 得 0、Number(undefined) 得 NaN，
+  // 因此「空时间」会在这里以 NaN 挡下，走到下面的日期校验才是真正的兜底。
+  const [hourText, minuteText] = time.split(":");
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
+
+  const date = fromDateKey(dateKey);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setHours(hour, minute, 0, 0);
+  return date.toISOString();
 }
 
 /** 形如「9月2日 周三」的展示文案 */

@@ -255,3 +255,40 @@
   font-size: 12px;
   color: var(--dt-text-muted);
 }
+
+/* 提交按钮的置灰原因提示：包裹在按钮外的相对定位容器，hover 时浮出。
+ * 复用卡片底 + 文字 + 描边 + 阴影，跟随主题切换，与右键菜单弹层视觉一致。
+ * 用 wrapper:hover 而非 button:hover：disabled 按钮不响应指针事件，
+ * 但鼠标仍在 wrapper 几何区域内，父级 :hover 可稳定触发。 */
+.submitWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.submitTip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  white-space: nowrap;
+  max-width: 280px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--dt-panel);
+  color: var(--dt-text);
+  border: 1px solid var(--dt-border);
+  box-shadow: var(--dt-shadow-md);
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+  pointer-events: none;
+  z-index: 30;
+}
+
+.submitWrap:hover .submitTip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}

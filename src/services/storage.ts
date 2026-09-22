@@ -22,6 +22,7 @@ import {
 import {
   defaultSettings,
   isAppSettings,
+  normalizeSettings,
   parseTasksFileCompatible,
   parseTasksValueTolerant,
   syncChildrenIndex,
@@ -147,7 +148,9 @@ export async function loadSettings(): Promise<AppSettings> {
           // 没有迁移函数，抬版本即完成升级，下次保存写出的文件也就带上了当前版本。
           version: CURRENT_VERSION,
         };
-        if (isAppSettings(merged)) return merged;
+        // 合并结果先校验再 normalize：新增字段（如 subtaskDoneKeep）即使缺失也会被补齐为出厂值，
+        // 保证消费端拿到的永远是完整合法的 AppSettings。
+        if (isAppSettings(merged)) return normalizeSettings(merged);
       }
     }
   } catch {

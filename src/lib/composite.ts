@@ -511,11 +511,28 @@ export interface SubtaskEdit {
   note: string;
   /** 截止日；null = 无截止日 */
   endDate: string | null;
+  /**
+   * 完成时刻（ISO8601）；省略 = 不改动。
+   * 只对「已完成」子任务生效 —— 手动回填完成时间（右键「修改完成时间」）走这个字段，
+   * 勾选 / 取消完成仍由 toggleSubtask 负责，编辑表单不开第二条「置为已完成」的路径。
+   */
+  childDoneAt?: string;
 }
 
 /**
- * 行内编辑单条子任务：改标题 / 备注 / 截止日，复用「单条写入」语义（与 toggleSubtask / addSubtask 同类）。
- * - 已完成子任务（childDoneAt != null）标题与截止日锁定，只改备注 —— 与表单端 doneLocked 一致，
+ * 「修改完成时间」的落值：把时刻收敛到不晚于 now，非法值 / 不适用的场景保留原时刻。
+ * 为什么要封顶：父任务的完成日由子任务里最新的 childDoneAt 推导而来，未来时刻会把父完成日推到未来。
+ */
+function applyDoneAtEdit(task: Task, edit: SubtaskEdit, now: Date): string | null {
+  if (task.childDoneAt == null || edit.childDoneAt === undefined) return task.childDoneAt ?? null;
+  const at = new Date(edit.childDoneAt);
+  if (Number.isNaN(at.getTime())) return task.childDoneAt;
+  return (at.getTime() > now.getTime() ? now : at).toISOString();
+}
+
+/**
+ * 行内编辑单条子任务：改标题 / 备注 / 截止日 / 完成时刻，复用「单条写入」语义（与 toggleSubtask / addSubtask 同类）。
+ * - 已完成子任务（childDoneAt != null）标题与截止日锁定，只改备注与完成时刻 —— 与表单端 doneLocked 一致，
  *   防止「已完成」状态被改标题 / 截止日造成历史完成态对不上的语义漂移；
  * - 截止日一律经 clampEndDateWithin 收敛到父区间 [父起始, 父截止]，避免脱离父任务约束；
  * - startDate 恒为父起始（子任务起自父起始），不在此改动；
@@ -537,10 +554,13 @@ export function editSubtask(
   const locked = child.childDoneAt != null;
   const parentStart = parent.schedule.startDate;
   const parentEnd = parent.schedule.endDate;
+  // 上限时刻只取一次：同一次提交里的完成时刻必须收敛到同一个 now
+  const now = new Date();
   const next = patchTask(tasks, childId, (task) => ({
     ...task,
     title: locked ? task.title : edit.title,
     note: edit.note,
+    childDoneAt: applyDoneAtEdit(task, edit, now),
     schedule: {
       ...task.schedule,
       endDate: locked

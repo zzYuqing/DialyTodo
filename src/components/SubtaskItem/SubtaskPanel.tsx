@@ -8,8 +8,16 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import { TextInput } from "@mantine/core";
 import { PlusIcon } from "@/components/Icons";
 import type { Task } from "@/types";
-import { childTasksOf, sortSubtasksForDisplay, type SubtaskEdit, type TaskMap } from "@/lib";
+import {
+  childTasksOf,
+  formatShortMonthDay,
+  sortSubtasksForDisplay,
+  splitDoneAt,
+  type SubtaskEdit,
+  type TaskMap,
+} from "@/lib";
 import { useDragSort } from "@/hooks";
+import { useSettingsStore } from "@/stores";
 import { SubtaskItem } from "./SubtaskItem";
 import styles from "./SubtaskItem.module.css";
 
@@ -23,7 +31,7 @@ interface SubtaskPanelProps {
   onToggleSubtask: (parentId: string, childId: string, done: boolean) => void;
   onRemoveSubtask: (parentId: string, childId: string) => void;
   onReorderSubtasks: (parentId: string, ids: string[]) => void;
-  /** 行内编辑单条子任务：改标题 / 备注 / 截止日 */
+  /** 行内编辑单条子任务：改标题 / 备注 / 截止日；已完成行再加完成时刻 */
   onEditSubtask?: (parentId: string, childId: string, edit: SubtaskEdit) => void;
   /** 列表末尾「+ 添加子任务」入口提交时调用 */
   onAddSubtask: (parentId: string, title: string) => void;
@@ -44,14 +52,58 @@ export function SubtaskPanel({
   const ordered = useMemo(() => sortSubtasksForDisplay(childTasksOf(map, parent)), [map, parent]);
   // 拖拽只在未完成区间内进行，已完成沉底是展示规则、不该被拖乱
   const draggable = useMemo(() => ordered.filter((child) => child.childDoneAt == null), [ordered]);
-  const doneIds = useMemo(
-    () => ordered.filter((child) => child.childDoneAt != null).map((child) => child.id),
+  const doneChildren = useMemo(
+    () => ordered.filter((child) => child.childDoneAt != null),
     [ordered],
   );
+  const doneIds = useMemo(() => doneChildren.map((child) => child.id), [doneChildren]);
+  // 折叠时保留「最近完成的 keep 条」，更早完成的隐藏。keep 来自设置（默认 5，用户可配）；
+  // 已完成数不超过 keep 时返回 null 表示不隐藏任何。
+  const keep = useSettingsStore((s) => s.settings.subtaskDoneKeep);
+  const recentDoneIds = useMemo(() => {
+    if (doneChildren.length <= keep) return null;
+    const keepSet = new Set(
+      [...doneChildren]
+        .sort((a, b) => (b.childDoneAt ?? "").localeCompare(a.childDoneAt ?? ""))
+        .slice(0, keep)
+        .map((c) => c.id),
+    );
+    return keepSet;
+  }, [doneChildren, keep]);
+  // 折叠节点上的时间跨度：被收起的那些较早完成项，从最早到最晚的月日区间（如「9/16 – 9/18」）。
+  // 只统计被隐藏的部分，不含保留在列表里的最近 keep 条。
+  const hiddenRange = useMemo(() => {
+    if (recentDoneIds === null) return null;
+    const keys = doneChildren
+      .filter((child) => !recentDoneIds.has(child.id))
+      .map((child) => splitDoneAt(child.childDoneAt)?.dateKey)
+      .filter((key): key is string => typeof key === "string")
+      .sort();
+    if (keys.length === 0) return null;
+    const first = keys[0];
+    const last = keys[keys.length - 1];
+    return first === last
+      ? formatShortMonthDay(first)
+      : `${formatShortMonthDay(first)} – ${formatShortMonthDay(last)}`;
+  }, [doneChildren, recentDoneIds]);
 
   const { listRef, getHandle } = useDragSort(draggable, (ids) => {
     onReorderSubtasks(parent.id, [...ids, ...doneIds]);
   });
+
+  const doneCount = doneIds.length;
+  const over = doneCount > keep;
+  // 初始：已完成超过 keep 条默认折叠。之后是否折叠由用户切换控制；
+  // 但「跨过阈值（≤keep → >keep）」的瞬间立即折叠，不必等父任务重新展开才生效。
+  // 阈值本身也可在设置里改小，同样会立即生效。
+  const [collapsed, setCollapsed] = useState(over);
+  const wasOver = useRef(over);
+  useEffect(() => {
+    if (over && !wasOver.current) {
+      setCollapsed(true);
+    }
+    wasOver.current = over;
+  }, [over]);
 
   // 「+ 添加子任务」入口的折叠态：true = 显示输入框，false = 显示按钮。
   // 提交后保持输入框激活，便于连续录入多条子任务；ESC 收起，失焦也收起。
@@ -97,9 +149,9 @@ export function SubtaskPanel({
       {ordered.length === 0 && (
         <li className={styles.empty}>这个任务集还没有子任务，直接下方输入</li>
       )}
-      {ordered.map((child) => {
-        const canDrag = child.childDoneAt == null;
-        const index = canDrag ? runningIndex++ : -1;
+      {/* 待勾选子任务（未完成，可拖拽排序） */}
+      {draggable.map((child) => {
+        const index = runningIndex++;
         return (
           <SubtaskItem
             key={child.id}
@@ -115,7 +167,50 @@ export function SubtaskPanel({
                 ? (childId, edit) => onEditSubtask(parent.id, childId, edit)
                 : undefined
             }
-            drag={canDrag ? getHandle(index) : undefined}
+            drag={getHandle(index)}
+          />
+        );
+      })}
+      {/* 折叠节点置于「待勾选」与「已勾选」之间：它本身就是时间轴上的一个虚线节点，
+          被收起的较早完成项从它下方展开，视觉上就是「中间那一段被收拢了」。 */}
+      {over && (
+        <li>
+          <button
+            type="button"
+            className={styles.collapseDone}
+            onClick={() => setCollapsed((v) => !v)}
+          >
+            <span className={`${styles.rail} ${styles.railDashed}`} aria-hidden="true" />
+            <span className={styles.collapseText}>
+              {hiddenRange === null
+                ? `${doneCount - keep} 条较早完成`
+                : `${hiddenRange} · ${doneCount - keep} 条较早完成`}
+            </span>
+            <span className={styles.collapseAction}>{collapsed ? "展开" : "收起"}</span>
+          </button>
+        </li>
+      )}
+      {/* 已勾选子任务（已完成，沉底且不可拖拽；折叠态隐藏超出最近 keep 条的旧项目） */}
+      {doneChildren.map((child) => {
+        if (collapsed && recentDoneIds !== null && !recentDoneIds.has(child.id)) {
+          return null;
+        }
+        return (
+          <SubtaskItem
+            key={child.id}
+            task={child}
+            dateKey={dateKey}
+            parentStart={parent.schedule.startDate}
+            parentEnd={parent.schedule.endDate}
+            disabledDone={disabledDone}
+            onToggleDone={(childId, done) => onToggleSubtask(parent.id, childId, done)}
+            onRemove={(childId) => onRemoveSubtask(parent.id, childId)}
+            onEdit={
+              onEditSubtask !== undefined
+                ? (childId, edit) => onEditSubtask(parent.id, childId, edit)
+                : undefined
+            }
+            drag={undefined}
           />
         );
       })}

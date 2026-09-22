@@ -95,7 +95,7 @@ interface TaskItemProps {
   onToggleSubtask?: (parentId: string, childId: string, done: boolean) => void;
   onRemoveSubtask?: (parentId: string, childId: string) => void;
   onReorderSubtasks?: (parentId: string, ids: string[]) => void;
-  /** 行内编辑单条子任务：改标题 / 备注 / 截止日 */
+  /** 行内编辑单条子任务：改标题 / 备注 / 截止日；已完成行再加完成时刻 */
   onEditSubtask?: (parentId: string, childId: string, edit: SubtaskEdit) => void;
   /** 列表末尾「+ 添加子任务」入口提交时调用 */
   onAddSubtask?: (parentId: string, title: string) => void;

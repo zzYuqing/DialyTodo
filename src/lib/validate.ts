@@ -1,7 +1,14 @@
 // 职责：JSON 结构校验与 version 校验（提示词 4.3）。
 // 纯函数：一律返回布尔值，不抛异常，由调用方决定如何降级。
 
-import { CURRENT_VERSION, HOLIDAY_URL_TEMPLATE, MIN_SUPPORTED_VERSION } from "@/constants";
+import {
+  CURRENT_VERSION,
+  DEFAULT_SUBTASK_DONE_KEEP,
+  HOLIDAY_URL_TEMPLATE,
+  MIN_SUPPORTED_VERSION,
+  SUBTASK_DONE_KEEP_MAX,
+  SUBTASK_DONE_KEEP_MIN,
+} from "@/constants";
 import type { AppSettings, DayRecord, Reminder, Schedule, Task, TasksFile } from "@/types";
 
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -223,10 +230,37 @@ export function isAppSettings(value: unknown): value is AppSettings {
   if (typeof candidate.autoStart !== "boolean") return false;
   if (typeof candidate.petEnabled !== "boolean") return false;
   if (typeof candidate.hideCompleted !== "boolean") return false;
+  // subtaskDoneKeep 是后加的字段：存量设置文件没有它（由 loadSettings 的 merge 补出厂值），
+  // 故缺失 / null 一律放行，由 normalizeSettings 补齐；只有「类型不对」才判废。
+  if (candidate.subtaskDoneKeep != null && typeof candidate.subtaskDoneKeep !== "number") {
+    return false;
+  }
   if (typeof candidate.holidayUrlTemplate !== "string") return false;
   if (candidate.lastBackupDate !== null && !isDateKey(candidate.lastBackupDate)) return false;
 
   return true;
+}
+
+/**
+ * 收敛「已勾选子任务保留条数」到合法区间：非有限数回出厂值，越界夹到上下限，小数取整。
+ * 设置页允许直接输入数字，手改 settings.json 也可能写出非法值，统一在这里收敛，
+ * 消费端（SubtaskPanel）可以直接当正整数用，不必再判空。
+ */
+export function clampSubtaskDoneKeep(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_SUBTASK_DONE_KEEP;
+  const rounded = Math.round(value);
+  return Math.min(SUBTASK_DONE_KEEP_MAX, Math.max(SUBTASK_DONE_KEEP_MIN, rounded));
+}
+
+/**
+ * 补齐 / 收敛设置：新增字段缺失时补出厂值，越界值夹回合法区间。
+ * 与 normalizeTask 同口径 —— 加载必经这一步，保证消费端拿到的永远是完整合法的 AppSettings。
+ */
+export function normalizeSettings(settings: AppSettings): AppSettings {
+  return {
+    ...settings,
+    subtaskDoneKeep: clampSubtaskDoneKeep(settings.subtaskDoneKeep),
+  };
 }
 
 /** 出厂设置。autoStart 默认 false，符合提示词第八节「不开机自启除非用户手动开启」。 */
@@ -242,6 +276,7 @@ export function defaultSettings(): AppSettings {
     autoStart: false,
     petEnabled: false,
     hideCompleted: false,
+    subtaskDoneKeep: DEFAULT_SUBTASK_DONE_KEEP,
     holidayUrlTemplate: HOLIDAY_URL_TEMPLATE,
     lastBackupDate: null,
   };

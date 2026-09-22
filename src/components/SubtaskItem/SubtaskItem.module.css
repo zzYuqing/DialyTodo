@@ -225,7 +225,8 @@
   padding: 5px 8px;
 }
 
-.noteIcon {
+/* 表单行 / 备注胶囊的前置图标槽：备注图标与完成时间图标共用这一份 */
+.fieldIcon {
   display: inline-flex;
   flex-shrink: 0;
   margin-top: 1px;
@@ -306,6 +307,86 @@
   align-items: center;
   gap: 6px;
   transition: background-color 120ms ease, color 120ms ease;
+}
+
+/* ── 完成时间轴 ──
+ * 已勾选区画成一条时间线：竖轴由每行 .rail 的 ::before 上下外扩拼接（补偿 .panel 的 4px 行距），
+ * 圆点即该条的完成节点。轴与节点做成独立元素而非 .row 的伪元素——
+ * .dropAbove::before / .dropBelow::after 已被拖拽插入指示线占用，不能抢。 */
+.rail {
+  position: relative;
+  flex: none;
+  width: 20px;
+  /* 撑满行高，竖轴才能按行高比例上下延伸 */
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 竖轴：上下各外扩 5px，与相邻行的轴首尾相接，连成一条不断开的直线 */
+.rail::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: -5px;
+  bottom: -5px;
+  width: 1px;
+  background: var(--dt-border);
+}
+
+/* 完成节点：实心小圆压在轴上 */
+.rail::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dt-bg);
+  border: 1px solid var(--dt-accent);
+}
+
+/* 折叠节点：虚线圈，表示「这里收着若干条已完成」 */
+.railDashed::after {
+  width: 9px;
+  height: 9px;
+  border: 1px dashed var(--dt-text-muted);
+}
+
+/* 折叠节点：与已完成行同构的一行（轴节点 + 区间摘要 + 动作），整行可点击。
+ * 位于待勾选段与已勾选段之间，被收起的较早完成项正好从它下方展开。 */
+.collapseDone {
+  margin-top: 4px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.collapseDone:hover {
+  background: var(--dt-panel-2);
+  color: var(--dt-text);
+}
+
+.collapseText {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collapseAction {
+  flex: none;
+  color: var(--dt-accent);
 }
 
 .addToggle:hover {
@@ -450,6 +531,45 @@
   flex: 1 1 auto;
   min-width: 0;
   color: var(--dt-text);
+}
+
+/* 完成时间条：只有已完成的行才渲染（手动修正时刻）。
+   与备注条同源——前置图标 + 浅底 + 无边框输入 + 聚焦内描边，读作同一张表单里的字段。 */
+.editDoneAt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--dt-panel-2);
+  color: var(--dt-text-muted);
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.editDoneAt:focus-within {
+  background: var(--dt-panel);
+  box-shadow: inset 0 0 0 1px var(--dt-accent);
+}
+
+/* 日期 + 时间两个输入并排，固定宽度避免切换月/日时行宽抖动 */
+.doneDateInput {
+  flex-shrink: 0;
+  width: 108px;
+}
+
+.doneTimeInput {
+  flex-shrink: 0;
+  width: 78px;
+}
+
+/* 与 .dueInput input 同口径：压掉 Mantine unstyled 变体的默认高度与字号 */
+.doneDateInput input,
+.doneTimeInput input {
+  min-height: 0;
+  height: 20px;
+  font-size: 12px;
+  color: var(--dt-text);
+  font-variant-numeric: tabular-nums;
 }
 
 /* 已勾选完成时的锁定提示，贴底弱化显示 */

@@ -23,7 +23,8 @@ export interface ContextMenuItem {
 }
 
 export interface ContextMenuGroup {
-  title: string;
+  /** 分组标题；省略则不渲染标题行（用于只有一两个动作的轻量菜单） */
+  title?: string;
   items: ContextMenuItem[];
   /** items 为空时显示的占位文案 */
   empty?: string;
@@ -81,14 +82,18 @@ export function RowContextMenu({ x, y, groups, onSelect, onClose }: RowContextMe
       onClose();
     };
 
-    window.addEventListener("pointerdown", onPointerDown);
+    // 捕获阶段而非冒泡：本仓库大量列表元素（行 / 勾选框 / 操作按钮）的
+    // onPointerDown 都 stopPropagation，会把原生事件在 React 根容器截断，
+    // 冒泡阶段挂的 window 监听收不到 —— 表现为「点别处不关、右键其它行叠加多个菜单」。
+    // 捕获阶段从 window 向下先执行，必能拿到事件；菜单内部点击由 contains 判定放过。
+    window.addEventListener("pointerdown", onPointerDown, true);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("resize", close);
     window.addEventListener("blur", close);
     // 捕获阶段：列表滚动后菜单会脱离原行，直接关掉比跟着飘更不容易误点
     window.addEventListener("scroll", onScroll, true);
     return () => {
-      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointerdown", onPointerDown, true);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("resize", close);
       window.removeEventListener("blur", close);
@@ -105,9 +110,10 @@ export function RowContextMenu({ x, y, groups, onSelect, onClose }: RowContextMe
       onPointerDown={(event) => event.stopPropagation()}
       onContextMenu={(event) => event.preventDefault()}
     >
-      {groups.map((group) => (
-        <div key={group.title} className={styles.group}>
-          <div className={styles.groupTitle}>{group.title}</div>
+      {groups.map((group, index) => (
+        // 标题可选，不能再拿 title 当 key（无标题分组会撞成同一个 undefined）→ 用下标兜底
+        <div key={group.title ?? `group-${index}`} className={styles.group}>
+          {group.title !== undefined && <div className={styles.groupTitle}>{group.title}</div>}
           {group.items.length === 0 ? (
             <p className={styles.empty}>{group.empty ?? "无可用项"}</p>
           ) : (

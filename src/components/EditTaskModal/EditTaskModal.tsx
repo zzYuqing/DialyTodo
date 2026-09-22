@@ -204,6 +204,21 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
     subtasksInvalid ||
     subtasksEmpty;
 
+  // 提交按钮置灰时，hover 浮出「不能创建的原因」：按 submitDisabled 的优先级取首个未通过项，
+  // 文案与下方各字段的行内错误保持同一口径（标题为空 / 日期越界 / 未选执行日 / 任务集约束）。
+  const submitReason =
+    title.trim().length === 0
+      ? "请先填写任务标题"
+      : endDateInvalid
+        ? "结束日期不能早于起始日期"
+        : weekdaysInvalid
+          ? "请至少选择一天执行日"
+          : subtasksEmpty
+            ? "任务集至少需要 1 个子任务"
+            : subtasksInvalid
+              ? "存在未通过校验的子任务（检查标题与截止日）"
+              : "";
+
   /**
    * 父日期改动后的即时收敛：把越界的子任务截止日裁剪回新的父区间，
    * 并给出一次性提示。小于整体起始日的不在这里偷偷改 —— 那是用户明确看到的行内错误，由他自己改。
@@ -490,7 +505,7 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
                   variant="subtle"
                   color="gray"
                   leftSection={<PlusIcon size={12} />}
-                  onClick={() => setSubtasks((current) => [...current, emptyDraft()])}
+                  onClick={() => setSubtasks((current) => [emptyDraft(), ...current])}
                 >
                   添加子任务
                 </Button>
@@ -610,9 +625,16 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
           <Button variant="default" onClick={onClose}>
             取消
           </Button>
-          <Button type="submit" disabled={submitDisabled}>
-            {isEdit ? "保存" : "创建"}
-          </Button>
+          <div className={styles.submitWrap}>
+            <Button type="submit" disabled={submitDisabled}>
+              {isEdit ? "保存" : "创建"}
+            </Button>
+            {submitDisabled && submitReason !== "" && (
+              <span className={styles.submitTip} role="tooltip">
+                {submitReason}
+              </span>
+            )}
+          </div>
         </Group>
       </form>
     </Modal>

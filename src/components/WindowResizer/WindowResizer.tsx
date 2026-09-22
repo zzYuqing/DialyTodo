@@ -6,9 +6,21 @@
 // 纯 Vite（npm run dev，无 Rust 宿主）下窗口本就由浏览器原生缩放，不渲染手柄。
 
 import { type PointerEvent as ReactPointerEvent } from "react";
-import { getCurrentWindow, type ResizeDirection } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { isTauri } from "@/bridge";
 import styles from "./WindowResizer.module.css";
+
+/** Tauri 缩放方向。库内 `ResizeDirection` 仅本地声明未导出，这里按同款字面值复刻；
+ *  传给 startResizeDragging 时字面量集合一致，TS 结构性兼容。 */
+type ResizeDirection =
+  | "East"
+  | "North"
+  | "NorthEast"
+  | "NorthWest"
+  | "South"
+  | "SouthEast"
+  | "SouthWest"
+  | "West";
 
 /** 八个方向的命中区：Tauri 缩放语义 → 对应样式类（定位与光标） */
 const HANDLES: { direction: ResizeDirection; className: string }[] = [

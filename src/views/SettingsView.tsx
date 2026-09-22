@@ -17,6 +17,7 @@ import {
   Code,
   Group,
   Modal,
+  NumberInput,
   Paper,
   SegmentedControl,
   Stack,
@@ -25,6 +26,8 @@ import {
 } from "@mantine/core";
 import { isTauri } from "@/bridge";
 import { useHolidayStore, useSettingsStore } from "@/stores";
+import { SUBTASK_DONE_KEEP_MAX, SUBTASK_DONE_KEEP_MIN } from "@/constants";
+import { clampSubtaskDoneKeep } from "@/lib";
 import {
   canMigrateTo,
   dataRoot,
@@ -52,6 +55,8 @@ export function SettingsView() {
   const layout = useSettingsStore((s) => s.settings.layout);
   const closeToTray = useSettingsStore((s) => s.settings.closeToTray);
   const autoStart = useSettingsStore((s) => s.settings.autoStart);
+  // 任务集展开区：已勾选子任务保留条数（超出部分收进折叠节点）
+  const subtaskDoneKeep = useSettingsStore((s) => s.settings.subtaskDoneKeep);
   const update = useSettingsStore((s) => s.update);
 
   const [holidayLoading, setHolidayLoading] = useState(false);
@@ -145,6 +150,16 @@ export function SettingsView() {
     }
     setAutoStartError(null);
     await update({ autoStart: next });
+  };
+
+  /**
+   * 保留条数：Mantine NumberInput 在输入过程中会给出 number，清空时给出空字符串。
+   * 空串不落盘（失焦后控件自己会按 min 夹回上次有效值），数字一律经 clamp 收敛再写入，
+   * 保证存进 settings.json 的永远是合法区间内的整数。
+   */
+  const handleKeepChange = (value: number | string) => {
+    if (typeof value !== "number") return;
+    void update({ subtaskDoneKeep: clampSubtaskDoneKeep(value) });
   };
 
   const currentYear = new Date().getFullYear();
@@ -275,6 +290,37 @@ export function SettingsView() {
             {autoStartError}
           </Text>
         )}
+      </Paper>
+
+      <Paper withBorder p="md" radius="md">
+        <Text fw={600} className={styles.cardTitle}>任务集展开区</Text>
+        <Text size="xs" className={styles.muted}>
+          展开任务集时，已勾选子任务默认只展示最近若干条，更早完成的收进中间的折叠节点，可随时展开。
+        </Text>
+
+        <Stack gap="md" mt="sm">
+          <Group justify="space-between" wrap="nowrap" gap="sm" align="flex-start">
+            <Stack gap={2} className={styles.grow}>
+              <Text size="sm">已勾选子任务保留条数</Text>
+              <Text size="xs" className={styles.muted}>
+                超出 {subtaskDoneKeep} 条的较早完成项会被折叠；范围 {SUBTASK_DONE_KEEP_MIN}–
+                {SUBTASK_DONE_KEEP_MAX}，改后立即生效
+              </Text>
+            </Stack>
+            <NumberInput
+              value={subtaskDoneKeep}
+              onChange={handleKeepChange}
+              min={SUBTASK_DONE_KEEP_MIN}
+              max={SUBTASK_DONE_KEEP_MAX}
+              step={1}
+              allowDecimal={false}
+              allowNegative={false}
+              size="xs"
+              w={84}
+              aria-label="已勾选子任务保留条数"
+            />
+          </Group>
+        </Stack>
       </Paper>
 
       <Paper withBorder p="md" radius="md">
