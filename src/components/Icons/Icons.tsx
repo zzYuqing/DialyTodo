@@ -204,6 +204,17 @@ export function UploadIcon({ size }: IconProps) {
   );
 }
 
+/** 下载：向下箭头 + 底横（把附件另存到用户指定位置） */
+export function DownloadIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M8 3v8" />
+      <path d="M5 8l3 3 3-3" />
+      <path d="M3.5 12.5h9" />
+    </svg>
+  );
+}
+
 /** 健康：心形（左栏「健康」分类与防疲劳类工具语义） */
 export function HealthIcon({ size }: IconProps) {
   return (
@@ -260,6 +271,16 @@ export function LoopIcon({ size }: IconProps) {
       <path d="M2.5 6.5A5.5 5.5 0 0 1 13 6" />
       <path d="M13.5 9.5A5.5 5.5 0 0 1 3 10" />
       <path d="M10.5 3.5l2.5-1.5v3M5.5 12.5l-2.5 1.5v-3" />
+    </svg>
+  );
+}
+
+/** 搜索：放大镜（经验页标题模糊搜索入口） */
+export function SearchIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <circle cx="7" cy="7" r="4.5" />
+      <path d="M10.4 10.4L14 14" />
     </svg>
   );
 }

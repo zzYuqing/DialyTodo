@@ -15,6 +15,30 @@
   gap: 12px;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.searchBox {
+  width: 220px;
+}
+
+.searchClear {
+  border: none;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.searchClear:hover {
+  color: var(--dt-text);
+}
+
 .titleRow {
   display: flex;
   align-items: baseline;
@@ -84,113 +108,116 @@
 /* 主体：左右分栏（左栏要放得下单行标题，宽度比原先略宽） */
 .body {
   flex: 1;
+  position: relative; /* 收起态的悬浮方块以此为定位基准 */
   display: grid;
   grid-template-columns: 240px 1fr;
   gap: 16px;
   min-height: 0;
+  transition: grid-template-columns 150ms ease, gap 150ms ease;
 }
 
-/* 左：日期导航 */
+/*
+ * 左栏收起：不留感应列——展开按钮是绝对定位（脱离 grid 流），若保留 18px 首列，
+ * 右栏会作为流内首个子项掉进那条窄列被挤扁；单列 1fr 让右栏直接占满，
+ * 「靠近浮现」的感应完全靠按钮自身的伪元素扩展区。
+ */
+.bodyCollapsed {
+  grid-template-columns: 1fr;
+}
+
+/* 左：标题导航（收起 / 展开两态的公共容器，撑满行高才能让内部列表滚动） */
+.railWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+}
+
+/* 折叠按钮行：右对齐，箭头朝左表示「收起」 */
+.railHead {
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.railToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  cursor: pointer;
+}
+
+.railToggle:hover {
+  background: var(--dt-panel-2);
+  color: var(--dt-text);
+}
+
+.railToggle svg {
+  transform: rotate(180deg);
+}
+
+/*
+ * 收起态的展开入口：一个脱离栅格流的小方块，垂直居中贴在左边缘，
+ * 默认透明（只留感应区），鼠标靠近左侧时浮出——不留常驻竖条占地方。
+ * 透明态仍接收指针事件，所以「靠近即浮现」靠 :hover 即可，无需 JS。
+ */
+.railCollapsed {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--dt-border);
+  border-radius: 6px;
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+/* 感应区：上下大幅扩展，让鼠标不必精确命中方块就能唤出它；右侧只扩 2px 少挡列表 */
+.railCollapsed::before {
+  content: "";
+  position: absolute;
+  inset: -28px -2px;
+}
+
+.railCollapsed:hover,
+.railCollapsed:focus-visible {
+  opacity: 1;
+  color: var(--dt-accent);
+  border-color: var(--dt-accent);
+}
+
 .rail {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
 }
 
-.railAll {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  text-align: left;
-  padding: 6px 10px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--dt-text-muted);
-  font-size: 13px;
-  cursor: pointer;
-  margin-bottom: 4px;
-}
-
-.railAll:hover {
-  background: var(--dt-panel-2);
-}
-
-.railGroup {
-  margin-top: 8px;
-}
-
-.railGroupTitle {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--dt-text-muted);
-  padding: 2px 10px;
-}
-
-.railItem {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  text-align: left;
-  padding: 6px 10px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--dt-text);
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.railItem:hover {
-  background: var(--dt-panel-2);
-}
-
-.railItemActive {
-  background: var(--dt-accent-soft);
-  color: var(--dt-accent);
-}
-
-.railDay {
-  font-size: 13px;
-}
-
-.railWeek {
-  font-size: 11px;
-  color: var(--dt-text-muted);
-}
-
-.railCount {
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: var(--dt-panel-2);
-  color: var(--dt-text-muted);
-  font-size: 11px;
-  line-height: 18px;
-  text-align: center;
-}
-
-.railItemActive .railCount {
-  background: var(--dt-accent);
-  color: var(--dt-accent-contrast);
-}
-
-/* 日期行 + 其下标题子列表 */
-.railDayBlock {
-  margin-bottom: 2px;
-}
-
+/* 标题行列表 */
 .railEntries {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  padding: 2px 0 4px 14px;
+  padding: 2px 0 4px 6px;
 }
 
 .railEntry {
@@ -199,12 +226,12 @@
   gap: 6px;
   width: 100%;
   text-align: left;
-  padding: 3px 8px;
+  padding: 4px 8px;
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--dt-text-muted);
-  font-size: 12px;
+  color: var(--dt-text);
+  font-size: 13px;
   cursor: pointer;
 }
 
@@ -226,9 +253,19 @@
 }
 
 .railEntryTitle {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 行尾小字日期：元数据级别，不与标题争视觉权重 */
+.railEntryDate {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--dt-text-muted);
 }
 
 /* 右：卡片列表 */
@@ -413,4 +450,142 @@
   border: none;
   border-top: 1px solid var(--dt-border);
   margin: 8px 0;
+}
+
+/* 正文里的图片：限宽避免撑破卡片 */
+.cardContent :global(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+/* 卡片底部附件条 */
+.cardAttach {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--dt-border);
+}
+
+/* 附件 chip：外壳是容器，内部「文件名（打开）+ 下载按钮」各一个（button 不可嵌套） */
+.attachChip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 240px;
+  border: 1px solid var(--dt-border);
+  border-radius: 999px;
+  background: var(--dt-panel-2);
+  overflow: hidden;
+}
+
+.attachChip:hover {
+  border-color: var(--dt-accent);
+}
+
+.attachName {
+  /* min-width:0 让 flex 子项可收缩，长文件名才能正常省略而非撑破 chip */
+  min-width: 0;
+  padding: 3px 4px 3px 10px;
+  border: none;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachChip:hover .attachName {
+  color: var(--dt-accent);
+}
+
+/* 下载按钮：右侧还要接删除按钮，故右内边距收紧，避免两个图标之间空得过分 */
+.attachAction {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 3px 5px 3px 4px;
+  border: none;
+  background: transparent;
+  color: var(--dt-text-muted);
+  cursor: pointer;
+}
+
+.attachAction:hover {
+  color: var(--dt-accent);
+}
+
+/* 附件删除：常态淡，hover 转危险色，与「删除整条」的语义色一致 */
+.attachRemove {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 3px 9px 3px 4px;
+  border: none;
+  background: transparent;
+  color: var(--dt-text-muted);
+  cursor: pointer;
+}
+
+.attachRemove:hover {
+  color: var(--dt-danger);
+}
+
+/* 无附件时不画分隔线：此时区里只有一个上传入口，不隔断正文 */
+.cardAttachEmpty {
+  margin-top: 6px;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* 就地添加附件：与附件 chip 同族的虚线次级入口 */
+.attachAdd {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px dashed var(--dt-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.attachAdd:hover:not(:disabled) {
+  color: var(--dt-accent);
+  border-color: var(--dt-accent);
+}
+
+.attachAdd:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.attachError {
+  margin-top: 4px;
+  color: var(--dt-danger);
+  font-size: 12px;
+}
+
+/* 就地编辑态：卡片换成可编辑形态，用强调色描边提示「这张正在改」 */
+.cardEditing {
+  border-color: var(--dt-accent);
+  box-shadow: var(--dt-shadow-md);
+}
+
+/* 编辑态正文区：与上方字段行留出间距 */
+.editBody {
+  margin-top: 10px;
+}
+
+/* 编辑态底部操作区：右对齐，取消在左、保存在右 */
+.editActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
 }

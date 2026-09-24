@@ -39,6 +39,12 @@ export const TASK_TYPE_FILE_SUFFIX = ".json";
 /** dev 构建：无法校验、被隔离保留的任务文件后缀（不丢弃，便于事后人工恢复） */
 export const QUARANTINE_SUFFIX = ".quarantine.json";
 
+/**
+ * 经验附件存放目录（位于数据根目录下，再按经验 id 分子目录）。
+ * md 正文引用的图片与直接上传的附件共用同一目录，便于统一迁移数据目录。
+ */
+export const EXPERIENCE_ATTACHMENTS_DIR = "experiences/attachments";
+
 /** 自动备份滚动保留份数（提示词 5.4） */
 export const BACKUP_KEEP_COUNT = 7;
 

@@ -1,22 +1,27 @@
-// 职责：经验新增 / 编辑共用弹窗。新增时 editing=null，编辑时传入既有记录回填。
-// 字段：日期（原生 date，与子任务截止日同风格）、分类、标题、整篇 Markdown 正文。
-// 正文支持两种录入：直接写 Markdown，或「上传 md」从本地选 .md 文件灌入；下方实时预览渲染效果。
+// 职责：新增经验的弹窗。编辑已改为在主页卡片上就地完成（ExperienceEditCard），
+// 本弹窗只服务新增，不再承担编辑回填。
+// 字段：日期（原生 date，与子任务截止日同风格）、分类、标题、整篇 Markdown 正文、直接附件。
+// 正文录入与图片修复复用 ExperienceMarkdownField，与就地编辑卡行为一致。
 
 import { useEffect, useState } from "react";
-import { Button, Group, Modal, NativeSelect, Stack, Textarea, TextInput } from "@mantine/core";
-import { open } from "@tauri-apps/plugin-dialog";
-import { readTextFile } from "@tauri-apps/plugin-fs";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { UploadIcon } from "@/components/Icons";
-import type { Experience, ExperienceCategory } from "@/types";
+import { Button, Group, Modal, NativeSelect, Stack, TextInput } from "@mantine/core";
+import { CloseIcon, UploadIcon } from "@/components/Icons";
+import { generateTaskId } from "@/lib";
+import { dataRoot } from "@/services/paths";
+import { copyPickedAttachments } from "./attachmentActions";
+import { ExperienceMarkdownField } from "./ExperienceMarkdownField";
 import styles from "./ExperienceEditorModal.module.css";
+import type { ExperienceAttachment, ExperienceCategory } from "@/types";
 
 export interface ExperienceDraft {
+  /** 由本弹窗预先生成：附件在落库前就已复制到 <数据根>/experiences/attachments/<id>，
+   *  落库必须沿用同一个 id，否则会出现「文件在但记录指不到」的错位 */
+  id: string;
   date: string;
   category: string;
   title: string;
   content: string;
+  attachments: ExperienceAttachment[];
 }
 
 interface ExperienceEditorModalProps {
@@ -24,8 +29,6 @@ interface ExperienceEditorModalProps {
   onClose: () => void;
   categories: ExperienceCategory[];
   defaultDate: string;
-  /** 传入则为编辑模式，否则新增 */
-  editing: Experience | null;
   onSubmit: (data: ExperienceDraft) => void;
 }
 
@@ -34,45 +37,49 @@ export function ExperienceEditorModal({
   onClose,
   categories,
   defaultDate,
-  editing,
   onSubmit,
 }: ExperienceEditorModalProps) {
+  const [expId, setExpId] = useState("");
   const [date, setDate] = useState(defaultDate);
-  const [category, setCategory] = useState(categories[0]?.id ?? "");
+  const [category, setCategory] = useState("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  // 上传失败的内联提示（项目未启用 notifications，不依赖它）
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  // 上传中避免重复点击
+  const [attachments, setAttachments] = useState<ExperienceAttachment[]>([]);
+  // 附件复制失败的内联提示（项目未启用 notifications，不依赖它）
+  const [attachError, setAttachError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  // 数据根目录，供正文编辑器解析附件图片地址
+  const [root, setRoot] = useState<string | null>(null);
+
+  // 依赖取首个分类 id 而非 categories 数组：数组每次渲染都是新引用，
+  // 放进依赖会让 effect 反复触发、把已填内容重置掉
+  const fallbackCategory = categories[0]?.id ?? "";
 
   useEffect(() => {
     if (!opened) return;
-    setDate(editing?.date ?? defaultDate);
-    setCategory(editing?.category ?? categories[0]?.id ?? "");
-    setTitle(editing?.title ?? "");
-    setContent(editing?.content ?? "");
-    setUploadError(null);
-  }, [opened, editing, defaultDate, categories]);
+    // 新增时先定 id：附件要复制到 <数据根>/experiences/attachments/<id>
+    setExpId(generateTaskId());
+    setDate(defaultDate);
+    setCategory(fallbackCategory);
+    setTitle("");
+    setContent("");
+    setAttachments([]);
+    setAttachError(null);
+    void dataRoot().then(setRoot);
+  }, [opened, defaultDate, fallbackCategory]);
 
   const canSave = title.trim().length > 0 && category.length > 0;
 
-  // 从本地选一个 .md 文件，把内容读入正文输入框。
-  // Tauri 2 经 dialog 选中的路径会自动进入 fs 可读 scope，故 readTextFile 可读到任意位置的文件。
-  const handleUpload = async () => {
-    setUploadError(null);
-    const picked = await open({
-      multiple: false,
-      filters: [{ name: "Markdown", extensions: ["md", "markdown"] }],
-    });
-    if (typeof picked !== "string") return;
+  /** 直接上传附件：多选，逐个复制进该经验的附件目录 */
+  const handleAddAttachments = async () => {
+    setAttachError(null);
     setUploading(true);
     try {
-      const text = await readTextFile(picked);
-      setContent(text);
+      const added = await copyPickedAttachments(expId, "选择要附加的文件");
+      if (added !== null) setAttachments((prev) => [...prev, ...added]);
     } catch (err) {
-      console.error("[experience] 读取 markdown 文件失败", err);
-      setUploadError("读取文件失败，请确认文件未被占用或重试");
+      console.error("[experience] 复制附件失败", err);
+      setAttachError("复制附件失败，请重试");
     } finally {
       setUploading(false);
     }
@@ -80,18 +87,19 @@ export function ExperienceEditorModal({
 
   const handleSave = () => {
     if (!canSave) return;
-    onSubmit({ date, category, title: title.trim(), content });
+    onSubmit({
+      id: expId,
+      date,
+      category,
+      title: title.trim(),
+      content,
+      attachments,
+    });
     onClose();
   };
 
   return (
-    <Modal
-      opened={opened}
-      onClose={onClose}
-      title={editing ? "编辑经验" : "新增经验"}
-      centered
-      size="lg"
-    >
+    <Modal opened={opened} onClose={onClose} title="新增经验" centered size="lg">
       <Stack gap="sm">
         <Group grow wrap="nowrap">
           <TextInput
@@ -115,36 +123,47 @@ export function ExperienceEditorModal({
           onChange={(e) => setTitle(e.currentTarget.value)}
         />
 
+        <ExperienceMarkdownField
+          value={content}
+          onChange={setContent}
+          expId={expId}
+          root={root}
+        />
+
         <div className={styles.editorBody}>
           <Group justify="space-between" align="center" className={styles.editorLabel}>
-            <span>经过 / 解决 / 教训（支持 Markdown）</span>
+            <span>附件</span>
             <Button
               size="xs"
               variant="default"
               leftSection={<UploadIcon size={14} />}
-              onClick={handleUpload}
+              onClick={handleAddAttachments}
               loading={uploading}
             >
-              上传 md
+              添加附件
             </Button>
           </Group>
-          <Textarea
-            placeholder={"可直接写 Markdown，或点「上传 md」灌入整篇文档：\n\n## 经过\n...\n\n## 解决\n...\n\n## 教训\n..."}
-            autosize
-            minRows={6}
-            maxRows={16}
-            value={content}
-            onChange={(e) => setContent(e.currentTarget.value)}
-          />
-          {uploadError && <div className={styles.uploadError}>{uploadError}</div>}
-          {content.trim().length > 0 && (
-            <div className={styles.preview}>
-              <div className={styles.previewTitle}>预览</div>
-              <div className={styles.previewBody}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-              </div>
+          {attachments.length === 0 ? (
+            <div className={styles.uploadHint}>还没有附件，可添加日志、截图、补丁等文件。</div>
+          ) : (
+            <div className={styles.attachList}>
+              {attachments.map((a) => (
+                <div key={a.id} className={styles.attachChip} title={a.name}>
+                  <span className={styles.attachName}>{a.name}</span>
+                  <button
+                    type="button"
+                    className={styles.attachRemove}
+                    onClick={() => setAttachments((prev) => prev.filter((x) => x.id !== a.id))}
+                    aria-label={`移除附件 ${a.name}`}
+                  >
+                    <CloseIcon size={12} />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
+          {/* 草稿态移除附件不落库、不删磁盘文件，无数据损失风险，故不设二次确认 */}
+          {attachError && <div className={styles.uploadError}>{attachError}</div>}
         </div>
 
         <Group justify="flex-end" mt="xs">
@@ -152,7 +171,7 @@ export function ExperienceEditorModal({
             取消
           </Button>
           <Button size="xs" onClick={handleSave} disabled={!canSave}>
-            {editing ? "保存" : "添加"}
+            添加
           </Button>
         </Group>
       </Stack>

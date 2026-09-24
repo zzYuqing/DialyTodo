@@ -17,6 +17,7 @@ import {
   BACKUP_DIR,
   DATA_DIR_NAME,
   DATA_DIR_POINTER_FILE,
+  EXPERIENCE_ATTACHMENTS_DIR,
   SETTINGS_FILE,
   TASKS_DIR,
   TASKS_FILE,
@@ -202,4 +203,13 @@ export async function backupDirPath(): Promise<string> {
 /** <数据根目录>/holidays_YYYY.json */
 export async function holidayFilePath(year: number): Promise<string> {
   return join(await dataRoot(), holidayFileName(year));
+}
+
+/**
+ * 单条经验的附件目录 <数据根目录>/experiences/attachments/<经验id>。
+ * md 引用的图片与直接上传的附件都落在这里；新增时由编辑器预先生成 id，
+ * 因此「还没落库的经验」也能先把文件复制进来。
+ */
+export async function experienceAttachmentsDir(expId: string): Promise<string> {
+  return join(await dataRoot(), EXPERIENCE_ATTACHMENTS_DIR, expId);
 }

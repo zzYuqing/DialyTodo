@@ -1,0 +1,31 @@
+/* 经验正文编辑区：标签行 + CodeMirror 编辑器宿主 + 上传错误提示 */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dt-text);
+}
+
+.uploadError {
+  font-size: 12px;
+  color: var(--dt-danger);
+}
+
+/*
+ * CodeMirror 编辑器宿主：限高滚动 + 面板描边。
+ * 编辑器内部（内容、标题、行内代码等渲染态装饰）的样式在
+ * ExperienceMarkdownEditor.tsx 里用 EditorView.theme 注入，颜色走 --dt-* 变量。
+ */
+.cmHost {
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  background: var(--dt-panel);
+}

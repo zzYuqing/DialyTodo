@@ -6,13 +6,19 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { generateTaskId, nowIso } from "@/lib";
 import { DEFAULT_CATEGORIES, loadExperiences, saveExperiences } from "@/services";
-import type { Experience, ExperienceCategory } from "@/types";
+import type { Experience, ExperienceAttachment, ExperienceCategory } from "@/types";
 
 export interface NewExperienceInput {
+  /**
+   * 新增时可指定 id：附件在落库前就已复制到 <数据根>/experiences/attachments/<id>，
+   * 落库必须沿用同一个 id，否则会出现「文件在但记录指不到」的错位。缺省时自行生成。
+   */
+  id?: string;
   date: string;
   category: string;
   title: string;
   content: string;
+  attachments?: ExperienceAttachment[];
 }
 
 /** 分类可改部分：改名与换色，两者独立提交 */
@@ -57,11 +63,12 @@ export const useExperienceStore = create<ExperienceState>()(
       async addExperience(input) {
         const ts = nowIso();
         const exp: Experience = {
-          id: generateTaskId(),
+          id: input.id ?? generateTaskId(),
           date: input.date,
           category: input.category,
           title: input.title.trim(),
           content: input.content,
+          attachments: input.attachments ?? [],
           createdAt: ts,
           updatedAt: ts,
         };

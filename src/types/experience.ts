@@ -9,6 +9,17 @@ export interface ExperienceCategory {
   color: string;
 }
 
+/** 挂在经验上的附件（直接上传的文件，非 md 内嵌图片） */
+export interface ExperienceAttachment {
+  id: string;
+  /** 原始文件名，界面展示用 */
+  name: string;
+  /** 数据目录内的实际文件名（含扩展名），由系统生成以避冲突 */
+  storedName: string;
+  /** 文件类型（按扩展名推断），供图标与打开方式判断 */
+  mime: string;
+}
+
 /** 一条经验记录 */
 export interface Experience {
   id: string;
@@ -20,6 +31,8 @@ export interface Experience {
   title: string;
   /** 详细经过 / 解决 / 教训 */
   content: string;
+  /** 直接上传的附件；md 正文引用的图片不在此列（它们只存在于 content 里） */
+  attachments: ExperienceAttachment[];
   createdAt: string;
   updatedAt: string;
 }
