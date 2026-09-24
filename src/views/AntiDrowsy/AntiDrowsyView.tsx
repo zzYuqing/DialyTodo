@@ -46,7 +46,6 @@ export function AntiDrowsyView({ onBack }: { onBack: () => void }) {
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<string | null>(null);
-  const [shuffleText, setShuffleText] = useState<string>("?");
 
   // 翻牌：牌阵，用户自行点一张
   const [flipped, setFlipped] = useState<number | null>(null);
@@ -121,14 +120,9 @@ export function AntiDrowsyView({ onBack }: { onBack: () => void }) {
     setPhase("shuffling");
 
     if (form === "flip") {
-      let n = 0;
-      const iv = window.setInterval(() => {
-        setShuffleText(rand());
-        if (++n > 6) window.clearInterval(iv);
-      }, 60);
+      // 翻牌由用户点牌触发 pickCard，draw 仅兜底定格结果
       timers.current.push(
         window.setTimeout(() => {
-          window.clearInterval(iv);
           finish(final);
         }, 480),
       );
