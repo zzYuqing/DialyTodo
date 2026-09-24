@@ -14,6 +14,7 @@ export type {
 } from "./RowContextMenu/RowContextMenu";
 export { EditTaskModal } from "./EditTaskModal/EditTaskModal";
 export type { TaskModalTarget } from "./EditTaskModal/EditTaskModal";
+export { ConfirmDialog } from "./ConfirmDialog/ConfirmDialog";
 export {
   AlertIcon,
   BellIcon,

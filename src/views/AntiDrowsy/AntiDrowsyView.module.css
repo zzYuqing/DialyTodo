@@ -1,0 +1,598 @@
+/* 防困小妙招工具页。全部引用 theme.css 的 --dt-* 变量，不硬编码颜色/尺寸；
+   深色主题由变量覆盖自动切换。 */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* 页头：返回 + 标题 + 分页 */
+.head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back {
+  border: 1px solid var(--dt-border);
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.back:hover {
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+  border-color: var(--dt-accent-soft);
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+.seg {
+  margin-left: auto;
+  display: inline-flex;
+  background: var(--dt-panel-2);
+  border-radius: 10px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.segBtn {
+  border: 0;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 14px;
+  padding: 7px 18px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.segOn {
+  background: var(--dt-panel);
+  color: var(--dt-accent);
+  font-weight: 600;
+  box-shadow: var(--dt-shadow-sm);
+}
+
+/* ===== 抽签页舞台 ===== */
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 32px 24px 64px;
+  background: var(--dt-panel);
+  border: 1px solid var(--dt-border);
+  border-radius: 14px;
+  box-shadow: var(--dt-shadow-sm);
+}
+
+/* ① 翻牌：牌阵，用户自己点一张 */
+.deck {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 440px;
+  transition: opacity 0.3s;
+}
+
+/* 翻开一张后，其余牌淡出，突出选中 */
+.deckPicked .card:not(.cardFlipped) {
+  opacity: 0.28;
+}
+
+.card {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  perspective: 700px;
+}
+
+.card:disabled {
+  cursor: default;
+}
+
+.cardInner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.5s ease;
+  border-radius: 10px;
+}
+
+.cardFlipped .cardInner {
+  transform: rotateY(180deg);
+}
+
+.cardFace {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--dt-shadow-sm);
+  overflow: hidden;
+}
+
+/* 背面：基础框（花纹由各 backX 叠加） */
+.cardBack {
+  border: 1px solid var(--dt-border-strong);
+}
+
+/* A 斜纹：墨绿底 + 双向斜纹 + 中心菱形徽记（最像扑克，慎选） */
+.backA {
+  background-color: var(--dt-accent);
+  background-image: repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.08) 0 5px,
+      transparent 5px 10px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.08) 0 5px,
+      transparent 5px 10px
+    );
+}
+
+/* B 圆点：墨绿底 + 低透明白点阵，可爱但不像扑克 */
+.backB {
+  background-color: var(--dt-accent);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1.6px, transparent 1.8px);
+  background-size: 11px 11px;
+}
+
+/* C 网格：墨绿底 + 细方格线，像笔记纸 */
+.backC {
+  background-color: var(--dt-accent);
+  background-image: linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+/* D 素角标：浅面板 + 细边 + 单角小三角，最素、最不扑克 */
+.backD {
+  background-color: var(--dt-panel-2);
+  border-color: var(--dt-border);
+}
+.backD::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  width: 0;
+  height: 0;
+  border-left: 9px solid var(--dt-accent);
+  border-bottom: 9px solid transparent;
+}
+
+.cardEmblem {
+  width: 22px;
+  height: 22px;
+  background: var(--dt-accent-contrast);
+  opacity: 0.85;
+  transform: rotate(45deg);
+  border-radius: 3px;
+}
+
+/* 牌背花纹切换：牌阵上方小控件 */
+.backSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--dt-text-muted);
+}
+
+.backCycle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--dt-border);
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.backCycle:hover {
+  color: var(--dt-accent);
+  border-color: var(--dt-accent-soft);
+  background: var(--dt-accent-soft);
+}
+
+/* 正面：显示抽中的妙招 */
+.cardFront {
+  background: var(--dt-panel);
+  border: 1px solid var(--dt-border);
+  transform: rotateY(180deg);
+  padding: 8px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--dt-text);
+}
+
+/* ② 滚动停字：三行滚轮，中行选中，上下行向上下渐隐 */
+.rollbox {
+  height: 156px; /* 3 × LINE_H */
+  width: 100%;
+  max-width: 320px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 34%,
+    #000 66%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 34%,
+    #000 66%,
+    transparent 100%
+  );
+}
+
+.rollinner {
+  will-change: transform;
+}
+
+.rollline {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 21px;
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+/* ③ 展签（卷轴） */
+.tube {
+  position: relative;
+  width: 110px;
+  height: 180px;
+  border-radius: 12px 12px 16px 16px;
+  background: var(--dt-panel-2);
+  border: 1px solid var(--dt-border-strong);
+  overflow: hidden;
+  box-shadow: inset 0 -10px 22px rgba(45, 60, 50, 0.1);
+}
+
+.tubeMouth {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 14px;
+  background: var(--dt-border-strong);
+  border-bottom: 1px solid var(--dt-border);
+}
+
+/* 竹节纹理：横向环纹，无金棕，仅用边框色低透明叠加 */
+.tube::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0 26px,
+    var(--dt-border) 26px 28px
+  );
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.shake {
+  animation: wob 0.5s ease-in-out;
+}
+
+@keyframes wob {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-7deg); }
+  40% { transform: rotate(6deg); }
+  60% { transform: rotate(-4deg); }
+  80% { transform: rotate(3deg); }
+}
+
+.stick {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 36px;
+  height: 154px;
+  transform: translateX(-50%) translateY(120%);
+  background: linear-gradient(180deg, var(--dt-panel) 0 18%, var(--dt-accent-soft) 18% 100%);
+  border: 1px solid var(--dt-accent);
+  border-radius: 6px;
+  transition: transform 0.85s cubic-bezier(0.2, 0.85, 0.25, 1);
+}
+
+.stickUp {
+  transform: translateX(-50%) translateY(-6%);
+}
+
+.stickTip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: var(--dt-accent);
+  border-radius: 5px 5px 0 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.stickBand {
+  position: absolute;
+  top: 56px;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: var(--dt-accent);
+  opacity: 0.55;
+}
+
+/* 签身只刻一个「签」字：避免长文本在窄签上换行、遮挡 */
+.stickText {
+  position: absolute;
+  top: 52px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "STKaiti", "KaiTi", "Songti SC", serif;
+  font-size: 22px;
+  color: var(--dt-accent);
+  z-index: 1;
+}
+
+.scroll {
+  width: 260px;
+  margin-top: 18px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.5s, transform 0.5s;
+}
+
+.scrollShow {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.scroll .rod {
+  height: 12px;
+  border-radius: 8px;
+  background: var(--dt-accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 1px 3px rgba(45, 60, 50, 0.22);
+}
+
+.paper {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.7s ease;
+  background: var(--dt-panel-2);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 45%);
+  border-left: 1px solid var(--dt-border);
+  border-right: 1px solid var(--dt-border);
+}
+
+.scrollOpen .paper {
+  max-height: 150px;
+}
+
+.paperInner {
+  padding: 16px;
+  text-align: center;
+  font-family: "STKaiti", "KaiTi", "Songti SC", serif;
+  font-size: 19px;
+  color: var(--dt-text);
+}
+
+/* 抽签按钮 */
+.drawBtn {
+  border: 0;
+  background: var(--dt-accent);
+  color: var(--dt-accent-contrast);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 11px 30px;
+  border-radius: 24px;
+  cursor: pointer;
+}
+
+.drawBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* 切换抽签形式：右下角单个循环按钮 */
+.formSwitch {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--dt-border);
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.formSwitch:hover {
+  color: var(--dt-accent);
+  border-color: var(--dt-accent-soft);
+  background: var(--dt-accent-soft);
+}
+
+/* ===== 全部条目页 ===== */
+.listWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.listHead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.listTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+.listCount {
+  font-size: 13px;
+  color: var(--dt-text-muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--dt-border);
+  border-radius: 12px;
+  background: var(--dt-panel);
+}
+
+.rowLast {
+  border-color: var(--dt-accent);
+  background: var(--dt-accent-soft);
+}
+
+.rowNo {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 22px;
+}
+
+.rowName {
+  font-size: 15px;
+  color: var(--dt-text);
+}
+
+.rowTag {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--dt-accent);
+  background: var(--dt-panel);
+  border: 1px solid var(--dt-accent-soft);
+  padding: 2px 9px;
+  border-radius: 8px;
+}
+
+.rowMark {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--dt-accent);
+  font-weight: 600;
+}
+
+.rowDel {
+  margin-left: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+
+.rowDel:hover {
+  background: var(--dt-danger);
+  color: var(--dt-danger-contrast);
+}
+
+.add {
+  display: flex;
+  gap: 8px;
+}
+
+.addInput {
+  flex: 1;
+  padding: 11px 13px;
+  border: 1px solid var(--dt-border);
+  border-radius: 10px;
+  font-size: 14px;
+  background: var(--dt-panel);
+  color: var(--dt-text);
+  outline: none;
+}
+
+.addInput:focus {
+  border-color: var(--dt-accent);
+}
+
+.addBtn {
+  border: 0;
+  background: var(--dt-accent);
+  color: var(--dt-accent-contrast);
+  padding: 11px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--dt-text-muted);
+}

@@ -1,4 +1,6 @@
-/* 工具页：占位白板，纵向留白布局 */
+/* 工具页：左栏分类导航 + 右栏图标宫格（BC 混合布局）。
+   全部引用 theme.css 的 --dt-* 变量，不硬编码颜色/尺寸；深色主题由变量覆盖自动切换。 */
+
 .wrap {
   display: flex;
   flex-direction: column;
@@ -8,26 +10,198 @@
   box-sizing: border-box;
 }
 
-.title {
-  font-size: 16px;
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.muted {
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 13px;
   color: var(--dt-text-muted);
 }
 
-/* 虚线白板：占据剩余高度，居中提示文字 */
-.board {
+/* 主框架：左栏固定宽 + 右栏自适应，整体占满剩余高度 */
+.frame {
   flex: 1;
+  min-height: 0;
+  display: flex;
+  background: var(--dt-panel);
+  border: 1px solid var(--dt-border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--dt-shadow-sm);
+}
+
+/* ===== 左栏：分类导航 ===== */
+.nav {
+  flex: 0 0 200px;
+  width: 200px;
+  background: var(--dt-panel-2);
+  border-right: 1px solid var(--dt-border);
+  padding: 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.navTitle {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--dt-text-muted);
+  padding: 0 10px 8px;
+}
+
+.navBtn,
+.navBtnActive {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--dt-text);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.navBtn:hover {
+  background: var(--dt-accent-soft);
+}
+
+.navBtnActive,
+.navBtnActive:hover {
+  background: var(--dt-accent);
+  color: var(--dt-accent-contrast);
+}
+
+.navLabel {
+  flex: 1;
+}
+
+.navCount {
+  font-size: 11px;
+  background: rgba(45, 60, 50, 0.12);
+  color: var(--dt-text-muted);
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+
+.navBtnActive .navCount {
+  background: rgba(255, 255, 255, 0.25);
+  color: var(--dt-accent-contrast);
+}
+
+/* ===== 右栏：图标宫格 ===== */
+.main {
+  flex: 1;
+  min-width: 0;
+  padding: 22px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.mainHead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.mainTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+.mainCount {
+  font-size: 13px;
+  color: var(--dt-text-muted);
+}
+
+.mainDesc {
+  margin: 2px 0 20px;
+  font-size: 13px;
+  color: var(--dt-text-muted);
+}
+
+/* 自适应宫格：auto-fill + minmax，容器/窗口变窄时自动减少列数 */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+  align-content: start;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 14px;
+  border: 1px solid var(--dt-border);
+  border-radius: 16px;
+  background: var(--dt-panel);
+  color: var(--dt-text);
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.16s, box-shadow 0.16s, border-color 0.16s;
+}
+
+.tile:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--dt-shadow-md);
+  border-color: var(--dt-accent-soft);
+}
+
+.tileGlyph {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--dt-panel-2);
-  border-style: dashed;
-  border-color: var(--dt-border-strong);
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
 }
 
-.placeholder {
-  color: var(--dt-text-muted);
+.tileTitle {
   font-size: 14px;
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+.tileDesc {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--dt-text-muted);
+}
+
+/* 空分类占位 */
+.empty {
+  margin-top: 30px;
+  padding: 42px 20px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--dt-text-muted);
+  border: 1px dashed var(--dt-border-strong);
+  border-radius: 14px;
+}
+
+.empty b {
+  color: var(--dt-accent);
+  font-weight: 600;
 }

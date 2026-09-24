@@ -6,10 +6,11 @@
 // - 日期导航在 TodoView 容器上，本组件只渲染清单本体；
 // - 未来日期（selectedDate > 今天）仍可点开并新建任务，但不可勾选完成（透传 disabledDone）。
 
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { TaskItem } from "@/components/TaskItem/TaskItem";
 import { AddTaskFab } from "@/components/AddTaskFab/AddTaskFab";
 import { EditTaskModal, type TaskModalTarget } from "@/components/EditTaskModal/EditTaskModal";
+import { ConfirmDialog } from "@/components/ConfirmDialog/ConfirmDialog";
 import {
   buildTaskMap,
   collectTasksOfDay,
@@ -234,18 +235,47 @@ export function DayMode() {
     else void updateTask(target.task.id, payload.edit);
   };
 
-  const handleArchive = (id: string) => {
-    if (window.confirm("删除后任务及其历史完成记录将一并移除，不可恢复。确定？")) {
-      void removeTask(id);
-    }
+  /**
+   * 待删除对象：用一个状态对象驱动二次确认弹窗，普通任务与子任务共用同一份。
+   * null = 弹窗关闭；非 null = 弹窗开启并显示对应文案。
+   * 取代原先的 window.confirm：原生对话框在浅/深主题下不可控、不可聚焦、阻断交互线程。
+   */
+  type PendingDelete =
+    | { kind: "task"; id: string }
+    | { kind: "subtask"; parentId: string; childId: string }
+    | null;
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
+
+  const requestArchive = (id: string) => setPendingDelete({ kind: "task", id });
+  const requestRemoveSubtask = (parentId: string, childId: string) =>
+    setPendingDelete({ kind: "subtask", parentId, childId });
+
+  // 真正执行删除：从 pendingDelete 取出目标，按类型走各自 store 动作，然后收起弹窗
+  const confirmDelete = () => {
+    if (pendingDelete === null) return;
+    if (pendingDelete.kind === "task") void removeTask(pendingDelete.id);
+    else void removeSubtask(pendingDelete.parentId, pendingDelete.childId);
+    setPendingDelete(null);
   };
 
-  // 删除单个子任务：连带硬删除。不给二次确认而是按任务集语境直接提示清楚后果
-  const handleRemoveSubtask = (parentId: string, childId: string) => {
-    if (window.confirm("该子任务将从任务集中删除，不可恢复。确定？")) {
-      void removeSubtask(parentId, childId);
+  // 弹窗文案：动态嵌入被删除对象的标题；任务集额外点明「及其全部子任务」
+  const deleteMessage = useMemo<ReactNode>(() => {
+    if (pendingDelete === null) return null;
+    if (pendingDelete.kind === "task") {
+      const t = tasks.find((x) => x.id === pendingDelete.id);
+      const title = t?.title ?? "未命名任务";
+      return t !== undefined && isComposite(t) ? (
+        <>删除后任务集「<strong>{title}</strong>」及其全部子任务、历史完成记录将一并移除，不可恢复。</>
+      ) : (
+        <>删除后任务「<strong>{title}</strong>」及其历史完成记录将一并移除，不可恢复。</>
+      );
     }
-  };
+    const child = tasks.find((x) => x.id === pendingDelete.childId);
+    const parent = tasks.find((x) => x.id === pendingDelete.parentId);
+    return (
+      <>子任务「<strong>{child?.title ?? "未命名子任务"}</strong>」将从任务集「<strong>{parent?.title ?? "未命名任务集"}</strong>」中删除，不可恢复。</>
+    );
+  }, [pendingDelete, tasks]);
 
   /**
    * 右键「添加到任务集」：收编后该任务会从日清单顶层移进任务集的展开区，
@@ -307,7 +337,7 @@ export function DayMode() {
               onToggleSubtask={(parentId, childId, done) =>
                 void setSubtaskDone(parentId, childId, done)
               }
-              onRemoveSubtask={handleRemoveSubtask}
+              onRemoveSubtask={requestRemoveSubtask}
               onReorderSubtasks={(parentId, ids) => void reorderSubtasks(parentId, ids)}
               onEditSubtask={(parentId, childId, edit) => void editSubtask(parentId, childId, edit)}
               onAddSubtask={(parentId, title) => void addSubtask(parentId, title)}
@@ -315,7 +345,7 @@ export function DayMode() {
               onAttachToComposite={handleAttachToComposite}
               onToggleDone={(id, done) => void setDone(id, selectedDate, done)}
               onEdit={(t) => setTarget({ kind: "edit", task: t })}
-              onRemove={handleArchive}
+              onRemove={requestArchive}
             />
           ))}
         </ul>
@@ -328,6 +358,14 @@ export function DayMode() {
         tasks={tasks}
         onSubmit={handleSubmit}
         onClose={() => setTarget(null)}
+      />
+
+      <ConfirmDialog
+        opened={pendingDelete !== null}
+        title={pendingDelete?.kind === "subtask" ? "删除子任务" : "删除任务"}
+        message={deleteMessage}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
       />
     </div>
   );

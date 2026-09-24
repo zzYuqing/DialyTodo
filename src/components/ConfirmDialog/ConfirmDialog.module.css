@@ -1,0 +1,43 @@
+/* 弹窗容器：圆角与既有 Modal（编辑任务）保持一致，阴影走主题变量 */
+.modal {
+  border-radius: 12px;
+}
+
+/* 说明文案：14px 正文，浅色下走 --dt-text（非 muted，删除提示属警告级，需要足够可读） */
+.message {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--dt-text);
+  white-space: normal;
+  word-break: break-word;
+}
+
+.message strong {
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+/* 底部操作区：右对齐，确认在右（最靠近惯用手），取消在左 */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* 确认按钮：危险色实心。用 .actions .confirm 提一档特异性，确保覆盖 Mantine 默认底色 */
+.actions .confirm {
+  background-color: var(--dt-danger);
+  color: var(--dt-danger-contrast);
+}
+
+.actions .confirm:hover {
+  background-color: var(--dt-danger);
+  filter: brightness(0.93);
+}
+
+/* 取消按钮：Mantine variant="default" 已自带底与描边，无需额外着色，
+   这里仅保证与确认按钮视觉等高对齐 */
+.actions .cancel {
+  flex-shrink: 0;
+}

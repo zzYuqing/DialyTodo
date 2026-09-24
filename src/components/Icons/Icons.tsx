@@ -203,3 +203,63 @@ export function UploadIcon({ size }: IconProps) {
     </svg>
   );
 }
+
+/** 健康：心形（左栏「健康」分类与防疲劳类工具语义） */
+export function HealthIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M8 12.8S3.8 9.8 3.8 6.9A2.2 2.2 0 0 1 8 5.8a2.2 2.2 0 0 1 4.2 1.1C12.2 9.8 8 12.8 8 12.8z" />
+    </svg>
+  );
+}
+
+/** 咖啡杯：带蒸汽（防困小妙招工具语义） */
+export function CoffeeIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M3 6.5h7.5v2.2a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z" />
+      <path d="M10.5 7h1.3a1.5 1.5 0 0 1 0 3H10.5" />
+      <path d="M5 5.2c0-.8.9-.8.9-1.6M7.6 5.2c0-.8.9-.8.9-1.6" />
+    </svg>
+  );
+}
+
+/** 火花：四角星 + 小闪点（科技分类与洞察AI 工具语义） */
+export function SparkIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M8 2.3l1.2 3.1 3.1 1.2-3.1 1.2L8 11l-1.2-3.1L3.7 6.6l3.1-1.2z" />
+      <path d="M12.4 11.4l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5z" />
+    </svg>
+  );
+}
+
+/** 闪电：效率分类语义 */
+export function BoltIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M9 2L4 9h3l-1 5 5-7H8z" />
+    </svg>
+  );
+}
+
+/** 叶子：养身小技巧工具语义（与 HealthIcon 区分） */
+export function LeafIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M4 12.5C4 7 7.5 4 12.5 4c0 5.5-3.5 8.5-8.5 8.5z" />
+      <path d="M5.2 11.3C7 9 9.6 7.5 12 6.6" />
+    </svg>
+  );
+}
+
+/** 循环箭头：切换 / 换一批语义 */
+export function LoopIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M2.5 6.5A5.5 5.5 0 0 1 13 6" />
+      <path d="M13.5 9.5A5.5 5.5 0 0 1 3 10" />
+      <path d="M10.5 3.5l2.5-1.5v3M5.5 12.5l-2.5 1.5v-3" />
+    </svg>
+  );
+}

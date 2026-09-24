@@ -4,12 +4,13 @@
 // 设计：左侧 168px 竖排状态导航（图标 + 名称 + 计数）一次只选一组，右侧列表区占满剩余高度独立滚动，
 // 组内条数再多也能滚到底；行内复用 TaskItem 卡片视觉（见 LongTermTaskRow）。已删除任务不计入。
 
-import { useMemo, useState, type ComponentType } from "react";
+import { useMemo, useState, type ComponentType, type ReactNode } from "react";
 import { AlertIcon, CheckCircleIcon, ClockIcon } from "@/components/Icons";
 import {
   EditTaskModal,
   type TaskModalTarget,
 } from "@/components/EditTaskModal/EditTaskModal";
+import { ConfirmDialog } from "@/components/ConfirmDialog/ConfirmDialog";
 import { LongTermTaskRow } from "@/components/LongTermTaskRow/LongTermTaskRow";
 import {
   buildTaskMap,
@@ -134,17 +135,47 @@ export function LongTermView() {
     else void updateTask(target.task.id, payload.edit);
   };
 
-  const handleArchive = (id: string) => {
-    if (window.confirm("删除后任务及其历史完成记录将一并移除，不可恢复。确定？")) {
-      void removeTask(id);
-    }
+  /**
+   * 待删除对象：用一个状态对象驱动二次确认弹窗，普通任务与子任务共用同一份。
+   * null = 弹窗关闭；非 null = 弹窗开启并显示对应文案。
+   * 取代原先的 window.confirm：原生对话框在浅/深主题下不可控、不可聚焦、阻断交互线程。
+   */
+  type PendingDelete =
+    | { kind: "task"; id: string }
+    | { kind: "subtask"; parentId: string; childId: string }
+    | null;
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
+
+  const requestArchive = (id: string) => setPendingDelete({ kind: "task", id });
+  const requestRemoveSubtask = (parentId: string, childId: string) =>
+    setPendingDelete({ kind: "subtask", parentId, childId });
+
+  // 真正执行删除：从 pendingDelete 取出目标，按类型走各自 store 动作，然后收起弹窗
+  const confirmDelete = () => {
+    if (pendingDelete === null) return;
+    if (pendingDelete.kind === "task") void removeTask(pendingDelete.id);
+    else void removeSubtask(pendingDelete.parentId, pendingDelete.childId);
+    setPendingDelete(null);
   };
 
-  const handleRemoveSubtask = (parentId: string, childId: string) => {
-    if (window.confirm("该子任务将从任务集中删除，不可恢复。确定？")) {
-      void removeSubtask(parentId, childId);
+  // 弹窗文案：动态嵌入被删除对象的标题；任务集额外点明「及其全部子任务」
+  const deleteMessage = useMemo<ReactNode>(() => {
+    if (pendingDelete === null) return null;
+    if (pendingDelete.kind === "task") {
+      const t = tasks.find((x) => x.id === pendingDelete.id);
+      const title = t?.title ?? "未命名任务";
+      return t !== undefined && isComposite(t) ? (
+        <>删除后任务集「<strong>{title}</strong>」及其全部子任务、历史完成记录将一并移除，不可恢复。</>
+      ) : (
+        <>删除后任务「<strong>{title}</strong>」及其历史完成记录将一并移除，不可恢复。</>
+      );
     }
-  };
+    const child = tasks.find((x) => x.id === pendingDelete.childId);
+    const parent = tasks.find((x) => x.id === pendingDelete.parentId);
+    return (
+      <>子任务「<strong>{child?.title ?? "未命名子任务"}</strong>」将从任务集「<strong>{parent?.title ?? "未命名任务集"}</strong>」中删除，不可恢复。</>
+    );
+  }, [pendingDelete, tasks]);
 
   /** 右键「添加到任务集」：收编后它会从长期任务列表移进任务集展开区，先讲清后果 */
   const handleAttachToComposite = (childId: string, parentId: string) => {
@@ -237,7 +268,7 @@ export function LongTermView() {
                     onToggleSubtask={(parentId, childId, done) =>
                       void setSubtaskDone(parentId, childId, done)
                     }
-                    onRemoveSubtask={handleRemoveSubtask}
+                    onRemoveSubtask={requestRemoveSubtask}
                     onReorderSubtasks={(parentId, ids) => void reorderSubtasks(parentId, ids)}
                     onEditSubtask={(parentId, childId, edit) => void editSubtask(parentId, childId, edit)}
                     onAddSubtask={(parentId, title) => void addSubtask(parentId, title)}
@@ -245,7 +276,7 @@ export function LongTermView() {
                     onAttachToComposite={handleAttachToComposite}
                     onToggleDone={(id, d) => void setDone(id, today, d)}
                     onEdit={(t) => setTarget({ kind: "edit", task: t })}
-                    onRemove={handleArchive}
+                    onRemove={requestArchive}
                   />
                 ))}
               </ul>
@@ -259,6 +290,14 @@ export function LongTermView() {
         tasks={tasks}
         onSubmit={handleSubmit}
         onClose={() => setTarget(null)}
+      />
+
+      <ConfirmDialog
+        opened={pendingDelete !== null}
+        title={pendingDelete?.kind === "subtask" ? "删除子任务" : "删除任务"}
+        message={deleteMessage}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
       />
     </section>
   );
