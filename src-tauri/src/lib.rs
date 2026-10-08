@@ -12,7 +12,23 @@ use tauri::{
 
 /// 应用入口装配。
 pub fn run() {
-    let app = tauri::Builder::default()
+    // 单实例锁：仅 release 构建注册 single-instance 插件。
+    // 原理：只有调用 init 的进程才会创建/校验基于 identifier 的互斥锁，
+    // dev 不注册 → dev 与 release 互不抢锁，两者可同时运行；
+    // release 注册后，多个 exe 实例之间互斥（第二个实例被拦截并聚焦已开窗口）。
+    // 插件要求第一个注册，故置于 builder 链最前（仅 release 生效）。
+    #[allow(unused_mut)]
+    let mut builder = tauri::Builder::default();
+
+    #[cfg(not(debug_assertions))]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            // 第二个实例被拦截时，聚焦已运行实例的主窗口（复用托盘菜单的聚焦逻辑）。
+            focus_main_window(app);
+        }));
+    }
+
+    let app = builder
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
