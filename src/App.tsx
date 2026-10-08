@@ -11,9 +11,16 @@ import {
   SimpleModeView,
   TodoView,
   ToolsView,
+  TrashView,
 } from "@/views";
 import { useReminders, useWindowMode } from "@/hooks";
-import { useExperienceStore, useSettingsStore, useTaskStore, useViewStore } from "@/stores";
+import {
+  useExperienceStore,
+  useSettingsStore,
+  useTaskStore,
+  useTrashStore,
+  useViewStore,
+} from "@/stores";
 import type { ViewName } from "@/stores";
 import styles from "./App.module.css";
 
@@ -23,6 +30,7 @@ const VIEW_COMPONENTS: Record<ViewName, () => JSX.Element> = {
   experience: () => <ExperienceView />,
   longterm: () => <LongTermView />,
   tools: () => <ToolsView />,
+  trash: () => <TrashView />,
   settings: () => <SettingsView />,
 };
 
@@ -42,10 +50,12 @@ export default function App() {
   useEffect(() => {
     const init = async () => {
       try {
+        // 先读设置：回收站启动扫描依赖保留天数（trashRetentionDays）
+        await initializeSettings();
         await Promise.all([
-          initializeSettings(),
           initializeTasks(),
           initializeExperiences(),
+          useTrashStore.getState().initialize(),
         ]);
       } catch (err) {
         useTaskStore.setState({

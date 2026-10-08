@@ -1,0 +1,78 @@
+/* 回收站视图布局，沿用经验页的浅色卡片风格 */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.header {
+  flex: 0 0 auto;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  font-size: 16px;
+}
+
+.muted {
+  color: var(--dt-text-muted);
+}
+
+.list {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.row {
+  background: var(--dt-card-bg, #fff);
+}
+
+.rowMain {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.rowText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rowName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
+}
+
+.remain {
+  color: var(--dt-text-muted);
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.expired {
+  color: var(--dt-danger);
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.empty {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dt-text-muted);
+  font-size: 14px;
+}

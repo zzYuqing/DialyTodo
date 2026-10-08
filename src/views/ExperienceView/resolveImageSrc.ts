@@ -16,11 +16,12 @@ export function resolveImageSrc(src: string | undefined, root: string | null): s
   if (/^(?:https?:|data:|blob:|file:)/i.test(src)) return src;
   // 附件目录内的相对路径 → 拼数据根目录后转 asset URL
   if (isAttachmentMarkdownPath(src) && root) {
-    return convertFileSrc(`${root}/${src}`);
+    // root 在 Windows 下含反斜杠，与 src 拼接会产生混合格式，统一归一化
+    return convertFileSrc(`${root.replace(/\\/g, "/")}/${src.replace(/\\/g, "/")}`);
   }
   // 绝对路径（Windows 盘符 / UNC）→ 直接转 asset URL
   if (/^(?:[a-zA-Z]:[\\/]|\\\\)/.test(src)) {
-    return convertFileSrc(src);
+    return convertFileSrc(src.replace(/\\/g, "/"));
   }
   // 其余（未修复的相对路径）原样返回，浏览器会显示为裂图
   return src;

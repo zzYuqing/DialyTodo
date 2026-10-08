@@ -4,10 +4,13 @@
 import {
   CURRENT_VERSION,
   DEFAULT_SUBTASK_DONE_KEEP,
+  DEFAULT_TRASH_RETENTION_DAYS,
   HOLIDAY_URL_TEMPLATE,
   MIN_SUPPORTED_VERSION,
   SUBTASK_DONE_KEEP_MAX,
   SUBTASK_DONE_KEEP_MIN,
+  TRASH_RETENTION_MAX,
+  TRASH_RETENTION_MIN,
 } from "@/constants";
 import type { AppSettings, DayRecord, Reminder, Schedule, Task, TasksFile } from "@/types";
 
@@ -235,6 +238,11 @@ export function isAppSettings(value: unknown): value is AppSettings {
   if (candidate.subtaskDoneKeep != null && typeof candidate.subtaskDoneKeep !== "number") {
     return false;
   }
+  // trashRetentionDays 是回收站功能新增字段：缺失 / null 一律放行（由 normalizeSettings 补出厂值），
+  // 只有「类型不对」才判废。用 != null 同时放过 null 与 undefined，避免老设置文件整份被判废。
+  if (candidate.trashRetentionDays != null && typeof candidate.trashRetentionDays !== "number") {
+    return false;
+  }
   if (typeof candidate.holidayUrlTemplate !== "string") return false;
   if (candidate.lastBackupDate !== null && !isDateKey(candidate.lastBackupDate)) return false;
 
@@ -253,6 +261,17 @@ export function clampSubtaskDoneKeep(value: number): number {
 }
 
 /**
+ * 收敛「回收站保留天数」到合法区间：非有限数回出厂值，越界夹到上下限，小数取整。
+ * 设置页允许直接输入数字，手改 settings.json 也可能写出非法值，统一在这里收敛，
+ * 消费端（回收站清理）可以直接当正整数用，不必再判空。
+ */
+export function clampTrashRetentionDays(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_TRASH_RETENTION_DAYS;
+  const rounded = Math.round(value);
+  return Math.min(TRASH_RETENTION_MAX, Math.max(TRASH_RETENTION_MIN, rounded));
+}
+
+/**
  * 补齐 / 收敛设置：新增字段缺失时补出厂值，越界值夹回合法区间。
  * 与 normalizeTask 同口径 —— 加载必经这一步，保证消费端拿到的永远是完整合法的 AppSettings。
  */
@@ -260,6 +279,7 @@ export function normalizeSettings(settings: AppSettings): AppSettings {
   return {
     ...settings,
     subtaskDoneKeep: clampSubtaskDoneKeep(settings.subtaskDoneKeep),
+    trashRetentionDays: clampTrashRetentionDays(settings.trashRetentionDays),
   };
 }
 
@@ -277,6 +297,7 @@ export function defaultSettings(): AppSettings {
     petEnabled: false,
     hideCompleted: false,
     subtaskDoneKeep: DEFAULT_SUBTASK_DONE_KEEP,
+    trashRetentionDays: DEFAULT_TRASH_RETENTION_DAYS,
     holidayUrlTemplate: HOLIDAY_URL_TEMPLATE,
     lastBackupDate: null,
   };

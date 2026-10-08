@@ -518,6 +518,22 @@
   color: var(--dt-accent);
 }
 
+/* 预览按钮：与下载同族的次级动作，常态淡、hover 转强调色 */
+.attachPreview {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 3px 4px;
+  border: none;
+  background: transparent;
+  color: var(--dt-text-muted);
+  cursor: pointer;
+}
+
+.attachPreview:hover {
+  color: var(--dt-accent);
+}
+
 /* 附件删除：常态淡，hover 转危险色，与「删除整条」的语义色一致 */
 .attachRemove {
   display: inline-flex;
@@ -569,6 +585,14 @@
   margin-top: 4px;
   color: var(--dt-danger);
   font-size: 12px;
+}
+
+/* .md 含本地图片的非阻断警告：复用强调色（提醒而非报错） */
+.attachWarn {
+  margin-top: 4px;
+  color: var(--dt-accent);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 /* 就地编辑态：卡片换成可编辑形态，用强调色描边提示「这张正在改」 */

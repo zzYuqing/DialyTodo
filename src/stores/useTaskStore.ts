@@ -8,6 +8,7 @@ import {
   applyCompositeSubtasks,
   applyTaskEdit,
   attachExistingTask,
+  childIdsOf,
   clampSubtaskDueDates,
   createTask,
   deriveCompositeCompletion,
@@ -24,7 +25,13 @@ import {
   todayKey,
 } from "@/lib";
 import { dailyBackup, loadTasks, saveTasks } from "@/services";
-import type { CompositeEdit, CreateTaskInput, Task, TaskEdit } from "@/types";
+import type {
+  CompositeEdit,
+  CreateTaskInput,
+  Task,
+  TaskEdit,
+  TrashSubtaskPayload,
+} from "@/types";
 import type { SubtaskEdit } from "@/lib";
 
 interface TaskState {
@@ -39,14 +46,25 @@ interface TaskState {
   addTask: (input: CreateTaskInput) => Promise<void>;
   updateTask: (id: string, edit: TaskEdit) => Promise<void>;
   setDone: (id: string, dateKey: string, done: boolean) => Promise<void>;
-  /** 删除任务（硬删除）。任务集删除时连带删除其全部子任务 */
+  /** 删除任务（软删除：仅从主数组移除并落盘，磁盘无独立文件；快照由回收站持有） */
   removeTask: (id: string) => Promise<void>;
+  /** 从回收站还原任务（含任务集的子任务）：按 id 去重后追加回主数组并落盘 */
+  restoreTasks: (tasks: Task[]) => Promise<void>;
+  /**
+   * 从回收站还原单个子任务：先在数组里补回任务实体，再挂回父任务集的 children，
+   * 并尽量放回原始下标（index 越界时收敛到末尾）。父任务集已不存在则原样返回不写盘。
+   */
+  restoreSubtask: (parentId: string, subtask: Task, index: number) => Promise<void>;
 
   // ── 复合任务（任务集）──
   /** 新建复合任务：创建任务集实体 + 首屏给出的子任务实体，一步落盘 */
   addComposite: (edit: CompositeEdit) => Promise<void>;
-  /** 编辑复合任务：父字段 + 子任务群（新增 / 改名 / 改截止日 / 删除）+ DDL 收敛 */
-  updateComposite: (id: string, edit: CompositeEdit) => Promise<void>;
+  /**
+   * 编辑复合任务：父字段 + 子任务群（新增 / 改名 / 改截止日 / 删除）+ DDL 收敛。
+   * 返回「草稿里消失而被连带删除」的子任务快照（含原下标与父引用），供调用方移入回收站；
+   * 删除本身发生在 applyCompositeSubtasks 内部，这里只负责在动手前先把快照留下来。
+   */
+  updateComposite: (id: string, edit: CompositeEdit) => Promise<TrashSubtaskPayload[]>;
   /** 勾选 / 取消单个子任务。写 childDoneAt，父任务的完成态由 lib 推导 */
   setSubtaskDone: (parentId: string, childId: string, done: boolean) => Promise<void>;
   /** 删除单个子任务：摘关系 + 硬删除（否则它会以普通任务身份复活在日清单） */
@@ -123,7 +141,7 @@ async addTask(input) {
 
     async removeTask(id) {
       const parent = get().tasks.find((task) => task.id === id);
-      // 任务集连带硬删除其全部子任务：否则子任务会因为无人收录而降级回普通任务重新冒到日清单。
+      // 任务集连带删除其全部子任务：否则子任务会因为无人收录而降级回普通任务重新冒到日清单。
       // 删子任务前先读 children，因为 filter 掉父之后子任务的 parentId 还指向已删的 id，
       // syncChildrenIndex 下次启动会把它们降级回顶层 —— 不删就会复活。
       const childIds = parent !== undefined && isComposite(parent) ? new Set(parent.children ?? []) : null;
@@ -131,6 +149,34 @@ async addTask(input) {
         childIds === null
           ? get().tasks.filter((task) => task.id !== id)
           : get().tasks.filter((task) => task.id !== id && !childIds.has(task.id));
+      set({ tasks: next });
+      await saveTasks(next);
+    },
+
+    async restoreTasks(tasksToRestore) {
+      // 还原时以快照为准；与主数据按 id 去重，已存在的跳过，避免重复还原同一份
+      const existing = new Set(get().tasks.map((task) => task.id));
+      const appended = tasksToRestore.filter((task) => !existing.has(task.id));
+      if (appended.length === 0) return;
+      const next = [...get().tasks, ...appended];
+      set({ tasks: next });
+      await saveTasks(next);
+    },
+
+    async restoreSubtask(parentId, subtask, index) {
+      // 还原以快照为准；已存在的实体不重复追加，避免同 id 撞键
+      const exists = get().tasks.some((task) => task.id === subtask.id);
+      const base = exists ? get().tasks : [...get().tasks, subtask];
+      // attachExistingTask 会挂关系 + 收敛截止日 + 重算父完成态；原样返回表示父不存在 / 已是成员
+      const attached = attachExistingTask(base, parentId, subtask.id);
+      if (attached === base) return;
+      // 放回原始位置：先从 children 里摘出，再按 index 插回（越界收敛到末尾）
+      const parent = attached.find((task) => task.id === parentId);
+      if (parent === undefined) return;
+      const without = childIdsOf(parent).filter((id) => id !== subtask.id);
+      const at = Math.min(Math.max(index, 0), without.length);
+      const ordered = [...without.slice(0, at), subtask.id, ...without.slice(at)];
+      const next = reorderSubtasks(attached, parentId, ordered);
       set({ tasks: next });
       await saveTasks(next);
     },
@@ -169,7 +215,19 @@ async addTask(input) {
 
     async updateComposite(id, edit) {
       const current = get().tasks.find((task) => task.id === id);
-      if (current === undefined) return;
+      if (current === undefined) return [];
+      // 动手前先留下快照：草稿里没出现的子任务会被 applyCompositeSubtasks 摘关系 + 硬删除，
+      // 删完就取不到 parentId / children 了。调用方（回收站）据此把它们移入回收站。
+      const keptIds = new Set(
+        edit.subtasks.map((draft) => draft.id).filter((draftId): draftId is string => draftId !== undefined),
+      );
+      const removed: TrashSubtaskPayload[] = [];
+      childIdsOf(current).forEach((childId, index) => {
+        if (keptIds.has(childId)) return;
+        const child = get().tasks.find((task) => task.id === childId);
+        if (child === undefined) return;
+        removed.push({ parentId: id, parentTitle: current.title, index, task: child });
+      });
       const newIds = edit.subtasks
         .filter((draft) => draft.id === undefined)
         .map(() => generateTaskId());
@@ -180,7 +238,7 @@ async addTask(input) {
           : task,
       );
       const parentAfterEdit = edited.find((task) => task.id === id);
-      if (parentAfterEdit === undefined) return;
+      if (parentAfterEdit === undefined) return [];
       const clamped = clampSubtaskDueDates(
         edited,
         parentAfterEdit,
@@ -202,6 +260,7 @@ async addTask(input) {
       );
       set({ tasks: next });
       await saveTasks(next);
+      return removed;
     },
 
     async setSubtaskDone(parentId, childId, done) {

@@ -31,6 +31,12 @@ export interface AppSettings {
    * 合法区间见 SUBTASK_DONE_KEEP_MIN / _MAX，UI 与加载时都会夹回区间内。
    */
   subtaskDoneKeep: number;
+  /**
+   * 回收站保留天数：删除的任务 / 经验 / 附件在回收站内保留该天数后，于下次启动彻底清除。
+   * 该字段为回收站功能新增，存量设置文件没有它，由 loadSettings 的 merge + normalizeSettings 补齐为出厂值。
+   * 合法区间见 TRASH_RETENTION_MIN / _MAX，UI 与加载时都会夹回区间内。
+   */
+  trashRetentionDays: number;
   /** 节假日数据源 URL 模板，%1 为四位年份；留空即退化为「永不联网」（提示词 5.3） */
   holidayUrlTemplate: string;
   /** 最后一次生成备份的日期，YYYY-MM-DD；每天只备份一次 */

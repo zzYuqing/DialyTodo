@@ -5,7 +5,11 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { generateTaskId, nowIso } from "@/lib";
-import { DEFAULT_CATEGORIES, loadExperiences, saveExperiences } from "@/services";
+import {
+  DEFAULT_CATEGORIES,
+  loadExperiences,
+  saveExperiences,
+} from "@/services";
 import type { Experience, ExperienceAttachment, ExperienceCategory } from "@/types";
 
 export interface NewExperienceInput {
@@ -35,6 +39,8 @@ interface ExperienceState {
   addExperience: (input: NewExperienceInput) => Promise<void>;
   updateExperience: (id: string, patch: Partial<NewExperienceInput>) => Promise<void>;
   removeExperience: (id: string) => Promise<void>;
+  /** 从回收站还原整条经验（含其附件数组）：同名 id 已存在则跳过，避免重复还原 */
+  restoreExperience: (exp: Experience) => Promise<void>;
   addCategory: (name: string, color: string) => Promise<void>;
   updateCategory: (id: string, patch: CategoryPatch) => Promise<void>;
   removeCategory: (id: string) => Promise<void>;
@@ -86,7 +92,17 @@ export const useExperienceStore = create<ExperienceState>()(
       },
 
       async removeExperience(id) {
+        // 软删除：仅从经验数组移除并落盘。磁盘附件目录保留，由回收站在彻底删除 / 过期时清理，
+        // 这样删除经验后附件文件不会立刻消失，仍可在回收站里还原整条经验（含附件）。
         const next = get().experiences.filter((e) => e.id !== id);
+        set({ experiences: next });
+        await saveExperiences(get().categories, next);
+      },
+
+      async restoreExperience(exp) {
+        // 还原整条经验（含其 attachments 数组）；id 已存在则跳过，避免重复还原
+        if (get().experiences.some((e) => e.id === exp.id)) return;
+        const next = [...get().experiences, exp];
         set({ experiences: next });
         await saveExperiences(get().categories, next);
       },

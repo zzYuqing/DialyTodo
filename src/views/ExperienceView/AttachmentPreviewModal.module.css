@@ -1,0 +1,57 @@
+/* 附件在线预览弹窗内部容器 */
+.body {
+  min-height: 320px;
+  max-height: 72vh;
+  overflow: auto;
+}
+
+/* 图片预览：等比缩放、居中，避免超大图撑破弹窗 */
+.image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 6px;
+}
+
+/* pdf 预览：占满宽度，高度交给 max-height 约束，由 WebView2 原生 PDF 阅读器呈现 */
+.frame {
+  width: 100%;
+  height: 72vh;
+  border: none;
+  border-radius: 6px;
+  background: var(--dt-panel-2);
+}
+
+/* 纯文本预览：保留换行与空白，等宽字体，浅底深字（不压暗，遵循视觉规范） */
+.text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-family-monospace, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--dt-text);
+  background: var(--dt-panel-2);
+  padding: 12px;
+  border-radius: 6px;
+}
+
+/* markdown 预览：与经验卡片正文同字号同色 */
+.markdown {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--dt-text);
+}
+
+.markdown img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+/* 预览失败提示：复用危险色（红），与「打开/下载失败」同一语义色 */
+.error {
+  color: var(--dt-danger);
+  font-size: 13px;
+}

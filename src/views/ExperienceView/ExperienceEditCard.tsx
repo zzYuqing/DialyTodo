@@ -6,10 +6,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Group, NativeSelect, TextInput } from "@mantine/core";
 import { ConfirmDialog } from "@/components/ConfirmDialog/ConfirmDialog";
-import { CloseIcon, DownloadIcon, UploadIcon } from "@/components/Icons";
+import { CloseIcon, DownloadIcon, EyeIcon, UploadIcon } from "@/components/Icons";
 import type { Experience, ExperienceAttachment, ExperienceCategory } from "@/types";
 import { copyPickedAttachments, downloadAttachment, openAttachment } from "./attachmentActions";
 import { ExperienceMarkdownField } from "./ExperienceMarkdownField";
+import { AttachmentPreviewModal, isPreviewableAttachment } from "./AttachmentPreviewModal";
 import styles from "./ExperienceView.module.css";
 
 /** 就地编辑提交的字段集 */
@@ -45,6 +46,10 @@ export function ExperienceEditCard({
   // 附件复制中禁用入口，避免连点
   const [uploading, setUploading] = useState(false);
   const [attachError, setAttachError] = useState<string | null>(null);
+  // .md 含本地图片的非阻断警告
+  const [attachWarn, setAttachWarn] = useState<string | null>(null);
+  // 正在预览的附件（编辑态单卡片，局部管理）
+  const [preview, setPreview] = useState<ExperienceAttachment | null>(null);
   // 待确认删除的附件：非空即弹出二次确认
   const [pendingDelete, setPendingDelete] = useState<ExperienceAttachment | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -64,13 +69,15 @@ export function ExperienceEditCard({
   /** 添加附件：文件立即复制进附件目录，条目进 draft（取消可回滚列表，磁盘文件按既定策略保留） */
   const handleAddAttachments = async () => {
     setAttachError(null);
+    setAttachWarn(null);
     setUploading(true);
     try {
-      const added = await copyPickedAttachments(
+      const result = await copyPickedAttachments(
         experience.id,
         `为「${experience.title}」添加附件`,
       );
-      if (added !== null) setAttachments((prev) => [...prev, ...added]);
+      if (result.added !== null) setAttachments((prev) => [...prev, ...result.added!]);
+      if (result.mdImageWarning !== undefined) setAttachWarn(result.mdImageWarning);
     } catch (err) {
       console.error("[experience] 编辑态添加附件失败", err);
       setAttachError("附件复制失败，请重试");
@@ -133,6 +140,17 @@ export function ExperienceEditCard({
             >
               {a.name}
             </button>
+            {isPreviewableAttachment(a) && (
+              <button
+                type="button"
+                className={styles.attachPreview}
+                onClick={() => setPreview(a)}
+                title={`预览 ${a.name}`}
+                aria-label={`预览 ${a.name}`}
+              >
+                <EyeIcon size={12} />
+              </button>
+            )}
             <button
               type="button"
               className={styles.attachAction}
@@ -167,6 +185,7 @@ export function ExperienceEditCard({
         </button>
       </div>
       {attachError && <div className={styles.attachError}>{attachError}</div>}
+      {attachWarn && <div className={styles.attachWarn}>{attachWarn}</div>}
 
       <div className={styles.editActions}>
         <Button size="xs" variant="default" onClick={onCancel}>
@@ -193,6 +212,14 @@ export function ExperienceEditCard({
           setPendingDelete(null);
         }}
         onCancel={() => setPendingDelete(null)}
+      />
+
+      <AttachmentPreviewModal
+        opened={preview !== null}
+        att={preview}
+        expId={experience.id}
+        root={root}
+        onClose={() => setPreview(null)}
       />
     </div>
   );

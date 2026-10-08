@@ -3,7 +3,7 @@
 // （经验属非关键数据，不做备份兜底，下次写入自然覆盖）。
 
 import { join } from "@tauri-apps/api/path";
-import { copyFile, exists, mkdir, readTextFile } from "@tauri-apps/plugin-fs";
+import { copyFile, exists, mkdir, readTextFile, remove } from "@tauri-apps/plugin-fs";
 import { CATEGORY_COLORS, CURRENT_VERSION } from "@/constants";
 import { generateTaskId } from "@/lib";
 import { ensureDirectories, dataRoot, experienceAttachmentsDir } from "./paths";
@@ -111,6 +111,7 @@ function mimeOf(ext: string): string {
     ".log": "text/plain",
     ".json": "application/json",
     ".md": "text/markdown",
+    ".markdown": "text/markdown",
   };
   return table[ext.toLowerCase()] ?? "application/octet-stream";
 }
@@ -128,7 +129,38 @@ export async function copyAttachmentInto(
   if (!(await exists(dir))) await mkdir(dir, { recursive: true });
   const name = baseNameOf(srcPath);
   const ext = extensionOf(name);
-  const storedName = `${generateTaskId()}${ext}`;
+  // id 同时作为 storedName 的前缀：附件文件可由 id 反推，删除时也能精准对应
+  const id = generateTaskId();
+  const storedName = `${id}${ext}`;
   await copyFile(srcPath, await join(dir, storedName));
-  return { id: generateTaskId(), name, storedName, mime: mimeOf(ext) };
+  return { id, name, storedName, mime: mimeOf(ext) };
+}
+
+/**
+ * 删除单条附件的物理文件（回收站彻底删除某条附件、或整条经验过期清理时调用）。
+ * 目录或文件缺失直接跳过；删除失败不阻断主流程。
+ */
+export async function deleteAttachmentFile(expId: string, storedName: string): Promise<void> {
+  const dir = await experienceAttachmentsDir(expId);
+  const file = await join(dir, storedName);
+  if (!(await exists(file))) return;
+  try {
+    await remove(file);
+  } catch {
+    // 单文件删除失败不阻断主流程
+  }
+}
+
+/**
+ * 整条经验删除 / 过期清理时，连其附件目录一起移除（含所有历史附件文件）。
+ * 目录缺失直接跳过；非空目录递归删除。清理失败不阻断删除主流程。
+ */
+export async function deleteExperienceAttachments(expId: string): Promise<void> {
+  const dir = await experienceAttachmentsDir(expId);
+  if (!(await exists(dir))) return;
+  try {
+    await remove(dir, { recursive: true });
+  } catch {
+    // 清理失败不阻断删除主流程
+  }
 }

@@ -284,3 +284,13 @@ export function SearchIcon({ size }: IconProps) {
     </svg>
   );
 }
+
+/** 预览：眼睛（附件在线预览入口） */
+export function EyeIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" />
+      <circle cx="8" cy="8" r="2.2" />
+    </svg>
+  );
+}

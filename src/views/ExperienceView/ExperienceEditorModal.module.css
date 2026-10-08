@@ -17,6 +17,13 @@
   color: var(--dt-danger);
 }
 
+/* .md 含本地图片的非阻断警告：复用强调色（提醒而非报错） */
+.uploadWarn {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dt-accent);
+}
+
 /* 附件区 */
 .uploadHint {
   font-size: 12px;
@@ -60,4 +67,19 @@
 
 .attachRemove:hover {
   color: var(--dt-danger);
+}
+
+/* 预览按钮：与删除同族的次级动作，常态淡、hover 转强调色 */
+.attachPreview {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  background: transparent;
+  color: var(--dt-text-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.attachPreview:hover {
+  color: var(--dt-accent);
 }

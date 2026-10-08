@@ -4,6 +4,7 @@
 export * from "./paths";
 export * from "./storage";
 export * from "./experienceService";
+export * from "./trashService";
 export * from "./holidayService";
 export * from "./reminderService";
 export * from "./migration";

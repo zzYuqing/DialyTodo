@@ -18,7 +18,7 @@ import {
   todayKey,
   sortUnfinishedTasks,
 } from "@/lib";
-import { useTaskStore, useViewStore } from "@/stores";
+import { useSettingsStore, useTaskStore, useTrashStore, useViewStore } from "@/stores";
 import { useWorkdayChecker } from "@/hooks";
 import type { CompositeTarget, Task, TaskSubmitPayload } from "@/types";
 import styles from "./DayMode.module.css";
@@ -43,12 +43,13 @@ export function DayMode() {
   const addTask = useTaskStore((s) => s.addTask);
   const updateTask = useTaskStore((s) => s.updateTask);
   const setDone = useTaskStore((s) => s.setDone);
-  const removeTask = useTaskStore((s) => s.removeTask);
+  const moveTaskToTrash = useTrashStore((s) => s.moveTaskToTrash);
+  const moveSubtaskToTrash = useTrashStore((s) => s.moveSubtaskToTrash);
+  const updateCompositeWithTrash = useTrashStore((s) => s.updateCompositeWithTrash);
+  const trashRetentionDays = useSettingsStore((s) => s.settings.trashRetentionDays);
   const reorderTasks = useTaskStore((s) => s.reorderTasks);
   const addComposite = useTaskStore((s) => s.addComposite);
-  const updateComposite = useTaskStore((s) => s.updateComposite);
   const setSubtaskDone = useTaskStore((s) => s.setSubtaskDone);
-  const removeSubtask = useTaskStore((s) => s.removeSubtask);
   const reorderSubtasks = useTaskStore((s) => s.reorderSubtasks);
   const editSubtask = useTaskStore((s) => s.editSubtask);
   const addSubtask = useTaskStore((s) => s.addSubtask);
@@ -231,7 +232,7 @@ export function DayMode() {
       else void addTask(payload.edit);
       return;
     }
-    if (payload.kind === "composite") void updateComposite(target.task.id, payload.edit);
+    if (payload.kind === "composite") void updateCompositeWithTrash(target.task.id, payload.edit);
     else void updateTask(target.task.id, payload.edit);
   };
 
@@ -253,8 +254,8 @@ export function DayMode() {
   // 真正执行删除：从 pendingDelete 取出目标，按类型走各自 store 动作，然后收起弹窗
   const confirmDelete = () => {
     if (pendingDelete === null) return;
-    if (pendingDelete.kind === "task") void removeTask(pendingDelete.id);
-    else void removeSubtask(pendingDelete.parentId, pendingDelete.childId);
+    if (pendingDelete.kind === "task") void moveTaskToTrash(pendingDelete.id);
+    else void moveSubtaskToTrash(pendingDelete.parentId, pendingDelete.childId);
     setPendingDelete(null);
   };
 
@@ -265,17 +266,17 @@ export function DayMode() {
       const t = tasks.find((x) => x.id === pendingDelete.id);
       const title = t?.title ?? "未命名任务";
       return t !== undefined && isComposite(t) ? (
-        <>删除后任务集「<strong>{title}</strong>」及其全部子任务、历史完成记录将一并移除，不可恢复。</>
+        <>删除后任务集「<strong>{title}</strong>」及其全部子任务、历史完成记录将移入回收站，保留 {trashRetentionDays} 天后彻底清除。</>
       ) : (
-        <>删除后任务「<strong>{title}</strong>」及其历史完成记录将一并移除，不可恢复。</>
+        <>删除后任务「<strong>{title}</strong>」及其历史完成记录将移入回收站，保留 {trashRetentionDays} 天后彻底清除。</>
       );
     }
     const child = tasks.find((x) => x.id === pendingDelete.childId);
     const parent = tasks.find((x) => x.id === pendingDelete.parentId);
     return (
-      <>子任务「<strong>{child?.title ?? "未命名子任务"}</strong>」将从任务集「<strong>{parent?.title ?? "未命名任务集"}</strong>」中删除，不可恢复。</>
+      <>子任务「<strong>{child?.title ?? "未命名子任务"}</strong>」将从任务集「<strong>{parent?.title ?? "未命名任务集"}</strong>」中移入回收站，保留 {trashRetentionDays} 天后彻底清除。</>
     );
-  }, [pendingDelete, tasks]);
+  }, [pendingDelete, tasks, trashRetentionDays]);
 
   /**
    * 右键「添加到任务集」：收编后该任务会从日清单顶层移进任务集的展开区，

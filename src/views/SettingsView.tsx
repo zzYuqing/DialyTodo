@@ -26,8 +26,13 @@ import {
 } from "@mantine/core";
 import { isTauri } from "@/bridge";
 import { useHolidayStore, useSettingsStore } from "@/stores";
-import { SUBTASK_DONE_KEEP_MAX, SUBTASK_DONE_KEEP_MIN } from "@/constants";
-import { clampSubtaskDoneKeep } from "@/lib";
+import {
+  SUBTASK_DONE_KEEP_MAX,
+  SUBTASK_DONE_KEEP_MIN,
+  TRASH_RETENTION_MAX,
+  TRASH_RETENTION_MIN,
+} from "@/constants";
+import { clampSubtaskDoneKeep, clampTrashRetentionDays } from "@/lib";
 import {
   canMigrateTo,
   dataRoot,
@@ -57,6 +62,7 @@ export function SettingsView() {
   const autoStart = useSettingsStore((s) => s.settings.autoStart);
   // 任务集展开区：已勾选子任务保留条数（超出部分收进折叠节点）
   const subtaskDoneKeep = useSettingsStore((s) => s.settings.subtaskDoneKeep);
+  const trashRetentionDays = useSettingsStore((s) => s.settings.trashRetentionDays);
   const update = useSettingsStore((s) => s.update);
 
   const [holidayLoading, setHolidayLoading] = useState(false);
@@ -160,6 +166,15 @@ export function SettingsView() {
   const handleKeepChange = (value: number | string) => {
     if (typeof value !== "number") return;
     void update({ subtaskDoneKeep: clampSubtaskDoneKeep(value) });
+  };
+
+  /**
+   * 回收站保留天数：与保留条数同口径，NumberInput 输入过程中给 number、清空给空串；
+   * 空串不落盘，数字经 clamp 收敛再写入，保证 settings.json 存的是合法区间内的整数。
+   */
+  const handleRetentionChange = (value: number | string) => {
+    if (typeof value !== "number") return;
+    void update({ trashRetentionDays: clampTrashRetentionDays(value) });
   };
 
   const currentYear = new Date().getFullYear();
@@ -318,6 +333,36 @@ export function SettingsView() {
               size="xs"
               w={84}
               aria-label="已勾选子任务保留条数"
+            />
+          </Group>
+        </Stack>
+      </Paper>
+
+      <Paper withBorder p="md" radius="md">
+        <Text fw={600} className={styles.cardTitle}>回收站</Text>
+        <Text size="xs" className={styles.muted}>
+          删除的任务、经验与附件会先进入回收站，到期前可随时还原；超过保留天数后于下次启动自动彻底清除。
+        </Text>
+
+        <Stack gap="md" mt="sm">
+          <Group justify="space-between" wrap="nowrap" gap="sm" align="flex-start">
+            <Stack gap={2} className={styles.grow}>
+              <Text size="sm">保留天数</Text>
+              <Text size="xs" className={styles.muted}>
+                回收站内条目的最长保留时长；范围 {TRASH_RETENTION_MIN}–{TRASH_RETENTION_MAX} 天，改后立即生效
+              </Text>
+            </Stack>
+            <NumberInput
+              value={trashRetentionDays}
+              onChange={handleRetentionChange}
+              min={TRASH_RETENTION_MIN}
+              max={TRASH_RETENTION_MAX}
+              step={1}
+              allowDecimal={false}
+              allowNegative={false}
+              size="xs"
+              w={84}
+              aria-label="回收站保留天数"
             />
           </Group>
         </Stack>

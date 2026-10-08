@@ -11,6 +11,7 @@ import {
   ChevronRightIcon,
   CloseIcon,
   DownloadIcon,
+  EyeIcon,
   PlusIcon,
   SearchIcon,
   SettingsIcon,
@@ -18,7 +19,7 @@ import {
 } from "@/components/Icons";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useExperienceStore } from "@/stores";
+import { useExperienceStore, useSettingsStore, useTrashStore } from "@/stores";
 import { todayKey } from "@/lib";
 import { dataRoot } from "@/services/paths";
 import { copyPickedAttachments, downloadAttachment, openAttachment } from "./attachmentActions";
@@ -26,6 +27,7 @@ import { ExperienceDateRail } from "./ExperienceDateRail";
 import { ExperienceEditCard, type ExperienceEditPatch } from "./ExperienceEditCard";
 import { ExperienceEditorModal, type ExperienceDraft } from "./ExperienceEditorModal";
 import { ExperienceCategoryManager } from "./ExperienceCategoryManager";
+import { AttachmentPreviewModal, isPreviewableAttachment } from "./AttachmentPreviewModal";
 import { resolveImageSrc } from "./resolveImageSrc";
 import type { Experience, ExperienceAttachment } from "@/types";
 import styles from "./ExperienceView.module.css";
@@ -61,7 +63,10 @@ export function ExperienceView() {
   const categories = useExperienceStore((s) => s.categories);
   const addExperience = useExperienceStore((s) => s.addExperience);
   const updateExperience = useExperienceStore((s) => s.updateExperience);
-  const removeExperience = useExperienceStore((s) => s.removeExperience);
+  // 删除改走回收站：整条经验 / 单附件先移入回收站，磁盘文件保留到彻底清除时
+  const moveExperienceToTrash = useTrashStore((s) => s.moveExperienceToTrash);
+  const moveAttachmentToTrash = useTrashStore((s) => s.moveAttachmentToTrash);
+  const trashRetentionDays = useSettingsStore((s) => s.settings.trashRetentionDays);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -79,6 +84,10 @@ export function ExperienceView() {
   const [uploadingIds, setUploadingIds] = useState<ReadonlySet<string>>(new Set());
   // 附件操作的失败提示，内联显示在对应卡片下（项目未启用 notifications，不依赖它）
   const [attachError, setAttachError] = useState<{ id: string; message: string } | null>(null);
+  // 附件操作的警告提示（如 .md 含本地图片），内联显示在对应卡片下，非阻断
+  const [attachWarn, setAttachWarn] = useState<{ id: string; message: string } | null>(null);
+  // 正在预览的附件：弹窗级状态，同一时刻只预览一个
+  const [preview, setPreview] = useState<{ expId: string; att: ExperienceAttachment } | null>(null);
   // 待确认删除的目标。存 id 而非对象引用，避免数据刷新后拿到过期快照；
   // 整条与附件共用一个状态，保证同一时刻只有一个确认弹窗
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
@@ -163,9 +172,18 @@ export function ExperienceView() {
     void addExperience(data);
   };
 
-  /** 就地编辑保存：patch 落到该条，随后退出编辑态 */
+  /** 就地编辑保存：patch 落到该条，被移除的附件移入回收站，随后退出编辑态 */
   const handleSaveEdit = async (id: string, patch: ExperienceEditPatch) => {
+    // 编辑保存可能批量移除了附件：先从当前快照挑出被移除的附件，随后移入回收站
+    const current = experiences.find((e) => e.id === id);
+    const removed =
+      current !== undefined && patch.attachments !== undefined
+        ? current.attachments.filter((a) => !patch.attachments!.some((p) => p.id === a.id))
+        : [];
     await updateExperience(id, patch);
+    for (const a of removed) {
+      await moveAttachmentToTrash(id, a);
+    }
     setEditingId(null);
   };
 
@@ -185,11 +203,17 @@ export function ExperienceView() {
    */
   const handleAddAttachments = async (exp: Experience) => {
     setAttachError(null);
+    setAttachWarn(null);
     setUploadingIds((prev) => new Set(prev).add(exp.id));
     try {
-      const added = await copyPickedAttachments(exp.id, `为「${exp.title}」添加附件`);
-      if (added !== null && added.length > 0) {
-        await updateExperience(exp.id, { attachments: [...exp.attachments, ...added] });
+      const result = await copyPickedAttachments(exp.id, `为「${exp.title}」添加附件`);
+      if (result.added !== null && result.added.length > 0) {
+        await updateExperience(exp.id, {
+          attachments: [...exp.attachments, ...result.added],
+        });
+      }
+      if (result.mdImageWarning !== undefined) {
+        setAttachWarn({ id: exp.id, message: result.mdImageWarning });
       }
     } catch (err) {
       console.error("[experience] 就地添加附件失败", err);
@@ -213,14 +237,18 @@ export function ExperienceView() {
     setPendingDelete(null);
     if (target.kind === "experience") {
       if (editingId === target.id) setEditingId(null);
-      await removeExperience(target.id);
+      // 整条经验移入回收站：软删经验数组（保留磁盘附件），快照写入 trash.json
+      await moveExperienceToTrash(target.id);
       return;
     }
     const exp = experiences.find((e) => e.id === target.expId);
     if (exp === undefined) return;
-    await updateExperience(exp.id, {
-      attachments: exp.attachments.filter((a) => a.id !== target.att.id),
-    });
+    const removed = exp.attachments.find((a) => a.id === target.att.id);
+    if (removed === undefined) return;
+    const kept = exp.attachments.filter((a) => a.id !== target.att.id);
+    await updateExperience(exp.id, { attachments: kept });
+    // 被删附件移入回收站（磁盘文件保留到回收站彻底清除时）；传入附件对象本身，避免删后再反查找不到
+    await moveAttachmentToTrash(exp.id, removed);
   };
 
   return (
@@ -419,6 +447,17 @@ export function ExperienceView() {
                         >
                           {a.name}
                         </button>
+                        {isPreviewableAttachment(a) && (
+                          <button
+                            type="button"
+                            className={styles.attachPreview}
+                            onClick={() => setPreview({ expId: e.id, att: a })}
+                            title={`预览 ${a.name}`}
+                            aria-label={`预览 ${a.name}`}
+                          >
+                            <EyeIcon size={12} />
+                          </button>
+                        )}
                         <button
                           type="button"
                           className={styles.attachAction}
@@ -459,6 +498,9 @@ export function ExperienceView() {
                   {attachError?.id === e.id && (
                     <div className={styles.attachError}>{attachError.message}</div>
                   )}
+                  {attachWarn?.id === e.id && (
+                    <div className={styles.attachWarn}>{attachWarn.message}</div>
+                  )}
                 </div>
               );
             })
@@ -489,17 +531,26 @@ export function ExperienceView() {
         message={
           pendingDelete?.kind === "attachment" ? (
             <>
-              确定要从这条经验移除附件 <strong>{pendingDelete.att.name}</strong> 吗？
+              确定要从这条经验移除附件 <strong>{pendingDelete.att.name}</strong> 吗？移除后可在回收站保留 {trashRetentionDays} 天，期间可还原。
             </>
           ) : (
             <>
-              确定要删除经验 <strong>{pendingDelete?.title ?? ""}</strong> 吗？删除后无法恢复。
+              确定要删除经验 <strong>{pendingDelete?.title ?? ""}</strong> 吗？删除后将移入回收站，保留 {trashRetentionDays} 天后彻底清除。
             </>
           )
         }
         confirmLabel="删除"
         onConfirm={() => void handleConfirmDelete()}
         onCancel={() => setPendingDelete(null)}
+      />
+
+      {/* 附件在线预览：视图级单例，点任意附件的「预览」按钮时挂载对应附件 */}
+      <AttachmentPreviewModal
+        opened={preview !== null}
+        att={preview?.att ?? null}
+        expId={preview?.expId ?? ""}
+        root={root}
+        onClose={() => setPreview(null)}
       />
     </div>
   );

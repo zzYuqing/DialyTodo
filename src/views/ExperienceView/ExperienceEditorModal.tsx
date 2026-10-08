@@ -5,11 +5,12 @@
 
 import { useEffect, useState } from "react";
 import { Button, Group, Modal, NativeSelect, Stack, TextInput } from "@mantine/core";
-import { CloseIcon, UploadIcon } from "@/components/Icons";
+import { CloseIcon, EyeIcon, UploadIcon } from "@/components/Icons";
 import { generateTaskId } from "@/lib";
 import { dataRoot } from "@/services/paths";
 import { copyPickedAttachments } from "./attachmentActions";
 import { ExperienceMarkdownField } from "./ExperienceMarkdownField";
+import { AttachmentPreviewModal, isPreviewableAttachment } from "./AttachmentPreviewModal";
 import styles from "./ExperienceEditorModal.module.css";
 import type { ExperienceAttachment, ExperienceCategory } from "@/types";
 
@@ -47,6 +48,10 @@ export function ExperienceEditorModal({
   const [attachments, setAttachments] = useState<ExperienceAttachment[]>([]);
   // 附件复制失败的内联提示（项目未启用 notifications，不依赖它）
   const [attachError, setAttachError] = useState<string | null>(null);
+  // .md 含本地图片的非阻断警告
+  const [attachWarn, setAttachWarn] = useState<string | null>(null);
+  // 正在预览的附件（弹窗内局部管理）
+  const [preview, setPreview] = useState<ExperienceAttachment | null>(null);
   const [uploading, setUploading] = useState(false);
   // 数据根目录，供正文编辑器解析附件图片地址
   const [root, setRoot] = useState<string | null>(null);
@@ -73,10 +78,12 @@ export function ExperienceEditorModal({
   /** 直接上传附件：多选，逐个复制进该经验的附件目录 */
   const handleAddAttachments = async () => {
     setAttachError(null);
+    setAttachWarn(null);
     setUploading(true);
     try {
-      const added = await copyPickedAttachments(expId, "选择要附加的文件");
-      if (added !== null) setAttachments((prev) => [...prev, ...added]);
+      const result = await copyPickedAttachments(expId, "选择要附加的文件");
+      if (result.added !== null) setAttachments((prev) => [...prev, ...result.added!]);
+      if (result.mdImageWarning !== undefined) setAttachWarn(result.mdImageWarning);
     } catch (err) {
       console.error("[experience] 复制附件失败", err);
       setAttachError("复制附件失败，请重试");
@@ -99,6 +106,7 @@ export function ExperienceEditorModal({
   };
 
   return (
+    <>
     <Modal opened={opened} onClose={onClose} title="新增经验" centered size="lg">
       <Stack gap="sm">
         <Group grow wrap="nowrap">
@@ -147,23 +155,35 @@ export function ExperienceEditorModal({
             <div className={styles.uploadHint}>还没有附件，可添加日志、截图、补丁等文件。</div>
           ) : (
             <div className={styles.attachList}>
-              {attachments.map((a) => (
-                <div key={a.id} className={styles.attachChip} title={a.name}>
-                  <span className={styles.attachName}>{a.name}</span>
-                  <button
-                    type="button"
-                    className={styles.attachRemove}
-                    onClick={() => setAttachments((prev) => prev.filter((x) => x.id !== a.id))}
-                    aria-label={`移除附件 ${a.name}`}
-                  >
-                    <CloseIcon size={12} />
-                  </button>
-                </div>
-              ))}
+          {attachments.map((a) => (
+            <div key={a.id} className={styles.attachChip} title={a.name}>
+              <span className={styles.attachName}>{a.name}</span>
+              {isPreviewableAttachment(a) && (
+                <button
+                  type="button"
+                  className={styles.attachPreview}
+                  onClick={() => setPreview(a)}
+                  title={`预览 ${a.name}`}
+                  aria-label={`预览 ${a.name}`}
+                >
+                  <EyeIcon size={12} />
+                </button>
+              )}
+              <button
+                type="button"
+                className={styles.attachRemove}
+                onClick={() => setAttachments((prev) => prev.filter((x) => x.id !== a.id))}
+                aria-label={`移除附件 ${a.name}`}
+              >
+                <CloseIcon size={12} />
+              </button>
+            </div>
+          ))}
             </div>
           )}
           {/* 草稿态移除附件不落库、不删磁盘文件，无数据损失风险，故不设二次确认 */}
           {attachError && <div className={styles.uploadError}>{attachError}</div>}
+          {attachWarn && <div className={styles.uploadWarn}>{attachWarn}</div>}
         </div>
 
         <Group justify="flex-end" mt="xs">
@@ -176,5 +196,14 @@ export function ExperienceEditorModal({
         </Group>
       </Stack>
     </Modal>
+
+    <AttachmentPreviewModal
+      opened={preview !== null}
+      att={preview}
+      expId={expId}
+      root={root}
+      onClose={() => setPreview(null)}
+    />
+    </>
   );
 }

@@ -14,6 +14,8 @@ export const DATA_DIR_POINTER_FILE = "data-dir";
 
 export const TASKS_FILE = "tasks.json";
 export const SETTINGS_FILE = "settings.json";
+/** 回收站数据文件：被删除的任务 / 经验 / 附件快照（不含磁盘文件本体） */
+export const TRASH_FILE = "trash.json";
 export const BACKUP_DIR = "backup";
 
 /** 备份文件名前缀，完整名为 backup_YYYY-MM-DD.json */

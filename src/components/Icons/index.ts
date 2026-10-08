@@ -11,6 +11,7 @@ export {
   DownloadIcon,
   EditIcon,
   ExperienceIcon,
+  EyeIcon,
   GripIcon,
   HealthIcon,
   LeafIcon,

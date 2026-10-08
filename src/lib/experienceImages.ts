@@ -89,6 +89,15 @@ export function countOccurrences(md: string, raw: string): number {
 }
 
 /**
+ * 统计 md 里「本地」图片引用数（relative + absolute，排除 http/data/ftp/mailto 等网络资源）。
+ * 用于「把 .md 作为附件上传」时判断是否需要警告：本地图片不会随附件一起复制，
+ * 用户打开附件时这些图片会缺失。网络图片不计入（远程加载，不存在「未上传」问题）。
+ */
+export function countLocalImages(md: string): number {
+  return extractImageRefs(md).filter((ref) => ref.kind !== "external").length;
+}
+
+/**
  * 把正文里所有等于 from 的图片地址替换为 to。
  * 直接按整串替换：同一相对路径的多处引用一次改全，也顺带覆盖引用式定义行。
  */

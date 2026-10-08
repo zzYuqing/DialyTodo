@@ -7,7 +7,14 @@
 import type { ComponentType } from "react";
 import { useViewStore } from "@/stores";
 import type { ViewName } from "@/stores";
-import { ExperienceIcon, LongTermIcon, SettingsIcon, TodoIcon, ToolsIcon } from "@/components/Icons";
+import {
+  ExperienceIcon,
+  LongTermIcon,
+  SettingsIcon,
+  TodoIcon,
+  ToolsIcon,
+  TrashIcon,
+} from "@/components/Icons";
 import styles from "./Sidebar.module.css";
 
 interface TabDef {
@@ -22,6 +29,7 @@ const TABS: TabDef[] = [
   { view: "experience", label: "经验", icon: ExperienceIcon },
   { view: "longterm", label: "长期", icon: LongTermIcon },
   { view: "tools", label: "工具", icon: ToolsIcon },
+  { view: "trash", label: "回收站", icon: TrashIcon },
   { view: "settings", label: "设置", icon: SettingsIcon },
 ];
 

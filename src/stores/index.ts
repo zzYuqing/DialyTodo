@@ -5,3 +5,4 @@ export * from "./useExperienceStore";
 export * from "./useSettingsStore";
 export * from "./useViewStore";
 export * from "./useHolidayStore";
+export * from "./useTrashStore";

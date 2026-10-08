@@ -8,3 +8,4 @@ export { SettingsView } from "./SettingsView";
 export { SimpleModeView } from "./SimpleModeView/SimpleModeView";
 export { ExperienceView } from "./ExperienceView";
 export { ToolsView } from "./ToolsView";
+export { TrashView } from "./TrashView";
