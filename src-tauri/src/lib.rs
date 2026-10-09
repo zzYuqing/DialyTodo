@@ -80,17 +80,20 @@ fn apply_dev_icon(app: &tauri::App) {
     }
 }
 
-/// 按系统版本应用窗口背板：Windows 11 用 Mica，失败（Windows 10）降级为 Acrylic 半透明纯色。
+/// 按系统版本应用窗口背板：仅 Windows 11 用 Mica；Windows 10 不做任何效果。
+/// 为什么 Win10 不能用 Acrylic 降级：Acrylic（SetWindowCompositionAttribute 的
+/// ACCENT_ENABLE_ACRYLICBLURBEHIND）要求 DWM 对窗口背后的屏幕内容做实时模糊采样，
+/// Win10 的 DWM 在拖动期间跟不上重采样节奏，窗口会明显滞后于鼠标（"拖动很慢"）；
+/// Win11 的 DWM 合成管线能跟上，所以同一代码在 Win11 无感。
+/// Win10 下窗口背景由前端 CSS 实色绘制（transparent 已为 false），不需要系统级效果。
 fn apply_window_effect(app: &tauri::AppHandle) {
-    use window_vibrancy::{apply_acrylic, apply_mica};
+    use window_vibrancy::apply_mica;
 
     let Some(window) = app.get_webview_window("main") else {
         return;
     };
-    if apply_mica(&window, Some(true)).is_err() {
-        // 提示词六节：Windows 10 降级为半透明纯色 + 细边框
-        let _ = apply_acrylic(&window, Some((245, 246, 248, 220)));
-    }
+    // Win10 上 apply_mica 返回 Err，此处直接放弃效果，不再降级 Acrylic。
+    let _ = apply_mica(&window, Some(true));
 }
 
 /// 构建托盘图标与原生菜单。
