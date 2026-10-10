@@ -236,6 +236,22 @@
   transition: background-color 120ms ease, color 120ms ease;
 }
 
+/* 底部操作行：添加子任务 + 分隔线 + 按截止排序，归在同一行、弱化呈现 */
+.sortRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+/* 操作行里的一根细分隔线，区隔「添加」与「排序」两类动作 */
+.sortDivider {
+  width: 1px;
+  height: 16px;
+  background: var(--dt-border);
+  margin: 0 4px;
+}
+
 /* ── 完成时间轴 ──
  * 已勾选区画成一条时间线：竖轴由每行 .rail 的 ::before 上下外扩拼接（补偿 .panel 的 4px 行距），
  * 圆点即该条的完成节点。轴与节点做成独立元素而非 .row 的伪元素——

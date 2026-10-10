@@ -1,0 +1,141 @@
+/* 控件根：内联块，浮层相对它绝对定位 */
+.root {
+  position: relative;
+  display: inline-flex;
+}
+
+/* 触发器基类：图标 + 文字横排 */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+/* 禁用：置灰且不可点，沿用现有 disabled 口径 */
+.trigger:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+/* 头部胶囊：与「今天」按钮同款（TodoView .textButton） */
+.headerBtn {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+  font-size: 12px;
+}
+
+.headerBtn:hover:not(:disabled) {
+  background: var(--dt-panel-2);
+  color: var(--dt-text);
+}
+
+/* 展开区透明轻量：与「添加子任务」同款（SubtaskItem .addToggle） */
+.inlineBtn {
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 12px;
+}
+
+.inlineBtn:hover:not(:disabled) {
+  background: var(--dt-panel-2);
+  color: var(--dt-text);
+}
+
+/* 激活态（浮层已展开）：主色浅底，表示「当前聚焦」 */
+.active {
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+  border-color: var(--dt-accent);
+}
+
+/* 方向浮层 */
+.popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  background: var(--dt-panel);
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  box-shadow: var(--dt-shadow-md);
+  padding: 4px;
+  min-width: 184px;
+}
+
+/* header 变体：按钮靠窗口右侧，浮层改为右对齐向左展开，避免向右超出被裁 */
+.popoverRight {
+  left: auto;
+  right: 0;
+}
+
+/* inline 变体：按钮在展开区底部，浮层改为向上展开，避免盖住 / 被下方任务卡盖住 */
+.popoverUp {
+  top: auto;
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: auto;
+}
+
+/* 浮层里的每个选项 */
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  /* 文案为完整句式，保持单行；宽度不足时由浮层自适应撑开而非折行 */
+  white-space: nowrap;
+  transition: background-color 120ms ease;
+}
+
+.item:hover:not(:disabled) {
+  background: var(--dt-panel-2);
+}
+
+/* 禁用项（如带截止期不足两条时的「按截止」）：置灰且不可点 */
+.item:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+/* 无截止期追问弹窗：复用 Modal 外观，双按钮（置底 / 置顶） */
+.modal {
+  border-radius: 12px;
+}
+
+.message {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--dt-text);
+  white-space: normal;
+  word-break: break-word;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* 置底 / 置顶两颗按钮同款中性描边，不用颜色区分主次 */
+.actions .actionBtn {
+  flex-shrink: 0;
+}

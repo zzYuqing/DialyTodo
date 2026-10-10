@@ -15,6 +15,7 @@
 //   超过 endDate 的任务由 occursOn/isWithinRange 过滤，不会出现在日清单。
 // - 紧迫度走整行底色 + 左侧色条 + 标题色阶（低饱和暖灰，避红橙），不染徽章；
 //   未完成且未到截止日的长期 DDL 追加「剩 N 天」徽章（中性色，数字等宽）；
+//   截止日当天（含长期任务最后一天）显示「今日截止」；
 //   「已过期」走独立红徽章，置于周期徽章右侧、日期之前。
 
 import {
@@ -36,6 +37,7 @@ import {
   isOverdueDdl,
   subtaskProgressOf,
   ddlUrgencyFor,
+  todayKey,
   type DdlUrgency,
   type SubtaskEdit,
   type TaskMap,
@@ -218,15 +220,25 @@ export const TaskItem = memo(function TaskItem({
   // 已过期：长期 DDL 在结束日当天且未完成（独立于档位，走红徽章）
   const overdue = isOverdueDdl(task, dateKey);
 
-  // 剩余天数：仅长期 DDL（有 endDate 才算得出）且未完成时显示，形如「剩 3 天」。
-  // 与「已过期」互斥 —— 截止日当天由 isOverdueDdl 走红徽章，不在此重复表达。
+  // 截止日徽章：仅未完成时计算，与「已过期」互斥（仅过去日标记已过期）。
+  // - 长期 DDL 的剩余天数：正数 →「剩 N 天」；截止日当天（含长期任务最后一天）→「今日截止」；
+  // - 非长期 DDL 但 endDate 命中真实今天且未完成（如起止同日的单日任务）→ 补「今日截止」。
   const endDate = task.schedule.endDate;
   const daysLeft =
     isLongDdlTask(task.schedule) && !isDdlCompleted && endDate != null
       ? daysBetweenKeys(dateKey, endDate)
       : null;
-  // 「剩 N 天」含截止日当天的 0 天；但与「已过期」互斥（仅过去日标记已过期），故排除 overdue。
-  const daysLeftText = daysLeft !== null && !overdue && daysLeft >= 0 ? `剩 ${daysLeft} 天` : null;
+  const deadlineBadge =
+    daysLeft !== null && !overdue
+      ? daysLeft === 0
+        ? "今日截止"
+        : `剩 ${daysLeft} 天`
+      : null;
+  const dueTodayBadge =
+    deadlineBadge === null && endDate != null && endDate === todayKey() && !isDdlCompleted
+      ? "今日截止"
+      : null;
+  const deadlineText = deadlineBadge ?? dueTodayBadge;
 
   // 完成态追加文字：完成时距 DDL 的剩余天数（endDate - completedAt）
   const daysAhead =
@@ -327,8 +339,8 @@ export const TaskItem = memo(function TaskItem({
           {overdue && (
             <span className={`${styles.badge} ${styles.badgeExpired}`}>已过期</span>
           )}
-          {daysLeftText !== null && (
-            <span className={`${styles.badge} ${styles.days}`}>{daysLeftText}</span>
+          {deadlineText !== null && (
+            <span className={`${styles.badge} ${styles.days}`}>{deadlineText}</span>
           )}
           {completedDateText !== null && (
             <span className={`${styles.badge} ${styles.badgeCompletion}`}>

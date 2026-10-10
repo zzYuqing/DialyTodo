@@ -10,11 +10,12 @@
   min-height: 0;
 }
 
-/* 头部：‹ 日期(含副标题) › [今天] 一行排布，按钮顶对齐标题行；间距统一 4px 基准 */
+/* 头部：左侧为 ‹ 日期(含副标题) › [今天] 标题组，右侧单独放「按截止排序」，两端对齐 */
 .header {
   flex-shrink: 0;
   display: flex;
   align-items: flex-start;
+  justify-content: space-between;
   gap: 12px;
   padding: 16px 20px 12px;
 }

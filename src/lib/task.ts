@@ -99,3 +99,51 @@ export function sortUnfinishedTasks(tasks: Task[]): Task[] {
   manual.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   return [...manual, ...ddl, ...rest];
 }
+
+/** 排序维度：按截止日 / 按名称 / 按创建时间 */
+export type SortDimension = "deadline" | "name" | "created";
+/** 排序方向：asc = 升序（近截止 / A→Z / 早→晚），desc = 降序（远截止 / Z→A / 晚→早） */
+export type SortDirection = "asc" | "desc";
+/** 无截止日条目的归位策略：排在顶部或底部（仅 deadline 维度使用） */
+export type NoDatePolicy = "top" | "bottom";
+
+/**
+ * 按指定维度对一组任务重排，只改变顺序、不改变成员。
+ * - deadline：有截止日的按方向排（asc 近→远，desc 远→近）；无截止日（endDate === null）的
+ *   不参与日期比较，按 noDatePolicy 统一归到顶或底，彼此保持入参顺序（稳定）。
+ * - name：按 title 升 / 降序（localeCompare 的 zh 规则，中文按拼音）。
+ * - created：按 createdAt 升 / 降序（ISO8601 字典序即时间序）。
+ *
+ * 各维度比较保持稳定：键相同者维持入参相对顺序。仅 deadline 维度消费 noDatePolicy，
+ * 其余维度忽略它。调用方负责把返回数组映射成 id 序列去落盘（reorderTasks /
+ * reorderSubtasks），不引入第二套顺序来源。
+ */
+export function sortTasksByDimension<T extends Task>(
+  tasks: T[],
+  dimension: SortDimension,
+  direction: SortDirection,
+  noDatePolicy: NoDatePolicy,
+): T[] {
+  if (dimension === "deadline") {
+    const dated: T[] = [];
+    const undated: T[] = [];
+    for (const task of tasks) {
+      if (task.schedule.endDate !== null) dated.push(task);
+      else undated.push(task);
+    }
+    dated.sort((a, b) => {
+      const ea = a.schedule.endDate as string;
+      const eb = b.schedule.endDate as string;
+      const cmp = ea.localeCompare(eb);
+      return direction === "asc" ? cmp : -cmp;
+    });
+    return noDatePolicy === "bottom" ? [...dated, ...undated] : [...undated, ...dated];
+  }
+  return [...tasks].sort((a, b) => {
+    const cmp =
+      dimension === "name"
+        ? a.title.localeCompare(b.title, "zh")
+        : a.createdAt.localeCompare(b.createdAt);
+    return direction === "asc" ? cmp : -cmp;
+  });
+}

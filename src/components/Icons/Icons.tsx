@@ -285,6 +285,18 @@ export function SearchIcon({ size }: IconProps) {
   );
 }
 
+/** 按截止日排序：列表 + 双向箭头，表达「可指定顺序重排」 */
+export function SortIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M2.5 4.5h5M2.5 8h5M2.5 11.5h5" />
+      <path d="M11 4.5v7" />
+      <path d="M9.5 6l1.5-1.5 1.5 1.5" />
+      <path d="M9.5 10l1.5 1.5 1.5-1.5" />
+    </svg>
+  );
+}
+
 /** 预览：眼睛（附件在线预览入口） */
 export function EyeIcon({ size }: IconProps) {
   return (

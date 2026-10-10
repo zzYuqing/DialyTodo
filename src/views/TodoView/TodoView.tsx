@@ -5,15 +5,27 @@
 //   右侧 DayMode 永远展示 selectedDate 的单日清单 —— 没有日/月模式切换；
 // - AddTaskFab 在右栏内（DayMode 挂载），新建、编辑、删除等完整交互都在右栏完成。
 
-import { addDaysToKey, calcDayCompletion, formatDateLabel, todayKey } from "@/lib";
+import { useMemo } from "react";
+import {
+  addDaysToKey,
+  calcDayCompletion,
+  collectTasksOfDay,
+  formatDateLabel,
+  sortTasksByDimension,
+  sortUnfinishedTasks,
+  todayKey,
+} from "@/lib";
+import type { NoDatePolicy, SortDimension, SortDirection } from "@/lib";
 import { useTaskStore, useViewStore } from "@/stores";
 import { useWorkdayChecker } from "@/hooks";
 import { CalendarRail } from "./CalendarRail/CalendarRail";
 import { DayMode } from "./DayMode";
+import { DeadlineSortControl } from "@/components/DeadlineSortControl/DeadlineSortControl";
 import styles from "./TodoView.module.css";
 
 export function TodoView() {
   const tasks = useTaskStore((s) => s.tasks);
+  const reorderTasks = useTaskStore((s) => s.reorderTasks);
 
   const selectedDate = useViewStore((s) => s.selectedDate);
   const setSelectedDate = useViewStore((s) => s.setSelectedDate);
@@ -22,6 +34,31 @@ export function TodoView() {
 
   const isToday = selectedDate === todayKey();
   const completion = calcDayCompletion(tasks, selectedDate, isWorkday);
+
+  // 当日未完成集合：与 DayMode 同一份口径（collectTasksOfDay → 过滤当天未完成）。
+  // 排序按钮只作用于这个范围，结果立刻可见、语义最干净。
+  const dayUnfinished = useMemo(() => {
+    const visible = collectTasksOfDay(tasks, selectedDate, isWorkday);
+    return sortUnfinishedTasks(
+      visible.filter((task) => task.instances[selectedDate]?.done !== true),
+    );
+  }, [tasks, selectedDate, isWorkday]);
+
+  const noDeadlineCount = dayUnfinished.filter((task) => task.schedule.endDate === null).length;
+  // 激活条件：范围内未完成项 ≥ 2（名称 / 创建排序不需要截止期）；
+  // 「按截止」维度另需带截止期条目 ≥ 2 才可选，否则该维度两项置灰。
+  const datedCount = dayUnfinished.length - noDeadlineCount;
+  const sortDisabled = dayUnfinished.length < 2;
+  const canSortByDeadline = datedCount >= 2;
+
+  const handleSort = (
+    dimension: SortDimension,
+    direction: SortDirection,
+    policy: NoDatePolicy,
+  ) => {
+    const sorted = sortTasksByDimension(dayUnfinished, dimension, direction, policy);
+    void reorderTasks(sorted.map((task) => task.id));
+  };
 
   const statsLine = `${isToday ? "今日" : "共"} ${completion.total} 项，已完成 ${completion.done}`;
 
@@ -63,6 +100,14 @@ export function TodoView() {
             今天
           </button>
         </div>
+        <DeadlineSortControl
+          variant="header"
+          disabled={sortDisabled}
+          canSortByDeadline={canSortByDeadline}
+          hasUndated={noDeadlineCount > 0}
+          undatedCount={noDeadlineCount}
+          onSort={handleSort}
+        />
       </header>
 
       <div className={styles.body}>

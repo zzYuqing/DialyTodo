@@ -21,6 +21,7 @@ export {
   PlusIcon,
   SearchIcon,
   SettingsIcon,
+  SortIcon,
   SparkIcon,
   TodoIcon,
   ToolsIcon,

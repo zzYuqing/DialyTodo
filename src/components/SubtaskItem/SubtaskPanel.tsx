@@ -7,12 +7,17 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { TextInput } from "@mantine/core";
 import { PlusIcon } from "@/components/Icons";
+import { DeadlineSortControl } from "@/components/DeadlineSortControl/DeadlineSortControl";
 import type { Task } from "@/types";
 import {
   childTasksOf,
   formatShortMonthDay,
   sortSubtasksForDisplay,
+  sortTasksByDimension,
   splitDoneAt,
+  type NoDatePolicy,
+  type SortDimension,
+  type SortDirection,
   type SubtaskEdit,
   type TaskMap,
 } from "@/lib";
@@ -57,6 +62,21 @@ export function SubtaskPanel({
     [ordered],
   );
   const doneIds = useMemo(() => doneChildren.map((child) => child.id), [doneChildren]);
+  // 排序按钮可用性：未完成子任务 ≥ 2 才激活；「按截止」维度另需带截止期 ≥ 2（与主页同口径）
+  const noDeadlineCount = draggable.filter((child) => child.schedule.endDate === null).length;
+  const datedCount = draggable.length - noDeadlineCount;
+  const sortDisabled = draggable.length < 2;
+  const canSortByDeadline = datedCount >= 2;
+
+  // 只重排未完成子任务（已完成恒沉底），按所选维度 / 方向（+ 无截止期归位策略）排出新顺序后落盘
+  const handleSortSubtasks = (
+    dimension: SortDimension,
+    direction: SortDirection,
+    policy: NoDatePolicy,
+  ) => {
+    const sorted = sortTasksByDimension(draggable, dimension, direction, policy);
+    onReorderSubtasks(parent.id, [...sorted.map((child) => child.id), ...doneIds]);
+  };
   // 折叠时保留「最近完成的 keep 条」，更早完成的隐藏。keep 来自设置（默认 5，用户可配）；
   // 已完成数不超过 keep 时返回 null 表示不隐藏任何。
   const keep = useSettingsStore((s) => s.settings.subtaskDoneKeep);
@@ -230,10 +250,21 @@ export function SubtaskPanel({
             />
           </div>
         ) : (
-          <button type="button" className={styles.addToggle} onClick={startAdding}>
-            <PlusIcon size={14} />
-            添加子任务
-          </button>
+          <div className={styles.sortRow}>
+            <button type="button" className={styles.addToggle} onClick={startAdding}>
+              <PlusIcon size={14} />
+              添加子任务
+            </button>
+            <span className={styles.sortDivider} aria-hidden="true" />
+            <DeadlineSortControl
+              variant="inline"
+              disabled={sortDisabled}
+              canSortByDeadline={canSortByDeadline}
+              hasUndated={noDeadlineCount > 0}
+              undatedCount={noDeadlineCount}
+              onSort={handleSortSubtasks}
+            />
+          </div>
         )}
       </li>
     </ul>
