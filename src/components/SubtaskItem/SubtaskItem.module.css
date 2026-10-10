@@ -182,84 +182,11 @@
   color: var(--dt-accent);
 }
 
-/* 备注折叠胶囊：默认只露一行截断预览，点击后胶囊自身原地展开为多行文本块（方案 C 原地展开）。
- * 视觉同源父任务行 .note（--dt-text-muted / 12px / 行高 1.5）。 */
-.notePill {
-  display: inline-flex;
-  align-items: flex-start;
-  align-self: flex-start;
-  gap: 4px;
-  max-width: 80%;
-  margin-top: 4px;
-  padding: 3px 8px;
-  border: 1px solid var(--dt-border);
-  border-radius: 999px;
-  background: var(--dt-bg);
-  color: var(--dt-text-muted);
-  font-size: 11px;
-  line-height: 1.4;
-  text-align: left;
-  cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease, border-radius 120ms ease;
-}
-
-.notePill:hover {
-  color: var(--dt-text);
-  border-color: var(--dt-accent);
-}
-
-/* 短备注：单行就能放完，不需要展开按钮/箭头，也不给 hover 高亮 */
-.notePillStatic {
-  cursor: default;
-}
-
-.notePillStatic:hover {
-  color: var(--dt-text-muted);
-  border-color: var(--dt-border);
-}
-
-/* 展开态：胶囊变成占满 80% 宽度的圆角矩形，容纳多行备注 */
-.notePillOpen {
-  width: 80%;
-  border-radius: 10px;
-  padding: 5px 8px;
-}
-
-/* 表单行 / 备注胶囊的前置图标槽：备注图标与完成时间图标共用这一份 */
+/* 表单行 / 备注胶囊的前置图标槽：备注图标与完成时间图标共用这一份（备注折叠胶囊已在 CollapsibleNote 内自包含）。 */
 .fieldIcon {
   display: inline-flex;
   flex-shrink: 0;
   margin-top: 1px;
-}
-
-.noteText {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.noteTextOpen {
-  flex: 1 1 auto;
-  min-width: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.noteChevron {
-  display: inline-flex;
-  flex-shrink: 0;
-  margin-top: 1px;
-  transition: transform 150ms ease;
-}
-
-.noteChevronOpen {
-  display: inline-flex;
-  flex-shrink: 0;
-  margin-top: 1px;
-  transform: rotate(90deg);
-  transition: transform 150ms ease;
 }
 
 /* 完成态整体弱化 + 标题删除线，视觉语言与 TaskItem 保持一致 */
@@ -512,13 +439,19 @@
 /* 备注条：无边框 + 极浅底 + 前置图标 —— 读作「这一条的补充说明」，不是第二个输入框 */
 .editNote {
   display: flex;
-  align-items: center;
+  /* 备注是多行字段（Textarea autosize）：顶对齐让图标始终贴首行，居中会在多行时吊在半空 */
+  align-items: flex-start;
   gap: 5px;
   padding: 0 8px;
   border-radius: 6px;
   background: var(--dt-panel-2);
   color: var(--dt-text-muted);
   transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+
+/* 仅备注条内的图标下移对齐首行文字；完成时间条（单行、居中）沿用 .fieldIcon 原样 */
+.editNote .fieldIcon {
+  margin-top: 3px;
 }
 
 /* 无边框输入没有自带聚焦态，补一圈内描边，键盘用户才看得到焦点落在哪 */

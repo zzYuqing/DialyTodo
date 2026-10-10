@@ -53,6 +53,8 @@ import {
   RowContextMenu,
   type ContextMenuGroup,
 } from "@/components/RowContextMenu/RowContextMenu";
+import { CollapsibleNote } from "@/components/CollapsibleNote/CollapsibleNote";
+import { useSettingsStore } from "@/stores";
 import styles from "./TaskItem.module.css";
 
 /**
@@ -139,6 +141,8 @@ export const TaskItem = memo(function TaskItem({
   // 复合任务：完成态由子任务推导而来，行本身不可直接勾选，改由展开区逐条操作。
   // 提前到最前：右键菜单的分组也要用它决定「是否显示添加到任务集」。
   const composite = isComposite(task);
+  // 备注折叠行数：来自设置，改后立即生效（CollapsibleNote 据此决定是否截断）。
+  const noteCollapseLines = useSettingsStore((s) => s.settings.noteCollapseLines);
 
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const closeMenu = useCallback(() => setMenu(null), []);
@@ -315,7 +319,9 @@ export const TaskItem = memo(function TaskItem({
         title="双击编辑"
       >
         <div className={styles.title}>{task.title}</div>
-        {task.note.length > 0 && <div className={styles.note}>{task.note}</div>}
+        {task.note.length > 0 && (
+          <CollapsibleNote text={task.note} maxLines={noteCollapseLines} variant="block" />
+        )}
         <div className={styles.meta}>
           {scheduleLabel !== null && <span className={styles.badge}>{scheduleLabel}</span>}
           {overdue && (

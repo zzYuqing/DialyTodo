@@ -15,6 +15,7 @@ export type {
 export { EditTaskModal } from "./EditTaskModal/EditTaskModal";
 export type { TaskModalTarget } from "./EditTaskModal/EditTaskModal";
 export { ConfirmDialog } from "./ConfirmDialog/ConfirmDialog";
+export { CollapsibleNote } from "./CollapsibleNote/CollapsibleNote";
 export {
   AlertIcon,
   BellIcon,

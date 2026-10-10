@@ -10,7 +10,7 @@
 // - 右键菜单：复制标题（所有行）+ 修改完成时间（仅已完成行）。
 
 import { memo, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
-import { TextInput } from "@mantine/core";
+import { Textarea, TextInput } from "@mantine/core";
 import type { Task } from "@/types";
 import {
   formatDoneAt,
@@ -31,9 +31,10 @@ import {
   NoteIcon,
   PlusIcon,
   TrashIcon,
-  ChevronRightIcon,
 } from "@/components/Icons";
 import { RowContextMenu, type ContextMenuGroup } from "@/components";
+import { CollapsibleNote } from "@/components/CollapsibleNote/CollapsibleNote";
+import { useSettingsStore } from "@/stores";
 import type { DragSortItemHandle } from "@/hooks";
 import styles from "./SubtaskItem.module.css";
 
@@ -63,16 +64,6 @@ const URGENCY_CLASS: Record<Exclude<SubtaskUrgency, null>, string> = {
   today: styles.toneToday,
   soon: styles.toneSoon,
   none: styles.toneNone,
-};
-
-/** 按视觉宽度估算备注是否足够短：中文字符/全角按 1 计，ASCII/半角按 0.5 计。
- * 阈值 18 约对应 80% 宽度胶囊（11px 字体）的单行容量；够短就不需要展开按钮。 */
-const noteVisualWidth = (text: string): number => {
-  let w = 0;
-  for (const char of text) {
-    w += char.charCodeAt(0) > 127 ? 1 : 0.5;
-  }
-  return w;
 };
 
 /** 行内表单草稿：SubtaskEdit + 完成时刻的两个本地输入值（date / time 输入框只认真实值） */
@@ -130,11 +121,8 @@ export const SubtaskItem = memo(function SubtaskItem({
   const doneLocked = done;
   // 父有整体截止日时子任务截止日必填，不允许清除（与编辑弹窗的 endDateLocked 一致）。
   const endLocked = parentEnd !== null;
-  // 备注胶囊仅在「未完成且有备注」时出现：完成行按方案 C 保持原样（不改写已完成态视觉），
-  // 无备注行不渲染任何气泡（用户明确要求：没备注就不显示空气泡）。
-  const hasNote = !done && task.note.trim().length > 0;
-  const noteShort = hasNote && noteVisualWidth(task.note) <= 18;
-  const [noteOpen, setNoteOpen] = useState(false);
+  // 备注折叠行数：来自设置，改后立即生效（CollapsibleNote 据此决定是否截断）。
+  const noteCollapseLines = useSettingsStore((s) => s.settings.noteCollapseLines);
   const urgency = subtaskUrgencyOf(task, dateKey);
   const endDate = task.schedule.endDate;
   // 完成时间徽章文案：优先用 childDoneAt（ISO 时刻）格式化为「9月5日 14:30」，
@@ -170,6 +158,13 @@ export const SubtaskItem = memo(function SubtaskItem({
     setEditing(false);
   };
   const cancelEdit = () => setEditing(false);
+  // 备注是多行字段：Enter 换行（textarea 默认行为），仅 Esc 保留「取消编辑」。
+  const handleNoteKey = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancelEdit();
+    }
+  };
   const handleEditKey = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -361,7 +356,7 @@ export const SubtaskItem = memo(function SubtaskItem({
               <span className={styles.fieldIcon}>
                 <NoteIcon size={11} />
               </span>
-              <TextInput
+              <Textarea
                 variant="unstyled"
                 size="xs"
                 className={styles.editNoteInput}
@@ -372,8 +367,11 @@ export const SubtaskItem = memo(function SubtaskItem({
                   const next = e.currentTarget.value;
                   setDraft((d) => ({ ...d, note: next }));
                 }}
-                onKeyDown={handleEditKey}
+                onKeyDown={handleNoteKey}
                 onPointerDown={(e) => e.stopPropagation()}
+                autosize
+                minRows={1}
+                maxRows={4}
               />
             </div>
             {doneLocked && (
@@ -399,32 +397,11 @@ export const SubtaskItem = memo(function SubtaskItem({
                 {done && doneText !== null && <span className={styles.doneBadge}>{doneText}</span>}
               </span>
             </div>
-            {hasNote && (
-              noteShort ? (
-                <span className={`${styles.notePill} ${styles.notePillStatic}`}>
-                  <span className={styles.fieldIcon}>
-                    <NoteIcon size={11} />
-                  </span>
-                  <span className={styles.noteText}>{task.note}</span>
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  className={`${styles.notePill} ${noteOpen ? styles.notePillOpen : ""}`}
-                  aria-expanded={noteOpen}
-                  aria-label={noteOpen ? "收起备注" : "展开备注"}
-                  onClick={() => setNoteOpen((v) => !v)}
-                  onPointerDown={(event) => event.stopPropagation()}
-                >
-                  <span className={styles.fieldIcon}>
-                    <NoteIcon size={11} />
-                  </span>
-                  <span className={noteOpen ? styles.noteTextOpen : styles.noteText}>{task.note}</span>
-                  <span className={noteOpen ? styles.noteChevronOpen : styles.noteChevron}>
-                    <ChevronRightIcon size={10} />
-                  </span>
-                </button>
-              )
+            {/* 备注仅在「未完成且有备注」时出现：完成行保持原样（不改写已完成态视觉），
+                无备注行不渲染任何气泡。超出 noteCollapseLines 行的备注由 CollapsibleNote 折叠。
+                短备注（未溢出）以静态胶囊呈现，不显示展开箭头。 */}
+            {!done && task.note.trim().length > 0 && (
+              <CollapsibleNote text={task.note} maxLines={noteCollapseLines} variant="pill" />
             )}
           </>
         )}

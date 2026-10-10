@@ -193,7 +193,8 @@
    始终渲染，不做「有内容才出现」的条件分支，避免同一张卡里的字段空值策略不一致。 */
 .subtaskNote {
   display: flex;
-  align-items: center;
+  /* 备注是多行字段（Textarea autosize）：顶对齐让图标始终贴首行，居中会在多行时吊在半空 */
+  align-items: flex-start;
   gap: 5px;
   padding: 0 8px;
   border-radius: 6px;
@@ -211,6 +212,8 @@
 .subtaskNoteIcon {
   display: inline-flex;
   flex-shrink: 0;
+  /* 多行备注顶对齐时，图标下移对齐首行文字 */
+  margin-top: 3px;
 }
 
 .subtaskNoteInput {

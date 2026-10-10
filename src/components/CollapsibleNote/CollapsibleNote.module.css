@@ -1,0 +1,120 @@
+/* 普通任务整块备注：折叠态按 N 行截断，溢出才显示「展开」。
+ * 视觉同源 TaskItem.module.css 的 .note（--dt-text-muted / 12px / 行高 1.5），
+ * 避免同一类备注两种视觉。 */
+
+.block {
+  margin-top: 4px;
+}
+
+.blockText {
+  font-size: 12px;
+  color: var(--dt-text-muted);
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* 折叠态：WebKit 多行截断。-webkit-box 提供容器，line-clamp 行数由组件内联 setProperty 动态写入。 */
+.blockTextClamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 展开态：取消截断，整段显示 */
+.blockTextOpen {
+  display: block;
+}
+
+.toggle {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--dt-accent);
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.toggle:hover {
+  text-decoration: underline;
+}
+
+/* ── 子任务胶囊变体：折叠态占满中间列（N 行截断 + 箭头），展开态原地变圆角块 ──
+ * 视觉同源 SubtaskItem.module.css 的旧 .notePill 系列（--dt-text-muted / 11px / 行高 1.4）。
+ * 宽度上限 100%：气泡的包含块是 .main（中间列），右侧编辑/删除按钮是 .row 的兄弟项，
+ * 不占 .main 宽度，气泡可以安全吃满（行间自带 8px gap，不会贴到按钮）。 */
+
+/* 圆角固定 10px：折叠态按 N 行截断后高度可超过单行，胶囊全弧（999px）会在
+ * 多行文本两端画出大弧，故折叠/展开统一用圆角矩形（与 .pillOpen 同值）。 */
+.pill {
+  display: inline-flex;
+  align-items: flex-start;
+  align-self: flex-start;
+  gap: 4px;
+  max-width: 100%;
+  margin-top: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--dt-border);
+  border-radius: 10px;
+  background: var(--dt-bg);
+  color: var(--dt-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.pill:hover:not(:disabled) {
+  color: var(--dt-text);
+  border-color: var(--dt-accent);
+}
+
+/* 未溢出（短备注）：禁用态、无箭头，读作一条静态说明，不给出展开暗示 */
+.pill:disabled {
+  cursor: default;
+}
+
+/* 展开态：占满中间列宽度容纳多行备注，圆角与折叠态同值（10px），仅放宽内边距 */
+.pillOpen {
+  width: 100%;
+  padding: 5px 8px;
+}
+
+/* 备注 / 完成时间前置图标槽：复用既有视觉 */
+.fieldIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.pillText {
+  flex: 1 1 auto;
+  min-width: 0;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.pillTextClamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pillTextOpen {
+  display: block;
+}
+
+.pillChevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-top: 1px;
+  transition: transform 150ms ease;
+}
+
+.pillChevronOpen {
+  transform: rotate(90deg);
+}

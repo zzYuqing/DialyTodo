@@ -1,8 +1,64 @@
-/* 设置页容器：窄栏居中，留白克制 */
+/* 设置页容器：左对齐（不居中），让左栏锁死在内容区最左侧、宽度恒定，
+ * 不随窗口缩放而左右移动；max-width 仅限制右栏可读宽度，超出部分留白在右侧 */
 .wrap {
-  max-width: 520px;
-  margin: 0 auto;
+  max-width: 760px;
+  margin: 0;
   padding: 24px 16px;
+}
+
+/* 两栏布局：左列硬锁定 132px 固定宽度，右列自适应并紧贴左列（grid 锁定列宽，
+ * 左栏宽度不会随右栏内容多少或窗口缩放而变化） */
+.layout {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+/* 左栏胶囊导航：图标 + 文字，选中项填充墨绿（方案 B） */
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: sticky;
+  top: 24px;
+  align-self: start;
+}
+
+.navPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 13px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.navPill:hover {
+  background: var(--dt-panel-2);
+  color: var(--dt-text);
+}
+
+.navPillActive,
+.navPillActive:hover {
+  background: var(--dt-accent);
+  color: var(--dt-accent-contrast);
+  border-color: var(--dt-accent);
+}
+
+/* 右栏内容区：占据网格右列（已自适应），分类卡片竖向堆叠 */
+.content {
+  min-width: 0;
+}
+
+.catGroup {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -12,12 +68,6 @@
 .muted {
   color: var(--dt-text-muted);
   line-height: 1.4;
-}
-
-/* 底部占位说明 */
-.note {
-  color: var(--dt-text-muted);
-  margin-top: 4px;
 }
 
 /* 数据目录路径：窄容器内长路径可断行，避免撑破卡片 */

@@ -25,6 +25,8 @@ import {
   RowContextMenu,
   type ContextMenuGroup,
 } from "@/components/RowContextMenu/RowContextMenu";
+import { CollapsibleNote } from "@/components/CollapsibleNote/CollapsibleNote";
+import { useSettingsStore } from "@/stores";
 import taskStyles from "@/components/TaskItem/TaskItem.module.css";
 import styles from "./LongTermTaskRow.module.css";
 
@@ -85,6 +87,8 @@ export const LongTermTaskRow = memo(function LongTermTaskRow({
   // 复合任务：完成态由子任务推导，行本身不可直接勾选，改由展开区逐条操作。
   // 提前到最前：右键菜单分组也要用它决定「是否显示添加到任务集」。
   const composite = isComposite(task);
+  // 备注折叠行数：来自设置，改后立即生效（CollapsibleNote 据此决定是否截断）。
+  const noteCollapseLines = useSettingsStore((s) => s.settings.noteCollapseLines);
 
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const closeMenu = useCallback(() => setMenu(null), []);
@@ -207,7 +211,9 @@ export const LongTermTaskRow = memo(function LongTermTaskRow({
 
       <div className={taskStyles.body} onDoubleClick={() => onEdit(task)} title="双击编辑">
         <div className={taskStyles.title}>{task.title}</div>
-        {task.note.length > 0 && <div className={taskStyles.note}>{task.note}</div>}
+        {task.note.length > 0 && (
+          <CollapsibleNote text={task.note} maxLines={noteCollapseLines} variant="block" />
+        )}
         <div className={taskStyles.meta}>
           {/* 周期徽标：weekly 具体到星期（如「每周一、五」），其余类型用常量表文案。
               「仅一次」在长期任务页恒成立（全是一次性任务），徽章会刷屏，直接过滤掉不渲染。 */}

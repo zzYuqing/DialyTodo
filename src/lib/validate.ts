@@ -3,10 +3,13 @@
 
 import {
   CURRENT_VERSION,
+  DEFAULT_NOTE_COLLAPSE_LINES,
   DEFAULT_SUBTASK_DONE_KEEP,
   DEFAULT_TRASH_RETENTION_DAYS,
   HOLIDAY_URL_TEMPLATE,
   MIN_SUPPORTED_VERSION,
+  NOTE_COLLAPSE_LINES_MAX,
+  NOTE_COLLAPSE_LINES_MIN,
   SUBTASK_DONE_KEEP_MAX,
   SUBTASK_DONE_KEEP_MIN,
   TRASH_RETENTION_MAX,
@@ -243,6 +246,11 @@ export function isAppSettings(value: unknown): value is AppSettings {
   if (candidate.trashRetentionDays != null && typeof candidate.trashRetentionDays !== "number") {
     return false;
   }
+  // noteCollapseLines 是备注折叠功能新增字段：缺失 / null 一律放行（由 normalizeSettings 补出厂值），
+  // 只有「类型不对」才判废。用 != null 同时放过 null 与 undefined，避免老设置文件整份被判废。
+  if (candidate.noteCollapseLines != null && typeof candidate.noteCollapseLines !== "number") {
+    return false;
+  }
   if (typeof candidate.holidayUrlTemplate !== "string") return false;
   if (candidate.lastBackupDate !== null && !isDateKey(candidate.lastBackupDate)) return false;
 
@@ -272,6 +280,17 @@ export function clampTrashRetentionDays(value: number): number {
 }
 
 /**
+ * 收敛「备注折叠行数」到合法区间：非有限数回出厂值，越界夹到上下限，小数取整。
+ * 设置页允许直接输入数字，手改 settings.json 也可能写出非法值，统一在这里收敛，
+ * 消费端（CollapsibleNote）可以直接当正整数用，不必再判空。
+ */
+export function clampNoteCollapseLines(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_NOTE_COLLAPSE_LINES;
+  const rounded = Math.round(value);
+  return Math.min(NOTE_COLLAPSE_LINES_MAX, Math.max(NOTE_COLLAPSE_LINES_MIN, rounded));
+}
+
+/**
  * 补齐 / 收敛设置：新增字段缺失时补出厂值，越界值夹回合法区间。
  * 与 normalizeTask 同口径 —— 加载必经这一步，保证消费端拿到的永远是完整合法的 AppSettings。
  */
@@ -280,6 +299,7 @@ export function normalizeSettings(settings: AppSettings): AppSettings {
     ...settings,
     subtaskDoneKeep: clampSubtaskDoneKeep(settings.subtaskDoneKeep),
     trashRetentionDays: clampTrashRetentionDays(settings.trashRetentionDays),
+    noteCollapseLines: clampNoteCollapseLines(settings.noteCollapseLines),
   };
 }
 
@@ -298,6 +318,7 @@ export function defaultSettings(): AppSettings {
     hideCompleted: false,
     subtaskDoneKeep: DEFAULT_SUBTASK_DONE_KEEP,
     trashRetentionDays: DEFAULT_TRASH_RETENTION_DAYS,
+    noteCollapseLines: DEFAULT_NOTE_COLLAPSE_LINES,
     holidayUrlTemplate: HOLIDAY_URL_TEMPLATE,
     lastBackupDate: null,
   };

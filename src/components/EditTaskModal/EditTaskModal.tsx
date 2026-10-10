@@ -599,13 +599,16 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
                         <span className={styles.subtaskNoteIcon}>
                           <NoteIcon size={11} />
                         </span>
-                        <TextInput
+                        <Textarea
                           variant="unstyled"
                           size="xs"
                           className={styles.subtaskNoteInput}
                           placeholder="备注（可选）"
                           value={draft.note}
                           onChange={(e) => patchSubtask(index, { note: e.currentTarget.value })}
+                          autosize
+                          minRows={1}
+                          maxRows={4}
                         />
                       </div>
                       {doneLocked && (

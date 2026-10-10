@@ -27,12 +27,14 @@ import {
 import { isTauri } from "@/bridge";
 import { useHolidayStore, useSettingsStore } from "@/stores";
 import {
+  NOTE_COLLAPSE_LINES_MAX,
+  NOTE_COLLAPSE_LINES_MIN,
   SUBTASK_DONE_KEEP_MAX,
   SUBTASK_DONE_KEEP_MIN,
   TRASH_RETENTION_MAX,
   TRASH_RETENTION_MIN,
 } from "@/constants";
-import { clampSubtaskDoneKeep, clampTrashRetentionDays } from "@/lib";
+import { clampNoteCollapseLines, clampSubtaskDoneKeep, clampTrashRetentionDays } from "@/lib";
 import {
   canMigrateTo,
   dataRoot,
@@ -42,6 +44,7 @@ import {
   type MigrationResult,
 } from "@/services";
 import type { LayoutMode } from "@/types";
+import { DownloadIcon, SettingsIcon, TodoIcon, TrashIcon } from "@/components/Icons";
 import styles from "./SettingsView.module.css";
 
 /** 迁移/操作结果提示：错误（红）与成功/警示（中性色）分开呈现 */
@@ -63,6 +66,8 @@ export function SettingsView() {
   // 任务集展开区：已勾选子任务保留条数（超出部分收进折叠节点）
   const subtaskDoneKeep = useSettingsStore((s) => s.settings.subtaskDoneKeep);
   const trashRetentionDays = useSettingsStore((s) => s.settings.trashRetentionDays);
+  // 备注折叠行数：备注超过该值才折叠，改后立即生效
+  const noteCollapseLines = useSettingsStore((s) => s.settings.noteCollapseLines);
   const update = useSettingsStore((s) => s.update);
 
   const [holidayLoading, setHolidayLoading] = useState(false);
@@ -177,6 +182,27 @@ export function SettingsView() {
     void update({ trashRetentionDays: clampTrashRetentionDays(value) });
   };
 
+  /**
+   * 备注折叠行数：与保留条数 / 保留天数同口径，NumberInput 输入过程中给 number、清空给空串；
+   * 空串不落盘，数字经 clamp 收敛再写入，保证 settings.json 存的是合法区间内的整数。
+   */
+  const handleNoteLinesChange = (value: number | string) => {
+    if (typeof value !== "number") return;
+    void update({ noteCollapseLines: clampNoteCollapseLines(value) });
+  };
+
+  type SettingsCategory = "general" | "tasks" | "storage" | "trash";
+
+  const CATEGORIES: { id: SettingsCategory; label: string; icon: typeof SettingsIcon }[] = [
+    { id: "general", label: "通用", icon: SettingsIcon },
+    { id: "tasks", label: "任务区", icon: TodoIcon },
+    { id: "storage", label: "数据存储", icon: DownloadIcon },
+    { id: "trash", label: "回收站", icon: TrashIcon },
+  ];
+
+  // 左栏分类导航：默认进「通用」，不记忆选中（关掉重开回到通用，少存一个参数）
+  const [activeCategory, setActiveCategory] = useState<SettingsCategory>("general");
+
   const currentYear = new Date().getFullYear();
   const years = [currentYear - 1, currentYear];
 
@@ -194,48 +220,30 @@ export function SettingsView() {
 
   return (
     <div className={styles.wrap}>
-      <Paper withBorder p="md" radius="md">
-        <Text fw={600} className={styles.cardTitle}>数据存储</Text>
-        <Text size="xs" className={styles.muted}>
-          任务、设置、备份与节假日缓存保存在本机数据目录。不想放 C 盘可迁移到其他磁盘。
-        </Text>
+      <div className={styles.layout}>
+        <nav className={styles.nav}>
+          {CATEGORIES.map((cat) => {
+            const Icon = cat.icon;
+            const active = cat.id === activeCategory;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                className={`${styles.navPill} ${active ? styles.navPillActive : ""}`}
+                onClick={() => setActiveCategory(cat.id)}
+                aria-pressed={active}
+              >
+                <Icon size={15} />
+                <span>{cat.label}</span>
+              </button>
+            );
+          })}
+        </nav>
 
-        <Stack gap={6} mt="sm">
-          <Group justify="space-between" wrap="nowrap" gap="sm">
-            <Text size="sm">当前数据目录</Text>
-            {isDefaultRoot ? (
-              <Badge color="gray" variant="light" size="sm">
-                默认位置
-              </Badge>
-            ) : (
-              <Badge color="teal" variant="light" size="sm">
-                自定义位置
-              </Badge>
-            )}
-          </Group>
-          <Code className={styles.path} block fz="xs">
-            {currentRoot ?? "加载中…"}
-          </Code>
-        </Stack>
-
-        <Group justify="flex-end" mt="md">
-          <Button size="xs" variant="light" onClick={handlePickTarget} disabled={migrating}>
-            更改位置…
-          </Button>
-        </Group>
-
-        {feedback !== null && (
-          <Text
-            size="xs"
-            mt="sm"
-            c={feedback.kind === "error" ? "red" : undefined}
-            className={feedback.kind === "error" ? styles.feedback : `${styles.muted} ${styles.feedback}`}
-          >
-            {feedback.text}
-          </Text>
-        )}
-      </Paper>
-
+        <div className={styles.content}>
+          <div className={styles.catGroup}>
+            {activeCategory === "general" && (
+              <>
       <Paper withBorder p="md" radius="md">
         <Text fw={600} className={styles.cardTitle}>窗口与托盘</Text>
         <Text size="xs" className={styles.muted}>
@@ -307,6 +315,10 @@ export function SettingsView() {
         )}
       </Paper>
 
+              </>
+            )}
+            {activeCategory === "tasks" && (
+              <>
       <Paper withBorder p="md" radius="md">
         <Text fw={600} className={styles.cardTitle}>任务集展开区</Text>
         <Text size="xs" className={styles.muted}>
@@ -339,6 +351,86 @@ export function SettingsView() {
       </Paper>
 
       <Paper withBorder p="md" radius="md">
+        <Text fw={600} className={styles.cardTitle}>备注显示</Text>
+        <Text size="xs" className={styles.muted}>
+          普通任务与子任务的备注超过设定行数时折叠，点击「展开 / 收起」查看完整内容；改后立即生效。
+        </Text>
+
+        <Stack gap="md" mt="sm">
+          <Group justify="space-between" wrap="nowrap" gap="sm" align="flex-start">
+            <Stack gap={2} className={styles.grow}>
+              <Text size="sm">备注折叠行数</Text>
+              <Text size="xs" className={styles.muted}>
+                备注超过 {noteCollapseLines} 行才折叠；范围 {NOTE_COLLAPSE_LINES_MIN}–
+                {NOTE_COLLAPSE_LINES_MAX} 行，改后立即生效
+              </Text>
+            </Stack>
+            <NumberInput
+              value={noteCollapseLines}
+              onChange={handleNoteLinesChange}
+              min={NOTE_COLLAPSE_LINES_MIN}
+              max={NOTE_COLLAPSE_LINES_MAX}
+              step={1}
+              allowDecimal={false}
+              allowNegative={false}
+              size="xs"
+              w={84}
+              aria-label="备注折叠行数"
+            />
+          </Group>
+        </Stack>
+      </Paper>
+
+              </>
+            )}
+            {activeCategory === "storage" && (
+              <>
+      <Paper withBorder p="md" radius="md">
+        <Text fw={600} className={styles.cardTitle}>数据存储</Text>
+        <Text size="xs" className={styles.muted}>
+          任务、设置、备份与节假日缓存保存在本机数据目录。不想放 C 盘可迁移到其他磁盘。
+        </Text>
+
+        <Stack gap={6} mt="sm">
+          <Group justify="space-between" wrap="nowrap" gap="sm">
+            <Text size="sm">当前数据目录</Text>
+            {isDefaultRoot ? (
+              <Badge color="gray" variant="light" size="sm">
+                默认位置
+              </Badge>
+            ) : (
+              <Badge color="teal" variant="light" size="sm">
+                自定义位置
+              </Badge>
+            )}
+          </Group>
+          <Code className={styles.path} block fz="xs">
+            {currentRoot ?? "加载中…"}
+          </Code>
+        </Stack>
+
+        <Group justify="flex-end" mt="md">
+          <Button size="xs" variant="light" onClick={handlePickTarget} disabled={migrating}>
+            更改位置…
+          </Button>
+        </Group>
+
+        {feedback !== null && (
+          <Text
+            size="xs"
+            mt="sm"
+            c={feedback.kind === "error" ? "red" : undefined}
+            className={feedback.kind === "error" ? styles.feedback : `${styles.muted} ${styles.feedback}`}
+          >
+            {feedback.text}
+          </Text>
+        )}
+      </Paper>
+              </>
+            )}
+            {activeCategory === "trash" && (
+              <>
+      <Paper withBorder p="md" radius="md">
         <Text fw={600} className={styles.cardTitle}>回收站</Text>
         <Text size="xs" className={styles.muted}>
           删除的任务、经验与附件会先进入回收站，到期前可随时还原；超过保留天数后于下次启动自动彻底清除。
@@ -367,7 +459,10 @@ export function SettingsView() {
           </Group>
         </Stack>
       </Paper>
-
+              </>
+            )}
+            {activeCategory === "general" && (
+              <>
       <Paper withBorder p="md" radius="md">
         <Group justify="space-between" wrap="nowrap" align="center" gap="sm">
           <Text fw={600} className={styles.cardTitle}>节假日数据</Text>
@@ -403,10 +498,11 @@ export function SettingsView() {
           ))}
         </Stack>
       </Paper>
-
-      <Text size="xs" className={styles.note}>
-        主题切换将在后续阶段接入；提醒时间窗与备份导入导出 UI 尚未开放。
-      </Text>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
 
       <Modal
         opened={targetDir !== null}
