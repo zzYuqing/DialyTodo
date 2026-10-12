@@ -13,7 +13,7 @@ import {
   ToolsView,
   TrashView,
 } from "@/views";
-import { useReminders, useWindowMode } from "@/hooks";
+import { useCloseGuard, useReminders, useWindowMode } from "@/hooks";
 import {
   useExperienceStore,
   useSettingsStore,
@@ -44,6 +44,7 @@ export default function App() {
   const layout = useSettingsStore((s) => s.settings.layout);
 
   // 阶段 5 副作用接线：窗口形态（置顶+布局）、提醒调度（均无 UI）
+  useCloseGuard();
   useWindowMode();
   useReminders();
 

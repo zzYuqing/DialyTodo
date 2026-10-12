@@ -3,4 +3,5 @@
 export { useWorkdayChecker } from "./useWorkdayChecker";
 export { useReminders } from "./useReminders";
 export { useWindowMode } from "./useWindowMode";
+export { useCloseGuard } from "./useCloseGuard";
 export { useDragSort, type DragSortItemHandle } from "./useDragSort";
