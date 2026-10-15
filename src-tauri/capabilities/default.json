@@ -72,6 +72,13 @@
       ]
     },
     {
+      "identifier": "fs:allow-write-file",
+      "allow": [
+        { "path": "$APPDATA" },
+        { "path": "$APPDATA/**" }
+      ]
+    },
+    {
       "identifier": "fs:allow-remove",
       "allow": [
         { "path": "$APPDATA" },

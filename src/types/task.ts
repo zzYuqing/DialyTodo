@@ -2,8 +2,45 @@
 // 设计要点：周期任务不展开成多条记录，用 schedule（周期规则）+ instances（日期 -> 完成记录）
 // 映射表达，避免数据膨胀。渲染某一天时先按 schedule 判定该日期是否应出现，再查 instances 取状态。
 
-/** 周期类型：仅一次 / 工作日 / 非工作日 / 每天 / 每周指定几天 */
-export type ScheduleType = "once" | "workday" | "weekend" | "daily" | "weekly";
+/** 周期类型：仅一次 / 工作日 / 非工作日 / 每天 / 每周指定几天 / 特殊周期 */
+export type ScheduleType = "once" | "workday" | "weekend" | "daily" | "weekly" | "special";
+
+/** 特殊周期的时间单位 */
+export type SpecialUnit = "day" | "week" | "month";
+
+/**
+ * 月锚点：每月第 ordinal 个星期几。
+ * ordinal 取值 1–4 表示第 1–4 个，5 表示「最后一个」（当月不足 5 个时取实际最后一个）。
+ * weekday 与全局一致：0 = 周一 … 6 = 周日。
+ */
+export interface MonthWeekdayAnchor {
+  ordinal: 1 | 2 | 3 | 4 | 5;
+  weekday: number;
+}
+
+/**
+ * 特殊周期规则（ScheduleType = "special"）。
+ * 三要素：unit（单位）× interval（每隔 N 个单位）× anchor（该单位内的命中锚点）。
+ * 非对应 unit 的锚点字段恒为缺省（undefined / 空数组），由 normalizeTask 统一补齐。
+ * 设计见 docs/特殊周期设计.md。
+ */
+export interface SpecialSchedule {
+  unit: SpecialUnit;
+  /** 每隔 N 个 unit 一次，整数 ≥ 1 */
+  interval: number;
+  /** unit=week：命中星期（0=周一…6=周日） */
+  weekdays?: number[];
+  /** unit=month：命中日期 1..31（多选） */
+  monthDays?: number[];
+  /** unit=month：命中「第几个星期几」 */
+  monthWeekday?: MonthWeekdayAnchor[];
+  /**
+   * unit=month：是否命中「每月最后一天」。
+   * 与 monthDays 互补 —— 数字 29/30/31 在 2 月 / 小月不存在（前端已禁止选择），
+   * 「最后一天」自动取当月末日，大小月与闰年 2 月都适用，无需关心当月具体天数。
+   */
+  monthLastDay?: boolean;
+}
 
 /**
  * 任务形态。single = 普通任务（默认），composite = 任务集（复合任务）。
@@ -25,6 +62,11 @@ export interface Schedule {
    * 该字段为阶段 7 新增的可选字段，存量数据没有它，由 normalizeTask 统一补 []。
    */
   weekdays?: number[];
+  /**
+   * 特殊周期规则，仅 type === "special" 使用；其余类型恒为 undefined。
+   * 设计见 docs/特殊周期设计.md，结构与 weekly 的 weekdays 同样的「可选字段演化」模式。
+   */
+  special?: SpecialSchedule;
 }
 
 /** 某一天的完成记录，键为本地日期 YYYY-MM-DD */

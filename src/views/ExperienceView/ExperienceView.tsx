@@ -1,17 +1,18 @@
 // 职责：经验页主视图。
 // 布局：顶部标题 + 搜索 + 操作按钮；其下分类筛选 chips；主体左为经验标题列表
-// （时间倒序，点标题仅定位单条）、右为经验卡片列表。筛选：分类 + 标题搜索，可叠加。
+// （时间倒序，点标题切换右栏展示该条）、右为单条经验卡片（默认展示第一条）。
+// 筛选：分类 + 标题搜索，可叠加。
 // 录入分两条路径：新增走弹窗（ExperienceEditorModal），编辑走卡片就地编辑
 // （ExperienceEditCard）—— 点「编辑」后该卡片原地变为可编辑，保存 / 取消就地完成。
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, Text, TextInput } from "@mantine/core";
 import { ConfirmDialog } from "@/components/ConfirmDialog/ConfirmDialog";
 import {
-  ChevronRightIcon,
   CloseIcon,
   DownloadIcon,
   EyeIcon,
+  PanelToggleIcon,
   PlusIcon,
   SearchIcon,
   SettingsIcon,
@@ -20,8 +21,8 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useExperienceStore, useSettingsStore, useTrashStore } from "@/stores";
-import { todayKey } from "@/lib";
-import { dataRoot } from "@/services/paths";
+import { attachmentStoredNamesIn, listedAttachments, todayKey } from "@/lib";
+import { dataRoot, deleteAttachmentFile } from "@/services";
 import { copyPickedAttachments, downloadAttachment, openAttachment } from "./attachmentActions";
 import { ExperienceDateRail } from "./ExperienceDateRail";
 import { ExperienceEditCard, type ExperienceEditPatch } from "./ExperienceEditCard";
@@ -142,12 +143,16 @@ export function ExperienceView() {
     [categoryFiltered],
   );
 
-  // 选中条目被后续筛选排除时自动落回 null，避免残留一个看不见的高亮
+  // 选中条目被后续筛选排除时自动切到第一条；空列表时置 null
   useEffect(() => {
-    if (selectedId !== null && !categoryFiltered.some((e) => e.id === selectedId)) {
-      setSelectedId(null);
+    if (filtered.length === 0) {
+      if (selectedId !== null) setSelectedId(null);
+      return;
     }
-  }, [categoryFiltered, selectedId]);
+    if (selectedId === null || !filtered.some((e) => e.id === selectedId)) {
+      setSelectedId(filtered[0]!.id);
+    }
+  }, [filtered, selectedId]);
 
   // 分类被删除后，若正选中它则回到「全部」
   useEffect(() => {
@@ -156,12 +161,10 @@ export function ExperienceView() {
     }
   }, [categories, activeCategory]);
 
-  // 点左栏标题：筛到该条所在日期并滚动到它
-  const cardRefs = useRef(new Map<string, HTMLDivElement>());
-  useEffect(() => {
-    if (selectedId === null) return;
-    cardRefs.current.get(selectedId)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [selectedId, filtered]);
+  // 点左栏标题：切换右栏展示该条经验
+  const handleSelectExperience = (id: string) => {
+    setSelectedId(id);
+  };
 
   const openAdd = () => {
     setEditorOpen(true);
@@ -172,24 +175,47 @@ export function ExperienceView() {
     void addExperience(data);
   };
 
-  /** 就地编辑保存：patch 落到该条，被移除的附件移入回收站，随后退出编辑态 */
+  /** 就地编辑保存：patch 落到该条；正文里删掉引用的图片直接删盘，手动移除的附件进回收站 */
   const handleSaveEdit = async (id: string, patch: ExperienceEditPatch) => {
-    // 编辑保存可能批量移除了附件：先从当前快照挑出被移除的附件，随后移入回收站
     const current = experiences.find((e) => e.id === id);
+
+    // 正文引用差集：旧正文引用、新正文不再引用的附件图片 → 直接删磁盘文件（不进回收站）。
+    // 必须按正文路径对比——上传 md 自动修复的图片只落盘 + 写正文路径，并不登记在
+    // attachments 元数据里，只看附件列表会漏掉它们。
+    const purgedStoredNames = new Set<string>();
+    const newRefs = attachmentStoredNamesIn(patch.content);
+    if (current !== undefined) {
+      const oldRefs = attachmentStoredNamesIn(current.content);
+      for (const storedName of oldRefs) {
+        if (!newRefs.has(storedName)) purgedStoredNames.add(storedName);
+      }
+      for (const storedName of purgedStoredNames) {
+        await deleteAttachmentFile(id, storedName);
+      }
+      // 内嵌图片（正文引用的图片）一律不进附件元数据列表：
+      // 既剔除本次删掉引用的，也顺带清掉历史版本误登记进列表的内嵌图片（文件保留）
+      patch.attachments = patch.attachments.filter(
+        (a) =>
+          !purgedStoredNames.has(a.storedName) &&
+          !(a.mime.startsWith("image/") && newRefs.has(a.storedName)),
+      );
+    }
+
+    // 手动从附件列表点 X 移除的附件才进回收站；内嵌图片的元数据清理排除在外（不进回收站）
+    const embeddedOrPurged = (a: ExperienceAttachment) =>
+      purgedStoredNames.has(a.storedName) ||
+      (a.mime.startsWith("image/") && newRefs.has(a.storedName));
     const removed =
-      current !== undefined && patch.attachments !== undefined
-        ? current.attachments.filter((a) => !patch.attachments!.some((p) => p.id === a.id))
+      current !== undefined
+        ? current.attachments.filter(
+            (a) => !patch.attachments.some((p) => p.id === a.id) && !embeddedOrPurged(a),
+          )
         : [];
     await updateExperience(id, patch);
     for (const a of removed) {
       await moveAttachmentToTrash(id, a);
     }
     setEditingId(null);
-  };
-
-  // 点左栏标题：只定位单条（滚动 + 高亮），不做日期筛选
-  const handleSelectExperience = (id: string) => {
-    setSelectedId(id);
   };
 
   /** 附件操作失败的统一提示入口（打开 / 下载 / 添加共用一条内联红字） */
@@ -255,6 +281,15 @@ export function ExperienceView() {
     <div className={styles.wrap}>
       <div className={styles.header}>
         <div className={styles.titleRow}>
+          <button
+            type="button"
+            className={styles.railSwitch}
+            onClick={() => setRailCollapsed((v) => !v)}
+            title={railCollapsed ? "展开左栏" : "隐藏左栏"}
+            aria-label={railCollapsed ? "展开左栏" : "隐藏左栏"}
+          >
+            <PanelToggleIcon size={16} />
+          </button>
           <span className={styles.titleIcon}>经验</span>
           <Text size="xs" className={styles.muted}>
             记录踩过的坑，以后遇到同类情况不慌
@@ -319,31 +354,8 @@ export function ExperienceView() {
       </div>
 
       <div className={`${styles.body} ${railCollapsed ? styles.bodyCollapsed : ""}`}>
-        {railCollapsed ? (
-          /* 收起态：左栏不留痕迹，只留一个垂直居中的小方块，鼠标靠近左侧时浮出 */
-          <button
-            type="button"
-            className={styles.railCollapsed}
-            onClick={() => setRailCollapsed(false)}
-            title="展开经验列表"
-            aria-label="展开经验列表"
-          >
-            <ChevronRightIcon size={14} />
-          </button>
-        ) : (
+        {!railCollapsed && (
           <div className={styles.railWrap}>
-            <div className={styles.railHead}>
-              <button
-                type="button"
-                className={styles.railToggle}
-                onClick={() => setRailCollapsed(true)}
-                title="收起经验列表"
-                aria-label="收起经验列表"
-              >
-                {/* 同一图标旋转 180° 表示「向左收起」，不新增图标资源 */}
-                <ChevronRightIcon size={14} />
-              </button>
-            </div>
             <ExperienceDateRail
               experiences={categoryFiltered}
               colorOf={(id) => categoryMap.get(id)?.color}
@@ -362,7 +374,9 @@ export function ExperienceView() {
                   : "当前筛选下没有经验记录。"}
             </div>
           ) : (
-            filtered.map((e) => {
+            (() => {
+              // 右栏只展示左栏选中的那条（默认第一条），不再铺满全部卡片
+              const e = filtered.find((x) => x.id === selectedId) ?? filtered[0]!;
               // 就地编辑：这一条换成编辑卡片，保存 / 取消都在卡片上完成
               if (e.id === editingId) {
                 return (
@@ -377,15 +391,10 @@ export function ExperienceView() {
                 );
               }
               const cat = categoryMap.get(e.category);
+              // 正文里内嵌引用的图片不占附件列表位，只展示独立附件
+              const cardAttachments = listedAttachments(e.attachments, e.content);
               return (
-                <div
-                  key={e.id}
-                  ref={(el) => {
-                    if (el) cardRefs.current.set(e.id, el);
-                    else cardRefs.current.delete(e.id);
-                  }}
-                  className={`${styles.card} ${e.id === selectedId ? styles.cardFocused : ""}`}
-                >
+                <div key={e.id} className={styles.card}>
                   <div className={styles.cardTop}>
                     <span
                       className={styles.cardDot}
@@ -430,10 +439,10 @@ export function ExperienceView() {
                   {/* 附件区常驻：即使没有附件也保留上传入口，便于事后补传 */}
                   <div
                     className={`${styles.cardAttach} ${
-                      e.attachments.length === 0 ? styles.cardAttachEmpty : ""
+                      cardAttachments.length === 0 ? styles.cardAttachEmpty : ""
                     }`}
                   >
-                    {e.attachments.map((a) => (
+                    {cardAttachments.map((a) => (
                       <div key={a.id} className={styles.attachChip}>
                         <button
                           type="button"
@@ -503,7 +512,7 @@ export function ExperienceView() {
                   )}
                 </div>
               );
-            })
+            })()
           )}
         </div>
       </div>

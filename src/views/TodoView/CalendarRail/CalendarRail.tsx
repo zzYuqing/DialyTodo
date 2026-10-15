@@ -10,12 +10,14 @@
 import {
   useMemo,
   useRef,
+  useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useWorkdayChecker } from "@/hooks";
 import {
   calcDaysCompletion,
   getContributionDays,
+  getYearDays,
   getYearRemainingDays,
   type DayCompletion,
 } from "@/lib";
@@ -50,21 +52,51 @@ export function CalendarRail() {
 
   // 日期序列不随任何视图状态变化，应用会话内只需计算一次
   const days = useMemo(() => getContributionDays(CONTRIBUTION_YEAR_MONTHS), []);
+  // 月视图年份切换器选中的年份（会话级 UI 状态，默认当前年）。切到任何年份时，
+  // 该年全量日期都并入 allDays 参与完成度计算：未来年渲染为「未来透明格」，过去年如实上色。
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+  const yearDays = useMemo(() => getYearDays(selectedYear), [selectedYear]);
+  // 年份切换器上下界：上界=当前年+1（未来一年）；下界=最早一条 task 的年份
+  // （createdAt 与 startDate 取较早者，避免漏掉早年数据）。无任务时退化为当前年。
+  const currentYear = new Date().getFullYear();
+  const maxYear = currentYear + 1;
+  const minYear = useMemo(() => {
+    const active = tasks.filter((task) => !task.archived);
+    if (active.length === 0) return currentYear;
+    let min = currentYear;
+    for (const task of active) {
+      const created = Number(task.createdAt.slice(0, 4));
+      const start = Number(task.schedule.startDate.slice(0, 4));
+      const y = Math.min(created, start);
+      if (y < min) min = y;
+    }
+    return min;
+  }, [tasks]);
   // 未来日期（今天所在自然年的剩余天）：月粒度会把整年 12 个月都画出来，
   // 未来格要显示「待完成 N 项 / X 项当日截止」，故一并参与批量计算。
   // 这些天的 done 恒为 0，不会抬高色阶分档用的 maxDone，色阶语义不变。
   const futureDays = useMemo(() => getYearRemainingDays(), []);
-  const allDays = useMemo(() => [...days, ...futureDays], [days, futureDays]);
+  const allDays = useMemo(
+    () => [...new Set([...days, ...futureDays, ...yearDays])],
+    [days, futureDays, yearDays],
+  );
   const isWorkday = useWorkdayChecker(allDays);
+  // 分档基准锁死在「近一年」窗口（days），无论切到哪一年，配色口径都不变（completion.ts 硬定义）。
   const completions = useMemo(
-    () => calcDaysCompletion(tasks, allDays, isWorkday),
-    [tasks, allDays, isWorkday],
+    () => calcDaysCompletion(tasks, allDays, isWorkday, days),
+    [tasks, allDays, isWorkday, days],
   );
 
+  // 「一年内完成 N 项」始终只统计近一年窗口，不随选中年份漂移。
   const totalDone = useMemo(
-    () => Object.values(completions).reduce((sum, item) => sum + item.done, 0),
-    [completions],
+    () => days.reduce((sum, key) => sum + (completions[key]?.done ?? 0), 0),
+    [completions, days],
   );
+
+  // 年份切换器（顶栏右侧，仅月粒度显示）：越界一律夹回界内，配合按钮 disabled 双保险。
+  const handleYearChange = (year: number) => {
+    setSelectedYear(Math.min(maxYear, Math.max(minYear, year)));
+  };
 
   // 拖动右缘调宽：宽度实时夹紧到限值内。
   // 拖动期间给 body 挂类（统一 col-resize 光标并禁用文本选择），松手/取消时移除。
@@ -109,11 +141,45 @@ export function CalendarRail() {
             年
           </button>
         </div>
+
+        {/* 年份切换器：月/年切换同一行的最右侧，仅月粒度显示。
+            ‹/› 翻年到界禁用；点年份标签回当年（已是当年时禁用）。 */}
+        {railMode === "month" && (
+          <div className={styles.yearNav} role="group" aria-label="切换年份">
+            <button
+              type="button"
+              className={styles.yearNavBtn}
+              onClick={() => handleYearChange(selectedYear - 1)}
+              disabled={selectedYear <= minYear}
+              aria-label="上一年"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              className={styles.yearLabel}
+              onClick={() => handleYearChange(currentYear)}
+              disabled={selectedYear === currentYear}
+              title="回到今年"
+            >
+              {selectedYear} 年
+            </button>
+            <button
+              type="button"
+              className={styles.yearNavBtn}
+              onClick={() => handleYearChange(selectedYear + 1)}
+              disabled={selectedYear >= maxYear}
+              aria-label="下一年"
+            >
+              ›
+            </button>
+          </div>
+        )}
       </div>
 
       <div className={styles.railBody}>
         {railMode === "month" ? (
-          <MonthRail {...railData} />
+          <MonthRail {...railData} selectedYear={selectedYear} />
         ) : (
           <YearRail {...railData} />
         )}

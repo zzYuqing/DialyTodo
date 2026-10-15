@@ -8,3 +8,4 @@ export * from "./experience";
 export * from "./subtask";
 export * from "./trash";
 export * from "./note";
+export * from "./changelog";

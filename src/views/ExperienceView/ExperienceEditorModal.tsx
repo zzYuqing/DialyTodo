@@ -6,7 +6,7 @@
 import { useEffect, useState } from "react";
 import { Button, Group, Modal, NativeSelect, Stack, TextInput } from "@mantine/core";
 import { CloseIcon, EyeIcon, UploadIcon } from "@/components/Icons";
-import { generateTaskId } from "@/lib";
+import { generateTaskId, listedAttachments } from "@/lib";
 import { dataRoot } from "@/services/paths";
 import { copyPickedAttachments } from "./attachmentActions";
 import { ExperienceMarkdownField } from "./ExperienceMarkdownField";
@@ -74,6 +74,9 @@ export function ExperienceEditorModal({
   }, [opened, defaultDate, fallbackCategory]);
 
   const canSave = title.trim().length > 0 && category.length > 0;
+
+  // 正文里内嵌引用的图片不出现在附件列表（与上传 md / 粘贴截图的口径一致）
+  const visibleAttachments = listedAttachments(attachments, content);
 
   /** 直接上传附件：多选，逐个复制进该经验的附件目录 */
   const handleAddAttachments = async () => {
@@ -151,11 +154,11 @@ export function ExperienceEditorModal({
               添加附件
             </Button>
           </Group>
-          {attachments.length === 0 ? (
+          {visibleAttachments.length === 0 ? (
             <div className={styles.uploadHint}>还没有附件，可添加日志、截图、补丁等文件。</div>
           ) : (
             <div className={styles.attachList}>
-          {attachments.map((a) => (
+          {visibleAttachments.map((a) => (
             <div key={a.id} className={styles.attachChip} title={a.name}>
               <span className={styles.attachName}>{a.name}</span>
               {isPreviewableAttachment(a) && (

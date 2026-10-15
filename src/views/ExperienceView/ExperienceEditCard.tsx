@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button, Group, NativeSelect, TextInput } from "@mantine/core";
 import { ConfirmDialog } from "@/components/ConfirmDialog/ConfirmDialog";
 import { CloseIcon, DownloadIcon, EyeIcon, UploadIcon } from "@/components/Icons";
+import { listedAttachments } from "@/lib";
 import type { Experience, ExperienceAttachment, ExperienceCategory } from "@/types";
 import { copyPickedAttachments, downloadAttachment, openAttachment } from "./attachmentActions";
 import { ExperienceMarkdownField } from "./ExperienceMarkdownField";
@@ -61,10 +62,26 @@ export function ExperienceEditCard({
 
   const canSave = title.trim().length > 0 && category.length > 0;
 
+  // 正文里内嵌引用的图片不出现在附件列表（与上传 md / 粘贴截图的口径一致）
+  const visibleAttachments = listedAttachments(attachments, content);
+
   const handleSave = () => {
     if (!canSave) return;
     onSave({ date, category, title: title.trim(), content, attachments });
   };
+
+  // 正文编辑态 Ctrl/Cmd + S 保存（阻止浏览器默认「另存为」）
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date, category, title, content, attachments]);
 
   /** 添加附件：文件立即复制进附件目录，条目进 draft（取消可回滚列表，磁盘文件按既定策略保留） */
   const handleAddAttachments = async () => {
@@ -123,10 +140,10 @@ export function ExperienceEditCard({
 
       <div
         className={`${styles.cardAttach} ${
-          attachments.length === 0 ? styles.cardAttachEmpty : ""
+          visibleAttachments.length === 0 ? styles.cardAttachEmpty : ""
         }`}
       >
-        {attachments.map((a) => (
+        {visibleAttachments.map((a) => (
           <div key={a.id} className={styles.attachChip}>
             <button
               type="button"

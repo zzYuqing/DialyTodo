@@ -19,6 +19,12 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   /** 取消按钮文字，默认「取消」 */
   cancelLabel?: string;
+  /**
+   * 确认按钮色调：danger = 危险色实心（默认，用于删除等不可逆操作）；
+   * primary = 主题强调色（墨绿），用于「标记完成」等正向但需二次确认的动作，
+   * 避免把正向操作也用删除红，造成语义错位。
+   */
+  confirmVariant?: "danger" | "primary";
   /** 点击确认时回调，由父组件执行真正的删除 */
   onConfirm: () => void;
   /** 点击取消 / 遮罩 / Esc 时回调，父组件清空待删除状态 */
@@ -31,6 +37,7 @@ export function ConfirmDialog({
   message,
   confirmLabel = "删除",
   cancelLabel = "取消",
+  confirmVariant = "danger",
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -53,7 +60,15 @@ export function ConfirmDialog({
           <Button variant="default" onClick={onCancel} className={styles.cancel}>
             {cancelLabel}
           </Button>
-          <Button className={styles.confirm} onClick={onConfirm}>
+          <Button
+            className={[
+              styles.confirm,
+              confirmVariant === "primary" ? styles.confirmPrimary : "",
+            ]
+              .filter((c) => c !== "")
+              .join(" ")}
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </Button>
         </div>

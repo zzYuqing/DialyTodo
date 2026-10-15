@@ -98,6 +98,7 @@ export function calcDaysCompletion(
   tasks: Task[],
   dateKeys: string[],
   isWorkday: WorkdayChecker,
+  scaleKeys: string[] = dateKeys,
 ): Record<string, DayCompletion> {
   const result: Record<string, DayCompletion> = {};
   for (const key of dateKeys) {
@@ -112,7 +113,9 @@ export function calcDaysCompletion(
     result[key] = { ...base, done: Math.max(0, adjusted) };
   }
 
-  const maxDone = Math.max(0, ...Object.values(result).map((c) => c.done));
+  // 分档基准窗口：默认与 dateKeys 一致（向后兼容）；贡献墙月视图传入「近一年」窗口，
+  // 使无论切到哪一年，色阶都锁定在近一年口径，不被所选年份的实际完成数带偏（completion.ts 硬定义）。
+  const maxDone = Math.max(0, ...scaleKeys.map((k) => result[k]?.done ?? 0));
   for (const key of dateKeys) {
     result[key].level = countToLevel(result[key].done, maxDone);
   }

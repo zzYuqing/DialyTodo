@@ -46,6 +46,15 @@
   color: var(--dt-text);
 }
 
+/* 还原图标前方方框的填充：与按钮底色一致，盖住后方方框穿过来的边线；hover 时同步换色 */
+.restoreFront {
+  fill: var(--dt-panel);
+}
+
+.control:hover .restoreFront {
+  fill: var(--dt-panel-2);
+}
+
 .controlClose:hover {
   background: var(--dt-danger);
   color: var(--dt-accent-contrast);

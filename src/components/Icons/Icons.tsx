@@ -151,6 +151,16 @@ export function ChevronRightIcon({ size }: IconProps) {
   );
 }
 
+/** 面板切换：方框 + 左侧竖条，用于经验页左栏的展开 / 收起 */
+export function PanelToggleIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <rect x="2.5" y="2.5" width="11" height="11" rx="1.5" />
+      <path d="M5.5 2.5v11" />
+    </svg>
+  );
+}
+
 /** 拖拽把手：六个点的点阵 */
 export function GripIcon({ size }: IconProps) {
   return (
@@ -303,6 +313,17 @@ export function EyeIcon({ size }: IconProps) {
     <svg {...base(size)}>
       <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" />
       <circle cx="8" cy="8" r="2.2" />
+    </svg>
+  );
+}
+
+/** 更新日志：带折角的文档（版本发布记录语义） */
+export function HistoryIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M3 2.5h7.5L13.5 5.5v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1z" />
+      <path d="M10.5 2.5v3h3" />
+      <path d="M5 8.5h6M5 11h6M5 13.5h4" />
     </svg>
   );
 }

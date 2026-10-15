@@ -36,6 +36,17 @@
   filter: brightness(0.93);
 }
 
+/* 确认按钮：主题强调色（墨绿）实心，用于「标记完成」等正向二次确认动作 */
+.actions .confirm.primary {
+  background-color: var(--dt-accent);
+  color: var(--dt-accent-contrast);
+}
+
+.actions .confirm.primary:hover {
+  background-color: var(--dt-accent);
+  filter: brightness(0.93);
+}
+
 /* 取消按钮：Mantine variant="default" 已自带底与描边，无需额外着色，
    这里仅保证与确认按钮视觉等高对齐 */
 .actions .cancel {

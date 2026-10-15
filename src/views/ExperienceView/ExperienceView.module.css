@@ -41,8 +41,30 @@
 
 .titleRow {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
+}
+
+/* 左栏切换按钮：放在「经验」标题左侧，点击展开 / 收起左栏 */
+.railSwitch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--dt-border);
+  border-radius: 6px;
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.railSwitch:hover {
+  color: var(--dt-accent);
+  border-color: var(--dt-accent);
+  background: var(--dt-accent-soft);
 }
 
 .titleIcon {
@@ -108,7 +130,6 @@
 /* 主体：左右分栏（左栏要放得下单行标题，宽度比原先略宽） */
 .body {
   flex: 1;
-  position: relative; /* 收起态的悬浮方块以此为定位基准 */
   display: grid;
   grid-template-columns: 240px 1fr;
   gap: 16px;
@@ -116,90 +137,16 @@
   transition: grid-template-columns 150ms ease, gap 150ms ease;
 }
 
-/*
- * 左栏收起：不留感应列——展开按钮是绝对定位（脱离 grid 流），若保留 18px 首列，
- * 右栏会作为流内首个子项掉进那条窄列被挤扁；单列 1fr 让右栏直接占满，
- * 「靠近浮现」的感应完全靠按钮自身的伪元素扩展区。
- */
+/* 左栏收起：单列 1fr 让右栏直接占满 */
 .bodyCollapsed {
   grid-template-columns: 1fr;
 }
 
-/* 左：标题导航（收起 / 展开两态的公共容器，撑满行高才能让内部列表滚动） */
+/* 左：标题导航（撑满行高才能让内部列表滚动） */
 .railWrap {
   display: flex;
   flex-direction: column;
-  gap: 4px;
   min-height: 0;
-}
-
-/* 折叠按钮行：右对齐，箭头朝左表示「收起」 */
-.railHead {
-  display: flex;
-  justify-content: flex-end;
-  flex-shrink: 0;
-}
-
-.railToggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--dt-text-muted);
-  cursor: pointer;
-}
-
-.railToggle:hover {
-  background: var(--dt-panel-2);
-  color: var(--dt-text);
-}
-
-.railToggle svg {
-  transform: rotate(180deg);
-}
-
-/*
- * 收起态的展开入口：一个脱离栅格流的小方块，垂直居中贴在左边缘，
- * 默认透明（只留感应区），鼠标靠近左侧时浮出——不留常驻竖条占地方。
- * 透明态仍接收指针事件，所以「靠近即浮现」靠 :hover 即可，无需 JS。
- */
-.railCollapsed {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 1px solid var(--dt-border);
-  border-radius: 6px;
-  background: var(--dt-panel);
-  color: var(--dt-text-muted);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 120ms ease, color 120ms ease, border-color 120ms ease;
-}
-
-/* 感应区：上下大幅扩展，让鼠标不必精确命中方块就能唤出它；右侧只扩 2px 少挡列表 */
-.railCollapsed::before {
-  content: "";
-  position: absolute;
-  inset: -28px -2px;
-}
-
-.railCollapsed:hover,
-.railCollapsed:focus-visible {
-  opacity: 1;
-  color: var(--dt-accent);
-  border-color: var(--dt-accent);
 }
 
 .rail {
@@ -259,13 +206,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* 行尾小字日期：元数据级别，不与标题争视觉权重 */
-.railEntryDate {
-  flex-shrink: 0;
-  font-size: 11px;
-  color: var(--dt-text-muted);
 }
 
 /* 右：卡片列表 */

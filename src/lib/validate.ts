@@ -15,10 +15,18 @@ import {
   TRASH_RETENTION_MAX,
   TRASH_RETENTION_MIN,
 } from "@/constants";
-import type { AppSettings, DayRecord, Reminder, Schedule, Task, TasksFile } from "@/types";
+import type {
+  AppSettings,
+  DayRecord,
+  Reminder,
+  Schedule,
+  SpecialSchedule,
+  Task,
+  TasksFile,
+} from "@/types";
 
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const SCHEDULE_TYPE_SET = new Set(["once", "workday", "weekend", "daily", "weekly"]);
+const SCHEDULE_TYPE_SET = new Set(["once", "workday", "weekend", "daily", "weekly", "special"]);
 
 /** 星期序号数组：元素必须是 0（周一）到 6（周日）的整数 */
 function isWeekdays(value: unknown): value is number[] {
@@ -26,6 +34,55 @@ function isWeekdays(value: unknown): value is number[] {
     Array.isArray(value) &&
     value.every((day) => typeof day === "number" && Number.isInteger(day) && day >= 0 && day <= 6)
   );
+}
+
+/** 月锚点「第几个星期几」：ordinal ∈ 1–5（5=最后），weekday ∈ 0–6（周一制） */
+function isMonthWeekdayAnchor(value: unknown): value is { ordinal: number; weekday: number } {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as { ordinal?: unknown; weekday?: unknown };
+  if (typeof v.ordinal !== "number" || v.ordinal < 1 || v.ordinal > 5) return false;
+  if (typeof v.weekday !== "number" || v.weekday < 0 || v.weekday > 6) return false;
+  return true;
+}
+
+/** 特殊周期结构校验：unit 合法、interval 为正整数、各锚点数组（若存在）元素合法 */
+function isSpecialSchedule(value: unknown): value is SpecialSchedule {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Partial<SpecialSchedule>;
+  if (v.unit !== "day" && v.unit !== "week" && v.unit !== "month") return false;
+  if (typeof v.interval !== "number" || !Number.isInteger(v.interval) || v.interval < 1) return false;
+  if (v.weekdays != null && !isWeekdays(v.weekdays)) return false;
+  if (v.monthDays != null) {
+    if (
+      !Array.isArray(v.monthDays) ||
+      !v.monthDays.every((d) => typeof d === "number" && Number.isInteger(d) && d >= 1 && d <= 31)
+    ) {
+      return false;
+    }
+  }
+  if (v.monthWeekday != null) {
+    if (!Array.isArray(v.monthWeekday) || !v.monthWeekday.every(isMonthWeekdayAnchor)) return false;
+  }
+  if (v.monthLastDay != null && typeof v.monthLastDay !== "boolean") return false;
+  return true;
+}
+
+/**
+ * 归一化 special 字段：null / undefined / 结构非法 一律归 undefined（安全降级，不判废整份任务）；
+ * 合法则补齐各锚点数组的缺省，保持与其他可选字段（weekdays）同口径。
+ * 注意：monthDays 允许含 29/30/31（短月判定时自然跳过），归一化不强制收窄到 1–28，
+ * 拦截放在 UI 表单提交层（见 docs/特殊周期设计.md 5.1）。
+ */
+function normalizeSpecial(value: unknown): SpecialSchedule | undefined {
+  if (value == null || !isSpecialSchedule(value)) return undefined;
+  return {
+    unit: value.unit,
+    interval: value.interval,
+    weekdays: value.weekdays ?? [],
+    monthDays: value.monthDays ?? [],
+    monthWeekday: value.monthWeekday ?? [],
+    monthLastDay: value.monthLastDay ?? false,
+  };
 }
 
 /** 是否为合法日期键 YYYY-MM-DD */
@@ -43,6 +100,8 @@ function isSchedule(value: unknown): value is Schedule {
   if (candidate.endDate != null && !isDateKey(candidate.endDate)) return false;
   // weekdays 是 weekly 专属字段，存量数据整个缺失；存在时必须合法，缺失放行（由 normalize 补 []）
   if (candidate.weekdays != null && !isWeekdays(candidate.weekdays)) return false;
+  // special 是特殊周期专属字段，存量数据整个缺失；存在时必须结构合法，缺失放行（由 normalize 补）
+  if (candidate.special != null && !isSpecialSchedule(candidate.special)) return false;
   return true;
 }
 
@@ -120,6 +179,7 @@ export function validateTaskOfType(type: string, value: unknown): value is Task 
   if (!isDateKey(candidate.schedule.startDate)) return false;
   if (candidate.schedule.endDate != null && !isDateKey(candidate.schedule.endDate)) return false;
   if (candidate.schedule.weekdays != null && !isWeekdays(candidate.schedule.weekdays)) return false;
+  if (candidate.schedule.special != null && !isSpecialSchedule(candidate.schedule.special)) return false;
   if (!isReminder(candidate.reminder)) return false;
   if (typeof candidate.archived !== "boolean") return false;
   if (candidate.completedAt != null && !isDateKey(candidate.completedAt)) return false;
@@ -214,6 +274,7 @@ export function normalizeTask(task: Task): Task {
       ...task.schedule,
       endDate: task.schedule.endDate ?? null,
       weekdays: task.schedule.weekdays ?? [],
+      special: normalizeSpecial(task.schedule.special),
     },
   };
 }

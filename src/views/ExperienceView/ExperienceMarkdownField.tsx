@@ -20,7 +20,11 @@ import {
   relativeRefs,
   replaceImageRef,
 } from "@/lib";
-import { copyAttachmentInto } from "@/services";
+import {
+  copyAttachmentInto,
+  imageExtOfMime,
+  saveAttachmentBytes,
+} from "@/services";
 import { ExperienceImageRepairModal, type RepairItem } from "./ExperienceImageRepairModal";
 import { ExperienceMarkdownEditor } from "./ExperienceMarkdownEditor";
 import { resolveImageSrc } from "./resolveImageSrc";
@@ -128,6 +132,25 @@ export function ExperienceMarkdownField({
     }
   };
 
+  /**
+   * 编辑器里直接粘贴截图：剪贴板给的是内存图片（没有磁盘路径），
+   * 读成字节后直接写进附件目录，再返回要插入正文的图片语法。
+   * 与「上传 md」带入的图片一致：只落盘 + 写正文路径，不登记进附件列表。
+   */
+  const handlePasteImage = async (blob: Blob): Promise<string | null> => {
+    try {
+      setUploadError(null);
+      const ext = imageExtOfMime(blob.type);
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const att = await saveAttachmentBytes(expId, bytes, ext);
+      return `![${att.name}](${attachmentMarkdownPath(expId, att.storedName)})`;
+    } catch (err) {
+      console.error("[experience] 粘贴图片保存失败", err);
+      setUploadError("粘贴图片保存失败，请重试");
+      return null;
+    }
+  };
+
   return (
     <div className={styles.field}>
       <Group justify="space-between" align="center" className={styles.label}>
@@ -148,9 +171,10 @@ export function ExperienceMarkdownField({
         className={styles.cmHost}
         value={value}
         onChange={onChange}
+        onPasteImage={handlePasteImage}
         // resolveImageSrc 仅在 src 为空时返回 undefined，此处回退原值以满足非空契约
         resolveImage={(raw) => resolveImageSrc(raw, root) ?? raw}
-        placeholder="可直接写 Markdown：## 标题、**加粗**、`代码`、![图片](路径)…"
+        placeholder="可直接写 Markdown：## 标题、**加粗**、`代码`、![图片](路径)，也可直接 Ctrl+V 粘贴截图…"
       />
       {uploadError && <div className={styles.uploadError}>{uploadError}</div>}
 

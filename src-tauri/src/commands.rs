@@ -45,16 +45,25 @@ pub fn quit_app(app: tauri::AppHandle) {
     app.exit(0);
 }
 
-/// 把用户选定的自定义数据目录加入 fs 访问白名单（运行时动态授权，不持久化）。
-/// 为何必须 Rust：plugin-fs 的 scope 校验发生在宿主进程，TS 侧没有扩展 scope 的 API。
+/// 把用户选定的自定义数据目录加入 fs 访问白名单与 asset 协议白名单（运行时动态授权，不持久化）。
+/// 为何必须 Rust：plugin-fs 的 scope 与 asset 协议 scope 校验都发生在宿主进程，TS 侧没有扩展 scope 的 API。
+/// 同时加入 asset scope 是为了让 convertFileSrc 能加载自定义数据目录下的图片（md 内嵌图片渲染）。
 /// 启动时由 TS 在解析到非默认数据目录后调用一次；迁移前也调用一次。
 #[tauri::command]
 pub fn authorize_dir(app: tauri::AppHandle, path: String) -> Result<(), String> {
     use tauri_plugin_fs::FsExt;
 
     app.fs_scope()
-        .allow_directory(path, true)
-        .map_err(|err| err.to_string())
+        .allow_directory(&path, true)
+        .map_err(|err| err.to_string())?;
+
+    // 自定义数据目录不在 assetProtocol 静态 scope（$APPDATA/**）内，
+    // 需运行时加入，否则该目录下的附件图片经 convertFileSrc 转成的 asset URL 会静默裂图。
+    app.asset_protocol_scope()
+        .allow_directory(&path, true)
+        .map_err(|err| err.to_string())?;
+
+    Ok(())
 }
 
 /// 重启应用：先脱离当前进程树拉起一个新实例，再退出当前实例（托盘菜单「重启」用）。

@@ -192,3 +192,14 @@ export function getYearRemainingDays(now: Date = new Date()): string[] {
   if (startKey > endKey) return [];
   return eachDayOfInterval({ start: fromDateKey(startKey), end: fromDateKey(endKey) }).map(toDateKey);
 }
+
+/**
+ * 生成指定自然年的全部日期键（1 月 1 日 → 12 月 31 日）。
+ * 用途：贡献墙月视图年份切换器 —— 切到任一年时，需该年全量日期参与完成度计算：
+ * 未来年日期 done 恒为 0 渲染为「未来透明格」，过去年日期如实上色。
+ */
+export function getYearDays(year: number): string[] {
+  const start = new Date(year, 0, 1);
+  const end = new Date(year, 11, 31);
+  return eachDayOfInterval({ start, end }).map(toDateKey);
+}

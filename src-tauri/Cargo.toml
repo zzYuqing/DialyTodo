@@ -1,6 +1,6 @@
 [package]
 name = "daily-todo"
-version = "0.2.2"
+version = "0.2.3"
 description = "DailyTodo —— Windows 本地轻量待办工具"
 authors = ["YoYo"]
 edition = "2021"
@@ -16,7 +16,7 @@ tauri-build = { version = "2", features = [] }
 
 # 依赖仅限提示词 3.2 白名单内的 Tauri 官方插件 + window-vibrancy
 [dependencies]
-tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri = { version = "2", features = ["protocol-asset", "tray-icon", "image-png"] }
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-notification = "2"

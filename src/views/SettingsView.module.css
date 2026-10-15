@@ -1,17 +1,18 @@
-/* 设置页容器：左对齐（不居中），让左栏锁死在内容区最左侧、宽度恒定，
- * 不随窗口缩放而左右移动；max-width 仅限制右栏可读宽度，超出部分留白在右侧 */
+/* 设置页容器：整体居中，宽度跟随窗口缩放——用 min(1000px, 94vw)
+ * 保证大窗口留白居中、小窗口只留窄边距，不再定死 */
 .wrap {
-  max-width: 760px;
-  margin: 0;
+  width: 100%;
+  max-width: min(1000px, 94vw);
+  margin: 0 auto;
   padding: 24px 16px;
 }
 
-/* 两栏布局：左列硬锁定 132px 固定宽度，右列自适应并紧贴左列（grid 锁定列宽，
- * 左栏宽度不会随右栏内容多少或窗口缩放而变化） */
+/* 两栏布局：左栏用 clamp 随窗口宽度在 108~148px 间伸缩，
+ * 右栏 minmax(0, 1fr) 吃掉剩余空间，两栏同步跟随窗口尺寸变化 */
 .layout {
   display: grid;
-  grid-template-columns: 132px minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: clamp(108px, 13vw, 148px) minmax(0, 1fr);
+  gap: clamp(12px, 2vw, 24px);
   align-items: start;
 }
 
@@ -53,15 +54,20 @@
   border-color: var(--dt-accent);
 }
 
-/* 右栏内容区：占据网格右列（已自适应），分类卡片竖向堆叠 */
+/* 右栏内容区：占据网格右列，内部内容水平居中（窗口再宽也居中展示） */
 .content {
   min-width: 0;
+  display: flex;
+  justify-content: center;
 }
 
 .catGroup {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: 100%;
+  /* 限制可读宽度：宽屏下卡片不会被拉得过长，且保持在右栏居中 */
+  max-width: 720px;
 }
 
 /* 次级说明文字：低饱和灰，不抢主体 */
@@ -89,4 +95,45 @@
 /* 卡片标题：墨绿工房主色，与贡献墙最高档同源 */
 .cardTitle {
   color: var(--dt-accent);
+}
+
+/* —— 更新日志 —— */
+
+/* 手风琴整体：去掉默认外描边，卡片之间用间距分隔 */
+.changelogAccordion {
+  border: none;
+}
+
+.changelogAccordion [data-accordion-item] {
+  border: 1px solid var(--dt-border);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+/* 手风琴控件：左右两端分别放版本号 + 标签、日期 */
+.changelogControl {
+  padding: 10px 12px;
+  min-height: auto;
+}
+
+.changelogControl:hover {
+  background: var(--dt-panel-2);
+}
+
+/* 版本号文字：稍大、加粗、用主色突出 */
+.versionLabel {
+  color: var(--dt-text);
+}
+
+/* 变更要点列表：用原生 disc 标记，天然与第一行文字对齐（多行也不会居中到整块） */
+.changelogList {
+  list-style-position: outside;
+  padding-left: 18px;
+}
+
+/* 原生圆点染成主色；缩小字号让圆点更精致 */
+.changelogList li::marker {
+  color: var(--dt-accent);
+  font-size: 10px;
 }

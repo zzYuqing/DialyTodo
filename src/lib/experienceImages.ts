@@ -114,3 +114,35 @@ export function attachmentMarkdownPath(expId: string, storedName: string): strin
 export function isAttachmentMarkdownPath(src: string): boolean {
   return src.startsWith(`${EXPERIENCE_ATTACHMENTS_DIR}/`);
 }
+
+/**
+ * 提取正文里所有「本应用附件图片」的 storedName 集合（路径最后一段）。
+ * 只统计附件目录内的引用，外部绝对路径 / 网络图片不计入。
+ * 用于编辑保存时对比新旧正文，找出被删掉引用的附件图片。
+ */
+export function attachmentStoredNamesIn(md: string): Set<string> {
+  const out = new Set<string>();
+  for (const ref of extractImageRefs(md)) {
+    if (!isAttachmentMarkdownPath(ref.raw)) continue;
+    // 附件路径恒为正斜杠（attachmentMarkdownPath 生成）；兼容历史数据里可能出现的反斜杠
+    const segments = ref.raw.split(/[\\/]/);
+    const storedName = segments[segments.length - 1];
+    if (storedName) out.add(storedName);
+  }
+  return out;
+}
+
+/**
+ * 过滤出「应展示在附件列表」的附件：
+ * 正文里以图片语法引用的图片属内嵌图片（随文上传 / 粘贴截图），不在附件列表展示；
+ * 非图片附件、以及未嵌入正文的图片仍作为独立附件展示。
+ */
+export function listedAttachments<T extends { mime: string; storedName: string }>(
+  attachments: readonly T[],
+  md: string,
+): T[] {
+  const embedded = attachmentStoredNamesIn(md);
+  return attachments.filter(
+    (a) => !a.mime.startsWith("image/") || !embedded.has(a.storedName),
+  );
+}

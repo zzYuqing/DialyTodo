@@ -19,6 +19,7 @@ import {
   Chip,
   Group,
   Modal,
+  NumberInput,
   Select,
   SegmentedControl,
   Stack,
@@ -26,12 +27,22 @@ import {
   TextInput,
   Textarea,
 } from "@mantine/core";
-import type { CompositeEdit, ScheduleType, SubtaskDraft, Task, TaskSubmitPayload } from "@/types";
+import type {
+  CompositeEdit,
+  MonthWeekdayAnchor,
+  ScheduleType,
+  SpecialSchedule,
+  SpecialUnit,
+  SubtaskDraft,
+  Task,
+  TaskSubmitPayload,
+} from "@/types";
 import { SCHEDULE_TYPES, SCHEDULE_TYPE_LABELS, WEEKDAY_OPTIONS } from "@/constants";
 import {
   buildTaskMap,
   childTasksOf,
   clampEndDateWithin,
+  describeSpecial,
   findParentOf,
   isComposite,
   sortSubtasksForDisplay,
@@ -88,6 +99,26 @@ function subtaskIssue(draft: SubtaskDraft, parentStart: string, parentEnd: strin
 /** 默认值：新建时的表单初值 */
 const DEFAULT_REMINDER_TIME = "09:00";
 
+/** 特殊周期常用预设（方案 B）：一键填入，覆盖高频场景 */
+interface SpecialPreset {
+  label: string;
+  unit: SpecialUnit;
+  interval: number;
+  weekdays?: number[];
+  monthDays?: number[];
+  monthWeekday?: MonthWeekdayAnchor[];
+  monthLastDay?: boolean;
+}
+const SPECIAL_PRESETS: SpecialPreset[] = [
+  { label: "每 3 天", unit: "day", interval: 3 },
+  { label: "每周一", unit: "week", interval: 1, weekdays: [0] },
+  { label: "每周一三五", unit: "week", interval: 1, weekdays: [0, 2, 4] },
+  { label: "每月 1·15 号", unit: "month", interval: 1, monthDays: [1, 15] },
+  { label: "每月最后周五", unit: "month", interval: 1, monthWeekday: [{ ordinal: 5, weekday: 4 }] },
+  { label: "每月最后一天", unit: "month", interval: 1, monthLastDay: true },
+  { label: "每 2 周周末", unit: "week", interval: 2, weekdays: [5, 6] },
+];
+
 // Mantine Select 的 onChange 回调给的是 string | null，
 // 这里用常量表收窄成联合类型，避免用 as 强转绕过检查。
 function isScheduleType(value: string): value is ScheduleType {
@@ -116,6 +147,18 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
   const [formKind, setFormKind] = useState<FormKind>("single");
   /** 子任务草稿，数组顺序即显示顺序 */
   const [subtasks, setSubtasks] = useState<SubtaskDraft[]>([]);
+  /** 特殊周期：单位（天/周/月） */
+  const [specialUnit, setSpecialUnit] = useState<SpecialUnit>("day");
+  /** 特殊周期：每隔 N 个单位 */
+  const [specialInterval, setSpecialInterval] = useState(1);
+  /** 特殊周期：week 单位命中的星期（0=周一…6=周日） */
+  const [specialWeekdays, setSpecialWeekdays] = useState<number[]>([]);
+  /** 特殊周期：month 单位命中的日期 1..31 */
+  const [specialMonthDays, setSpecialMonthDays] = useState<number[]>([]);
+  /** 特殊周期：month 单位命中的「第几个星期几」 */
+  const [specialMonthWeekday, setSpecialMonthWeekday] = useState<MonthWeekdayAnchor[]>([]);
+  /** 特殊周期：month 单位是否命中「每月最后一天」 */
+  const [specialMonthLastDay, setSpecialMonthLastDay] = useState(false);
   /** 上一次自动裁剪的提示文案，null = 无 */
   const [clampNotice, setClampNotice] = useState<string | null>(null);
 
@@ -139,6 +182,22 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
       setNote(target.task.note);
       setScheduleType(target.task.schedule.type);
       setWeekdays(target.task.schedule.weekdays ?? []);
+      const sp = target.task.schedule.special;
+      if (sp) {
+        setSpecialUnit(sp.unit);
+        setSpecialInterval(sp.interval);
+        setSpecialWeekdays(sp.weekdays ?? []);
+        setSpecialMonthDays(sp.monthDays ?? []);
+        setSpecialMonthWeekday(sp.monthWeekday ?? []);
+        setSpecialMonthLastDay(sp.monthLastDay ?? false);
+      } else {
+        setSpecialUnit("day");
+        setSpecialInterval(1);
+        setSpecialWeekdays([]);
+        setSpecialMonthDays([]);
+        setSpecialMonthWeekday([]);
+        setSpecialMonthLastDay(false);
+      }
       setStartDate(target.task.schedule.startDate);
       // 编辑模式按 endDate 是否存在还原开关：有结束日 → 开，无 → 关
       setEndDateEnabled(target.task.schedule.endDate !== null);
@@ -181,6 +240,13 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
     setReminderTime(DEFAULT_REMINDER_TIME);
     setFormKind("single");
     setSubtasks([]);
+    // 新建时清空特殊周期各子状态，避免沿用上一次编辑留下的残留值
+    setSpecialUnit("day");
+    setSpecialInterval(1);
+    setSpecialWeekdays([]);
+    setSpecialMonthDays([]);
+    setSpecialMonthWeekday([]);
+    setSpecialMonthLastDay(false);
     // targetKey 已完整表达"目标身份"，target 只作为取值来源；map 同理（只作为取子任务实体的索引）
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetKey]);
@@ -193,6 +259,15 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
   const endDateInvalid = endDateEnabled && endDate < startDate;
   // 每周指定：至少选一天，否则任务永远不会出现在任何日期。复合任务恒为 once，不会触发
   const weekdaysInvalid = !isCompositeForm && scheduleType === "weekly" && weekdays.length === 0;
+  // 特殊周期：按 unit 校验锚点必填项
+  const specialInvalid =
+    !isCompositeForm &&
+    scheduleType === "special" &&
+    (specialUnit === "week"
+      ? specialWeekdays.length === 0
+      : specialUnit === "month"
+        ? specialMonthDays.length === 0 && specialMonthWeekday.length === 0 && !specialMonthLastDay
+        : false);
 
   const issues = isCompositeForm ? subtasks.map((draft) => subtaskIssue(draft, startDate, parentEnd)) : [];
   const subtasksInvalid = isCompositeForm && issues.some((issue) => issue !== null);
@@ -201,6 +276,7 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
     title.trim().length === 0 ||
     endDateInvalid ||
     weekdaysInvalid ||
+    specialInvalid ||
     subtasksInvalid ||
     subtasksEmpty;
 
@@ -213,7 +289,11 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
         ? "结束日期不能早于起始日期"
         : weekdaysInvalid
           ? "请至少选择一天执行日"
-          : subtasksEmpty
+            : specialInvalid
+            ? specialUnit === "week"
+              ? "请至少选择一天执行日"
+              : "请选择每月的执行日（几号 / 第几个星期几 / 最后一天）"
+              : subtasksEmpty
             ? "任务集至少需要 1 个子任务"
             : subtasksInvalid
               ? "存在未通过校验的子任务（检查标题与截止日）"
@@ -245,6 +325,40 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
   const patchSubtask = (index: number, patch: Partial<SubtaskDraft>) => {
     setSubtasks((current) => current.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   };
+
+  /** 由当前 special 表单状态收敛出 SpecialSchedule：非本 unit 的锚点恒写空数组，保持与 normalize 同口径 */
+  const buildSpecial = (): SpecialSchedule => ({
+    unit: specialUnit,
+    interval: specialInterval,
+    weekdays: specialUnit === "week" ? specialWeekdays : [],
+    monthDays: specialUnit === "month" ? specialMonthDays : [],
+    monthWeekday: specialUnit === "month" ? specialMonthWeekday : [],
+    monthLastDay: specialUnit === "month" ? specialMonthLastDay : false,
+  });
+
+  /** 应用一个常用预设：一次性把单位 / 间隔 / 各锚点全部填满 */
+  const applyPreset = (preset: SpecialPreset) => {
+    setSpecialUnit(preset.unit);
+    setSpecialInterval(preset.interval);
+    setSpecialWeekdays(preset.weekdays ?? []);
+    setSpecialMonthDays(preset.monthDays ?? []);
+    setSpecialMonthWeekday(preset.monthWeekday ?? []);
+    setSpecialMonthLastDay(preset.monthLastDay ?? false);
+  };
+
+  /** 新增一条「第几个星期几」锚点，默认「第 1 个周一」，避免空默认值 */
+  const addMonthWeekday = () =>
+    setSpecialMonthWeekday((current) => [...current, { ordinal: 1, weekday: 0 }]);
+
+  /** 删除第 index 条「第几个星期几」锚点 */
+  const removeMonthWeekday = (index: number) =>
+    setSpecialMonthWeekday((current) => current.filter((_, i) => i !== index));
+
+  /** 就地改第 index 条「第几个星期几」锚点 */
+  const updateMonthWeekday = (index: number, patch: Partial<MonthWeekdayAnchor>) =>
+    setSpecialMonthWeekday((current) =>
+      current.map((item, i) => (i === index ? { ...item, ...patch } : item)),
+    );
 
   const handleEndDateChange = (event: ChangeEvent<HTMLInputElement>) => {
     const value = event.currentTarget.value;
@@ -306,6 +420,8 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
           endDate: endDateEnabled ? endDate : null,
           // 非 weekly 恒写空数组，与 normalizeTask 的补齐口径一致，避免 undefined 落盘
           weekdays: scheduleType === "weekly" ? weekdays : [],
+          // 非 special 恒写 undefined；special 由 buildSpecial 按当前 unit 收敛各锚点数组
+          special: scheduleType === "special" ? buildSpecial() : undefined,
         },
         reminder: { enabled: reminderEnabled, time: reminderTime },
       },
@@ -419,6 +535,177 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
                 </Group>
               </Chip.Group>
               {weekdaysInvalid && <div className={styles.weekdayError}>请至少选择一天</div>}
+            </div>
+          )}
+
+          {/* 特殊周期：选 special 时展开组合控件（方案 A 结构 + 方案 B 预设）。
+              unit × interval × anchor 三要素；月锚点支持「指定几号 / 最后一天 / 第几个星期几」。
+              29–31 号在小月 / 2 月不存在，前端直接禁止选中（而非提交时警告）。 */}
+          {scheduleType === "special" && (
+            <div className={styles.specialBlock}>
+              {/* 方案 B：常用预设，一键填入高频场景 */}
+              <div>
+                <div className={styles.weekdayLabel}>常用</div>
+                <Group gap={6}>
+                  {SPECIAL_PRESETS.map((preset) => (
+                    <Button
+                      key={preset.label}
+                      size="compact-xs"
+                      variant="light"
+                      onClick={() => applyPreset(preset)}
+                    >
+                      {preset.label}
+                    </Button>
+                  ))}
+                </Group>
+              </div>
+
+              <Group gap="xs" align="flex-end">
+                <NumberInput
+                  label="每"
+                  value={specialInterval}
+                  min={1}
+                  max={99}
+                  w={90}
+                  onChange={(value) =>
+                    setSpecialInterval(typeof value === "number" ? Math.max(1, Math.floor(value)) : 1)
+                  }
+                />
+                <Select
+                  label="单位"
+                  data={[
+                    { value: "day", label: "天" },
+                    { value: "week", label: "周" },
+                    { value: "month", label: "月" },
+                  ]}
+                  value={specialUnit}
+                  onChange={(v) => v !== null && setSpecialUnit(v as SpecialUnit)}
+                  allowDeselect={false}
+                  w={110}
+                />
+              </Group>
+
+              {specialUnit === "week" && (
+                <div className={styles.weekdayBlock}>
+                  <div className={styles.weekdayLabel}>执行日（可多选）</div>
+                  <Chip.Group
+                    multiple
+                    value={specialWeekdays.map((day) => String(day))}
+                    onChange={(value) => setSpecialWeekdays(toWeekdays(value))}
+                  >
+                    <Group gap={6}>
+                      {WEEKDAY_OPTIONS.map((option) => (
+                        <Chip
+                          key={option.value}
+                          value={String(option.value)}
+                          size="xs"
+                          radius="sm"
+                          variant="outline"
+                        >
+                          {option.label}
+                        </Chip>
+                      ))}
+                    </Group>
+                  </Chip.Group>
+                  {specialWeekdays.length === 0 && (
+                    <div className={styles.weekdayError}>请至少选择一天</div>
+                  )}
+                </div>
+              )}
+
+              {specialUnit === "month" && (
+                <div className={styles.specialMonthBlock}>
+                  <div className={styles.weekdayLabel}>指定几号（可多选，29–31 已禁用）</div>
+                  {/* 29–31 仅当已存在于旧数据时才允许取消，新配置禁止选中。
+                      「最后一天」以 "last" 伪键并入 Chip.Group，渲染在 31 之后。 */}
+                  <Chip.Group
+                    multiple
+                    value={[
+                      ...specialMonthDays.map((day) => String(day)),
+                      ...(specialMonthLastDay ? ["last"] : []),
+                    ]}
+                    onChange={(value) => {
+                      const list = Array.isArray(value) ? value : [value];
+                      setSpecialMonthLastDay(list.includes("last"));
+                      setSpecialMonthDays(
+                        [
+                          ...new Set(
+                            list
+                              .filter((item) => item !== "last")
+                              .map((item) => Number(item))
+                              .filter((d) => d >= 1 && d <= 31),
+                          ),
+                        ].sort((a, b) => a - b),
+                      );
+                    }}
+                  >
+                    <Group gap={4}>
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                        const disabled = day >= 29 && !specialMonthDays.includes(day);
+                        return (
+                          <Chip
+                            key={day}
+                            value={String(day)}
+                            size="xs"
+                            radius="sm"
+                            variant="outline"
+                            disabled={disabled}
+                            title={disabled ? "2 月 / 小月无此日，禁止选择" : undefined}
+                          >
+                            {day}
+                          </Chip>
+                        );
+                      })}
+                      <Chip value="last" size="xs" radius="sm" variant="outline">
+                        最后一天
+                      </Chip>
+                    </Group>
+                  </Chip.Group>
+
+                  <div className={styles.weekdayLabel} style={{ marginTop: 8 }}>
+                    第几个星期几
+                  </div>
+                  <Stack gap={4}>
+                    {specialMonthWeekday.map((mw, idx) => (
+                      <Group key={idx} gap={6} align="center">
+                        <Select
+                          data={[
+                            { value: "1", label: "第1个" },
+                            { value: "2", label: "第2个" },
+                            { value: "3", label: "第3个" },
+                            { value: "4", label: "第4个" },
+                            { value: "5", label: "最后" },
+                          ]}
+                          value={String(mw.ordinal)}
+                          onChange={(v) =>
+                            v !== null &&
+                            updateMonthWeekday(idx, { ordinal: Number(v) as 1 | 2 | 3 | 4 | 5 })
+                          }
+                          w={100}
+                        />
+                        <Select
+                          data={WEEKDAY_OPTIONS.map((o) => ({ value: String(o.value), label: o.label }))}
+                          value={String(mw.weekday)}
+                          onChange={(v) => v !== null && updateMonthWeekday(idx, { weekday: Number(v) })}
+                          w={100}
+                        />
+                        <Button size="compact-xs" variant="subtle" color="red" onClick={() => removeMonthWeekday(idx)}>
+                          删除
+                        </Button>
+                      </Group>
+                    ))}
+                    <Button size="compact-xs" variant="subtle" color="gray" onClick={addMonthWeekday}>
+                      添加「第几个星期几」
+                    </Button>
+                  </Stack>
+                </div>
+              )}
+
+              {/* 实时预览：把当前组合立刻转成人类可读文案，消除「配完不知道生成啥」的焦虑 */}
+              <div className={styles.specialPreview}>
+                <span className={styles.weekdayLabel}>将显示为</span>
+                <span className={styles.specialPreviewText}>{describeSpecial(buildSpecial())}</span>
+              </div>
             </div>
           )}
 

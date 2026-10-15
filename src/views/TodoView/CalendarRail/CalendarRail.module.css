@@ -54,6 +54,70 @@
   cursor: default;
 }
 
+/* 年份切换器：railHeader 最右侧，仅月粒度显示。
+   与左侧「月/年」toggle 同一视觉语言：同款描边圆角组 + 透明小按钮。 */
+.yearNav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  background: var(--dt-bg);
+}
+
+.yearNavBtn {
+  width: 24px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.yearNavBtn:hover:not(:disabled) {
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+}
+
+.yearNavBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.yearLabel {
+  min-width: 52px;
+  height: 22px;
+  text-align: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0 4px;
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+.yearLabel:hover:not(:disabled) {
+  color: var(--dt-accent);
+}
+
+/* 已是当年时标签禁用：纯展示态，保持正常文字色而非置灰 */
+.yearLabel:disabled {
+  cursor: default;
+}
+
 .railBody {
   flex: 1;
   display: flex;

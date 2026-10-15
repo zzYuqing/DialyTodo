@@ -3,7 +3,7 @@
 // （经验属非关键数据，不做备份兜底，下次写入自然覆盖）。
 
 import { join } from "@tauri-apps/api/path";
-import { copyFile, exists, mkdir, readTextFile, remove } from "@tauri-apps/plugin-fs";
+import { copyFile, exists, mkdir, readTextFile, remove, writeFile } from "@tauri-apps/plugin-fs";
 import { CATEGORY_COLORS, CURRENT_VERSION } from "@/constants";
 import { generateTaskId } from "@/lib";
 import { ensureDirectories, dataRoot, experienceAttachmentsDir } from "./paths";
@@ -134,6 +134,37 @@ export async function copyAttachmentInto(
   const storedName = `${id}${ext}`;
   await copyFile(srcPath, await join(dir, storedName));
   return { id, name, storedName, mime: mimeOf(ext) };
+}
+
+/** 剪贴板图片 mime → 扩展名（含点）；不在表内按 png 处理（截图工具最常见输出） */
+export function imageExtOfMime(mime: string): string {
+  const table: Record<string, string> = {
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/gif": ".gif",
+    "image/webp": ".webp",
+    "image/svg+xml": ".svg",
+    "image/bmp": ".bmp",
+  };
+  return table[mime] ?? ".png";
+}
+
+/**
+ * 把内存字节（编辑器里粘贴的剪贴板图片）直接写进该经验的附件目录。
+ * 与 copyAttachmentInto 的区别：源数据没有磁盘路径，只能经 fs writeFile 落盘。
+ * name 取「粘贴图片-短 id」，展示时可辨识来源；id/storedName 规则与文件复制一致。
+ */
+export async function saveAttachmentBytes(
+  expId: string,
+  bytes: Uint8Array,
+  ext: string,
+): Promise<ExperienceAttachment> {
+  const dir = await experienceAttachmentsDir(expId);
+  if (!(await exists(dir))) await mkdir(dir, { recursive: true });
+  const id = generateTaskId();
+  const storedName = `${id}${ext}`;
+  await writeFile(await join(dir, storedName), bytes);
+  return { id, name: `粘贴图片-${id.slice(0, 8)}${ext}`, storedName, mime: mimeOf(ext) };
 }
 
 /**

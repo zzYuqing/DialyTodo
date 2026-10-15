@@ -12,10 +12,12 @@ import {
   disable as disableAutoStart,
 } from "@tauri-apps/plugin-autostart";
 import {
+  Accordion,
   Badge,
   Button,
   Code,
   Group,
+  List,
   Modal,
   NumberInput,
   Paper,
@@ -27,6 +29,7 @@ import {
 import { isTauri } from "@/bridge";
 import { useHolidayStore, useSettingsStore } from "@/stores";
 import {
+  CHANGELOG,
   NOTE_COLLAPSE_LINES_MAX,
   NOTE_COLLAPSE_LINES_MIN,
   SUBTASK_DONE_KEEP_MAX,
@@ -44,7 +47,7 @@ import {
   type MigrationResult,
 } from "@/services";
 import type { LayoutMode } from "@/types";
-import { DownloadIcon, SettingsIcon, TodoIcon, TrashIcon } from "@/components/Icons";
+import { DownloadIcon, HistoryIcon, SettingsIcon, TodoIcon, TrashIcon } from "@/components/Icons";
 import styles from "./SettingsView.module.css";
 
 /** 迁移/操作结果提示：错误（红）与成功/警示（中性色）分开呈现 */
@@ -191,13 +194,14 @@ export function SettingsView() {
     void update({ noteCollapseLines: clampNoteCollapseLines(value) });
   };
 
-  type SettingsCategory = "general" | "tasks" | "storage" | "trash";
+  type SettingsCategory = "general" | "tasks" | "storage" | "trash" | "changelog";
 
   const CATEGORIES: { id: SettingsCategory; label: string; icon: typeof SettingsIcon }[] = [
     { id: "general", label: "通用", icon: SettingsIcon },
     { id: "tasks", label: "任务区", icon: TodoIcon },
     { id: "storage", label: "数据存储", icon: DownloadIcon },
     { id: "trash", label: "回收站", icon: TrashIcon },
+    { id: "changelog", label: "更新日志", icon: HistoryIcon },
   ];
 
   // 左栏分类导航：默认进「通用」，不记忆选中（关掉重开回到通用，少存一个参数）
@@ -458,6 +462,62 @@ export function SettingsView() {
             />
           </Group>
         </Stack>
+      </Paper>
+              </>
+            )}
+            {activeCategory === "changelog" && (
+              <>
+      <Paper withBorder p="md" radius="md">
+        <Text fw={600} className={styles.cardTitle}>更新日志</Text>
+        <Text size="xs" className={styles.muted}>
+          记录每个版本的主要变更。点击版本号展开查看详情。
+        </Text>
+
+        <Accordion
+          variant="separated"
+          chevronPosition="right"
+          className={styles.changelogAccordion}
+          mt="md"
+        >
+          {CHANGELOG.map((entry) => (
+            <Accordion.Item key={entry.version} value={entry.version}>
+              <Accordion.Control className={styles.changelogControl}>
+                <Group justify="space-between" wrap="nowrap" w="100%">
+                  <Group gap="sm" wrap="nowrap">
+                    <Text fw={600} size="sm" className={styles.versionLabel}>
+                      v{entry.version}
+                    </Text>
+                    {entry.tag !== "" && (
+                      <Badge
+                        color={entry.tag === "首次发布" ? "teal" : "gray"}
+                        variant="light"
+                        size="sm"
+                      >
+                        {entry.tag}
+                      </Badge>
+                    )}
+                  </Group>
+                  {entry.date !== "" && (
+                    <Text size="xs" className={styles.muted}>
+                      {entry.date}
+                    </Text>
+                  )}
+                </Group>
+              </Accordion.Control>
+              <Accordion.Panel>
+                <List
+                  size="sm"
+                  spacing="xs"
+                  className={styles.changelogList}
+                >
+                  {entry.highlights.map((item, idx) => (
+                    <List.Item key={idx}>{item}</List.Item>
+                  ))}
+                </List>
+              </Accordion.Panel>
+            </Accordion.Item>
+          ))}
+        </Accordion>
       </Paper>
               </>
             )}

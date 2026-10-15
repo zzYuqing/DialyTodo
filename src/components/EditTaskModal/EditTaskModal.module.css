@@ -295,3 +295,37 @@
   visibility: visible;
   transform: translateY(0);
 }
+
+/* 特殊周期组合区：浅底分组，风格与 subtaskBlock 一致 */
+.specialBlock {
+  border-radius: 10px;
+  padding: 10px;
+  background: var(--dt-panel-2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 月锚点块：在特殊周期组合区内再做一次浅分组，内含「几号」与「第几个星期几」两块 */
+.specialMonthBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 实时预览：浅底胶囊，强调最终生成的文案 */
+.specialPreview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--dt-accent-soft, rgba(44, 122, 83, 0.1));
+  border: 1px solid var(--dt-border);
+}
+
+.specialPreviewText {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dt-accent);
+}

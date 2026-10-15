@@ -1,5 +1,15 @@
 /* 失效图片修复弹窗：路径行 + 选择结果行 */
 
+.folderBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px dashed var(--dt-border-strong);
+  border-radius: 8px;
+  background: var(--dt-panel);
+}
+
 .list {
   display: flex;
   flex-direction: column;

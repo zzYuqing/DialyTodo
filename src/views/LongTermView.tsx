@@ -147,6 +147,15 @@ export function LongTermView() {
     | null;
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
 
+  /**
+   * 待标记完成对象：本长期任务页里，勾选「完成」会写入 completedAt（完成日 = 今天），
+   * 使任务在今天之后不再出现在任何清单（中止未来显示）。这一步不可逆且代价明显，
+   * 因此仅在「未完成 → 勾选完成」方向拦截，弹出二次确认。
+   * 「完成 → 取消完成」是恢复未来显示，无风险，直接执行。
+   * null = 弹窗关闭；非 null = 弹窗开启。
+   */
+  const [pendingDone, setPendingDone] = useState<{ id: string } | null>(null);
+
   const requestArchive = (id: string) => setPendingDelete({ kind: "task", id });
   const requestRemoveSubtask = (parentId: string, childId: string) =>
     setPendingDelete({ kind: "subtask", parentId, childId });
@@ -158,6 +167,41 @@ export function LongTermView() {
     else void moveSubtaskToTrash(pendingDelete.parentId, pendingDelete.childId);
     setPendingDelete(null);
   };
+
+  /**
+   * 勾选完成拦截：仅在「未完成 → 完成」时弹确认；取消完成直接执行。
+   * 已在完成态（理论上不会触发，此时 checkbox 显示的是「取消完成」）也直接执行，
+   * 避免重复弹窗。
+   */
+  const handleToggleDone = (id: string, d: boolean) => {
+    if (!d) {
+      void setDone(id, today, false);
+      return;
+    }
+    const task = tasks.find((x) => x.id === id);
+    if (task !== undefined && task.completedAt != null) {
+      void setDone(id, today, true);
+      return;
+    }
+    setPendingDone({ id });
+  };
+
+  // 二次确认后真正写入完成日
+  const confirmDone = () => {
+    if (pendingDone === null) return;
+    void setDone(pendingDone.id, today, true);
+    setPendingDone(null);
+  };
+
+  // 弹窗文案：嵌入任务标题，说明勾选后今天之后不再出现在任何清单
+  const doneMessage = useMemo<ReactNode>(() => {
+    if (pendingDone === null) return null;
+    const t = tasks.find((x) => x.id === pendingDone.id);
+    const title = t?.title ?? "未命名任务";
+    return (
+      <>勾选「<strong>{title}</strong>」为已完成后，任务将以今天（{today}）为完成日写入记录，并在今天之后不再出现在任何清单中（即<strong>中止未来显示</strong>）。若之后想恢复，可再次点击取消完成。确定标记完成？</>
+    );
+  }, [pendingDone, tasks, today]);
 
   // 弹窗文案：动态嵌入被删除对象的标题；任务集额外点明「及其全部子任务」
   const deleteMessage = useMemo<ReactNode>(() => {
@@ -275,7 +319,7 @@ export function LongTermView() {
                     onAddSubtask={(parentId, title) => void addSubtask(parentId, title)}
                     compositeTargets={compositeTargets}
                     onAttachToComposite={handleAttachToComposite}
-                    onToggleDone={(id, d) => void setDone(id, today, d)}
+                    onToggleDone={handleToggleDone}
                     onEdit={(t) => setTarget({ kind: "edit", task: t })}
                     onRemove={requestArchive}
                   />
@@ -299,6 +343,16 @@ export function LongTermView() {
         message={deleteMessage}
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}
+      />
+
+      <ConfirmDialog
+        opened={pendingDone !== null}
+        title="标记长期任务完成"
+        message={doneMessage}
+        confirmLabel="标记完成"
+        confirmVariant="primary"
+        onConfirm={confirmDone}
+        onCancel={() => setPendingDone(null)}
       />
     </section>
   );

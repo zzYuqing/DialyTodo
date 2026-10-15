@@ -2,17 +2,18 @@
 
 import type { ScheduleType } from "@/types";
 
-/** 五种周期规则的中文文案 */
+/** 六种周期规则的中文文案 */
 export const SCHEDULE_TYPE_LABELS: Record<ScheduleType, string> = {
   once: "仅一次",
   workday: "工作日",
   weekend: "非工作日",
   daily: "每天",
   weekly: "每周指定",
+  special: "特殊周期",
 };
 
 /** 周期类型列表，用于下拉框渲染顺序 */
-export const SCHEDULE_TYPES: ScheduleType[] = ["once", "workday", "weekend", "daily", "weekly"];
+export const SCHEDULE_TYPES: ScheduleType[] = ["once", "workday", "weekend", "daily", "weekly", "special"];
 
 /**
  * 星期选项，供 weekly 的多选控件渲染。

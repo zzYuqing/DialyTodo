@@ -16,6 +16,12 @@ interface ExperienceMarkdownEditorProps {
   onChange: (value: string) => void;
   /** 图片地址解析：把 md 里的图片地址转成 WebView 可加载的 URL */
   resolveImage: ImageResolver;
+  /**
+   * 粘贴剪贴板图片时的落盘回调：拿到图片二进制，返回要插入正文的 Markdown 片段
+   * （如 ![](experiences/attachments/...)）；返回 null 表示保存失败，占位符会被移除。
+   * 不传则粘贴图片不做处理。
+   */
+  onPasteImage?: (blob: Blob) => Promise<string | null>;
   /** 宿主容器的样式类（限高 / 描边由调用方决定） */
   className?: string;
   placeholder?: string;
@@ -131,6 +137,7 @@ export function ExperienceMarkdownEditor({
   value,
   onChange,
   resolveImage,
+  onPasteImage,
   className,
   placeholder,
 }: ExperienceMarkdownEditorProps) {
@@ -141,6 +148,65 @@ export function ExperienceMarkdownEditor({
   onChangeRef.current = onChange;
   const resolverRef = useRef(resolveImage);
   resolverRef.current = resolveImage;
+  const pasteImageRef = useRef(onPasteImage);
+  pasteImageRef.current = onPasteImage;
+  // 占位符序号：一次编辑生命周期内递增，保证多张图片的占位符互不串位
+  const pasteSeqRef = useRef(0);
+
+  /**
+   * 剪贴板粘贴：含文本时走默认行为（贴代码 / 贴文字）；纯图片则拦截落盘。
+   * 先同步插入「上传中」占位符占住光标位置，落盘完成后按唯一编号定位替换，
+   * 用户在等待期间继续输入也不会把图片插错位置。
+   */
+  const pasteHandler = EditorView.domEventHandlers({
+    paste(event: ClipboardEvent, view: EditorView) {
+      const cb = event.clipboardData;
+      if (!cb) return false;
+      const images: Blob[] = [];
+      for (const item of Array.from(cb.items)) {
+        // 同时带文本（如从网页复制）时让默认粘贴生效，避免丢文字
+        if (item.kind === "string") return false;
+        if (item.kind === "file" && item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) images.push(file);
+        }
+      }
+      if (images.length === 0) return false;
+      event.preventDefault();
+      const handler = pasteImageRef.current;
+      if (!handler) return true;
+      for (const blob of images) {
+        const seq = ++pasteSeqRef.current;
+        const marker = `![图片上传中 #${seq}]()`;
+        const pos = view.state.selection.main.head;
+        view.dispatch({
+          changes: { from: pos, insert: marker },
+          selection: { anchor: pos + marker.length },
+        });
+        void handler(blob)
+          .then((snippet) => {
+            const docText = view.state.doc.toString();
+            const idx = docText.indexOf(marker);
+            const insert = snippet ?? "";
+            if (idx >= 0) {
+              view.dispatch({
+                changes: { from: idx, to: idx + marker.length, insert },
+                selection: { anchor: idx + insert.length },
+              });
+            }
+            view.focus();
+          })
+          .catch(() => {
+            const docText = view.state.doc.toString();
+            const idx = docText.indexOf(marker);
+            if (idx >= 0) {
+              view.dispatch({ changes: { from: idx, to: idx + marker.length, insert: "" } });
+            }
+          });
+      }
+      return true;
+    },
+  });
 
   useEffect(() => {
     const host = hostRef.current;
@@ -155,6 +221,7 @@ export function ExperienceMarkdownEditor({
           cmPlaceholder(placeholder ?? ""),
           liveMarkdown(stableResolver),
           markdown(),
+          pasteHandler,
           EditorView.lineWrapping,
           editorTheme,
           EditorView.updateListener.of((update) => {
