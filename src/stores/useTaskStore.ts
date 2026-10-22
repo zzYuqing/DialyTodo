@@ -17,6 +17,7 @@ import {
   generateTaskId,
   isComposite,
   nowIso,
+  pinTaskToTop,
   reorderSubtasks,
   sortTasksByCreatedAt,
   syncChildrenIndex,
@@ -85,6 +86,11 @@ interface TaskState {
    * 只改出现在 ids 里的任务，其余（已完成 / 不在当天的）保持原值。
    */
   reorderTasks: (ids: string[]) => Promise<void>;
+  /**
+   * 右键「置顶」：把该任务挪到未完成清单顶部。
+   * 与 reorderTasks 的区别是只改这一条任务的 order，不重排其余任务。
+   */
+  pinTask: (id: string) => Promise<void>;
 }
 
 export const useTaskStore = create<TaskState>()(
@@ -321,6 +327,14 @@ async addTask(input) {
         const order = rank.get(task.id);
         return order === undefined ? task : { ...task, order };
       });
+      set({ tasks: next });
+      await saveTasks(next);
+    },
+
+    async pinTask(id) {
+      const next = pinTaskToTop(get().tasks, id);
+      // 原样返回 = 目标不存在或已在顶部，不写盘
+      if (next === get().tasks) return;
       set({ tasks: next });
       await saveTasks(next);
     },

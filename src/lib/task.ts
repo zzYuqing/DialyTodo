@@ -100,6 +100,26 @@ export function sortUnfinishedTasks(tasks: Task[]): Task[] {
   return [...manual, ...ddl, ...rest];
 }
 
+/**
+ * 把任务置顶（右键菜单「置顶」）：只给目标一个「比当前最小 order 还小」的序号，
+ * 其余任务一概不动 —— 全表重排会顺带改写一堆无关任务的 order，
+ * 而 order 是全局字段（不按日期存），会连其他日期的清单顺序一起打乱。
+ *
+ * 目标已在顶部（order 已是最小值）时原样返回，调用方据此跳过写盘。
+ */
+export function pinTaskToTop(tasks: Task[], id: string): Task[] {
+  const target = tasks.find((task) => task.id === id);
+  if (target === undefined) return tasks;
+  let min = 0;
+  for (const task of tasks) {
+    if (task.id === id || typeof task.order !== "number") continue;
+    if (task.order < min) min = task.order;
+  }
+  const order = min - 1;
+  if (target.order === order) return tasks;
+  return tasks.map((task) => (task.id === id ? { ...task, order } : task));
+}
+
 /** 排序维度：按截止日 / 按名称 / 按创建时间 */
 export type SortDimension = "deadline" | "name" | "created";
 /** 排序方向：asc = 升序（近截止 / A→Z / 早→晚），desc = 降序（远截止 / Z→A / 晚→早） */

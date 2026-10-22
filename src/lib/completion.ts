@@ -7,8 +7,8 @@
 import type { ContributionLevel } from "@/constants";
 import type { Task } from "@/types";
 import { occursOn, type WorkdayChecker } from "./schedule";
-import { isOverdueDdl } from "./ddl";
-import { isComposite, isRootTask } from "./composite";
+import { isLongDdlTask } from "./ddl";
+import { buildTaskMap, isComposite, isRootTask } from "./composite";
 
 export interface DayCompletion {
   /** 当日应完成任务数 */
@@ -20,8 +20,8 @@ export interface DayCompletion {
   /** 贡献墙色阶档位；仅在批量窗口计算（calcDaysCompletion）时有效，单日计算无窗口上下文故为 0 */
   level: ContributionLevel;
   /**
-   * DDL 任务「截止日命中当天且尚未完成」的数量（判定见 ddl.ts 的 isOverdueDdl）。
-   * 口径本身与日期的先后无关，因此两种读法共用同一字段：
+   * 「截止日命中当天且尚未完成」的条数，顶层任务与任务集的子任务一并计入。
+   * 判定本身与日期先后无关，因此两种读法共用同一字段：
    * - 过去 / 今天 → 「已过期」条数，贡献墙用它决定右下角是否显示过期角标；
    * - 未来日期 → 「当日截止」条数，贡献墙未来格用它提示当天有几项到期。
    * 未命中截止日的日期恒为 0。
@@ -46,18 +46,53 @@ export function collectTasksOfDay(
   );
 }
 
+/**
+ * 截止日命中该日且尚未完成（贡献墙口径：不区分过去与未来，读法由渲染端决定）。
+ * 准入仍走 ddl.ts 的 isLongDdlTask —— 起止同日的 once 不算 DDL，不在此重复实现该规则。
+ */
+function isDueOnDay(task: Task, dateKey: string): boolean {
+  return (
+    isLongDdlTask(task.schedule) &&
+    task.schedule.endDate === dateKey &&
+    task.completedAt == null
+  );
+}
+
+/**
+ * 未完成的子任务按「截止日」分布的计数（贡献墙专用）。
+ * 子任务不出现在日清单顶层，但它的截止日与父任务同样是「那天要交」的事实，
+ * 逾期了贡献墙必须标得出来，因此与顶层任务同权计入（父与子同日截止计 2 项）。
+ * 已完成（childDoneAt != null）、已归档、以及父任务集已归档的子任务一律不计。
+ */
+function subtaskDueByDay(tasks: Task[]): Map<string, number> {
+  const map = buildTaskMap(tasks);
+  const out = new Map<string, number>();
+  for (const task of tasks) {
+    if (isRootTask(task) || task.archived || task.childDoneAt != null) continue;
+    const end = task.schedule.endDate;
+    if (end == null || !isLongDdlTask(task.schedule)) continue;
+    const parentId = task.parentId;
+    if (parentId != null && (map.get(parentId)?.archived ?? false)) continue;
+    out.set(end, (out.get(end) ?? 0) + 1);
+  }
+  return out;
+}
+
 /** 计算某一天的完成情况（不含窗口色阶档位） */
 export function calcDayCompletion(
   tasks: Task[],
   dateKey: string,
   isWorkday: WorkdayChecker,
+  /** 子任务截止日分布；批量计算时由调用方建一次传入，避免逐日重建索引 */
+  subtaskDue?: Map<string, number>,
 ): DayCompletion {
   const dayTasks = collectTasksOfDay(tasks, dateKey, isWorkday);
   const done = dayTasks.filter((task) => task.instances[dateKey]?.done === true).length;
   const ratio = dayTasks.length === 0 ? 0 : done / dayTasks.length;
-  // DDL 任务过期：endDate 当天且尚未完成，贡献墙角标用此计数。
-  // 判定统一走 ddl.ts 的单一真相源：起止同日的 once 任务不算 DDL，不在此重复实现该规则。
-  const expiredDdlCount = dayTasks.filter((task) => isOverdueDdl(task, dateKey)).length;
+  // 贡献墙角标计数 = 顶层任务命中当天 + 子任务命中当天（后者不进日清单，须单独累加）
+  const dueByDay = subtaskDue ?? subtaskDueByDay(tasks);
+  const expiredDdlCount =
+    dayTasks.filter((task) => isDueOnDay(task, dateKey)).length + (dueByDay.get(dateKey) ?? 0);
 
   return {
     total: dayTasks.length,
@@ -101,8 +136,10 @@ export function calcDaysCompletion(
   scaleKeys: string[] = dateKeys,
 ): Record<string, DayCompletion> {
   const result: Record<string, DayCompletion> = {};
+  // 子任务截止日分布只建一次：批量计算覆盖近一年，逐日重建索引是 O(天数 × 任务数)
+  const subtaskDue = subtaskDueByDay(tasks);
   for (const key of dateKeys) {
-    result[key] = calcDayCompletion(tasks, key, isWorkday);
+    result[key] = calcDayCompletion(tasks, key, isWorkday, subtaskDue);
   }
 
   const subtaskByDay = subtaskDoneByDay(tasks);

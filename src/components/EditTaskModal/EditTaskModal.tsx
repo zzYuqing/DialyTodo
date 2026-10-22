@@ -50,6 +50,7 @@ import {
   weekdayIndexOf,
 } from "@/lib";
 import { CloseIcon, NoteIcon, PlusIcon, TrashIcon } from "@/components/Icons";
+import { ReminderTimePicker } from "./ReminderTimePicker";
 import styles from "./EditTaskModal.module.css";
 
 /** 模态目标：新建时只需一个默认起始日，编辑时需要完整任务 */
@@ -766,12 +767,11 @@ export function EditTaskModal({ target, tasks, onSubmit, onClose }: EditTaskModa
                 onChange={(e) => setReminderEnabled(e.currentTarget.checked)}
               />
             </div>
-            <TextInput
-              type="time"
+            <ReminderTimePicker
               label="提醒时间"
               value={reminderTime}
               disabled={!reminderEnabled}
-              onChange={(e) => setReminderTime(e.currentTarget.value)}
+              onChange={setReminderTime}
             />
           </Group>
 

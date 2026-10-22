@@ -180,6 +180,9 @@ export function SubtaskPanel({
             parentStart={parent.schedule.startDate}
             parentEnd={parent.schedule.endDate}
             disabledDone={disabledDone}
+            // 置顶：把这一条提到 children 首位即可 —— 展示排序是「未完成按 children 原序、
+            // 已完成恒沉底」，所以提到首位就等于未完成区的顶部，其余条目顺序不变。
+            onPinTop={() => onReorderSubtasks(parent.id, [child.id])}
             onToggleDone={(childId, done) => onToggleSubtask(parent.id, childId, done)}
             onRemove={(childId) => onRemoveSubtask(parent.id, childId)}
             onEdit={
@@ -223,6 +226,9 @@ export function SubtaskPanel({
             parentStart={parent.schedule.startDate}
             parentEnd={parent.schedule.endDate}
             disabledDone={disabledDone}
+            // 已勾选的子任务由 SubtaskItem 内部判掉「置顶」，这里只管把闭包给足，
+            // 免得同一份列表出现两种传参写法。
+            onPinTop={() => onReorderSubtasks(parent.id, [child.id])}
             onToggleDone={(childId, done) => onToggleSubtask(parent.id, childId, done)}
             onRemove={(childId) => onRemoveSubtask(parent.id, childId)}
             onEdit={

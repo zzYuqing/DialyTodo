@@ -376,3 +376,10 @@
   background: var(--dt-danger);
   border-color: transparent;
 }
+
+/* 标题右侧的子任务逾期提示：与标题同一文本流，长标题时折到下一行，
+   因此收起状态下也始终可见（不依赖展开区）。配色复用上面的红色通道。 */
+.titleBadge {
+  margin-left: 6px;
+  vertical-align: 1px;
+}

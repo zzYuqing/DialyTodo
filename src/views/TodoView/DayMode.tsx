@@ -48,6 +48,7 @@ export function DayMode() {
   const updateCompositeWithTrash = useTrashStore((s) => s.updateCompositeWithTrash);
   const trashRetentionDays = useSettingsStore((s) => s.settings.trashRetentionDays);
   const reorderTasks = useTaskStore((s) => s.reorderTasks);
+  const pinTask = useTaskStore((s) => s.pinTask);
   const addComposite = useTaskStore((s) => s.addComposite);
   const setSubtaskDone = useTaskStore((s) => s.setSubtaskDone);
   const reorderSubtasks = useTaskStore((s) => s.reorderSubtasks);
@@ -347,6 +348,7 @@ export function DayMode() {
               onToggleDone={(id, done) => void setDone(id, selectedDate, done)}
               onEdit={(t) => setTarget({ kind: "edit", task: t })}
               onRemove={requestArchive}
+              onPinTop={(id) => void pinTask(id)}
             />
           ))}
         </ul>

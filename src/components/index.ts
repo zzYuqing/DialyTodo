@@ -7,7 +7,11 @@ export { TaskItem } from "./TaskItem/TaskItem";
 export { SubtaskItem } from "./SubtaskItem/SubtaskItem";
 export { SubtaskPanel } from "./SubtaskItem/SubtaskPanel";
 export { AddTaskFab } from "./AddTaskFab/AddTaskFab";
-export { RowContextMenu, ATTACH_ITEM_PREFIX } from "./RowContextMenu/RowContextMenu";
+export {
+  RowContextMenu,
+  ATTACH_ITEM_PREFIX,
+  PIN_ITEM_ID,
+} from "./RowContextMenu/RowContextMenu";
 export type {
   ContextMenuGroup,
   ContextMenuItem,

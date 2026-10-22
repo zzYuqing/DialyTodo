@@ -7,7 +7,8 @@
 //   否则它会因为"没有任何父收录它"而降级回普通任务，重新冒到日清单顶层。
 // - 行内可「编辑」：点铅笔图标就地展开表单，改标题 / 备注 / 截止日（与编辑弹窗的子任务块同口径）；
 //   已勾选完成的行标题与截止日只读，但完成时刻可手动修正 —— 右键「修改完成时间」直达同一张表单。
-// - 右键菜单：复制标题（所有行）+ 修改完成时间（仅已完成行）。
+// - 右键菜单：置顶（所有未完成行）/ 复制标题（所有行）+ 修改完成时间（仅已完成行）。
+//   「置顶」把该条挪到任务集内部的顶部（提到父 children 首位），只对未勾选的行出现。
 
 import { memo, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
 import { Textarea, TextInput } from "@mantine/core";
@@ -32,7 +33,7 @@ import {
   PlusIcon,
   TrashIcon,
 } from "@/components/Icons";
-import { RowContextMenu, type ContextMenuGroup } from "@/components";
+import { RowContextMenu, PIN_ITEM_ID, type ContextMenuItem, type ContextMenuGroup } from "@/components";
 import { CollapsibleNote } from "@/components/CollapsibleNote/CollapsibleNote";
 import { useSettingsStore } from "@/stores";
 import type { DragSortItemHandle } from "@/hooks";
@@ -98,6 +99,8 @@ interface SubtaskItemProps {
   disabledDone?: boolean;
   onToggleDone: (id: string, done: boolean) => void;
   onRemove: (id: string) => void;
+  /** 右键「置顶」：把本条挪到任务集内部的顶部；省略则不显示该项 */
+  onPinTop?: () => void;
   /** 行内编辑提交：标题 / 备注 / 截止日；已完成行另带修改后的完成时刻 */
   onEdit?: (id: string, edit: SubtaskEdit) => void;
   /** 拖拽句柄；省略表示本行不参与排序（已完成的子任务） */
@@ -112,6 +115,7 @@ export const SubtaskItem = memo(function SubtaskItem({
   disabledDone = false,
   onToggleDone,
   onRemove,
+  onPinTop,
   onEdit,
   drag,
 }: SubtaskItemProps) {
@@ -176,15 +180,13 @@ export const SubtaskItem = memo(function SubtaskItem({
   };
 
   // 右键菜单分组：只有一个动作组，故不给分组标题（省略 title 即不渲染标题行）。
+  // 「置顶」只给未勾选的条目（已完成恒沉底，置顶没意义）；
   // 「修改完成时间」只在已勾选的行出现 —— 未完成的条目还没有完成时刻。
-  const menuGroups: ContextMenuGroup[] = [
-    {
-      items: [
-        { id: "copy-title", label: "复制标题" },
-        ...(done ? [{ id: "edit-done-at", label: "修改完成时间" }] : []),
-      ],
-    },
-  ];
+  const menuItems: ContextMenuItem[] = [];
+  if (!done) menuItems.push({ id: PIN_ITEM_ID, label: "置顶" });
+  menuItems.push({ id: "copy-title", label: "复制标题" });
+  if (done) menuItems.push({ id: "edit-done-at", label: "修改完成时间" });
+  const menuGroups: ContextMenuGroup[] = [{ items: menuItems }];
 
   const classes = [styles.row];
   if (done) classes.push(styles.done);
@@ -461,6 +463,7 @@ export const SubtaskItem = memo(function SubtaskItem({
           y={menu.y}
           groups={menuGroups}
           onSelect={(id) => {
+            if (id === PIN_ITEM_ID) onPinTop?.();
             if (id === "copy-title") void copyToClipboard(task.title);
             // 完成时间复用行内编辑表单：已完成行的标题与截止日只读，进去改的就是完成时间与备注
             if (id === "edit-done-at") startEdit();

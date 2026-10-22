@@ -49,6 +49,12 @@ const EDGE_GAP = 8;
  */
 export const ATTACH_ITEM_PREFIX = "attach:";
 
+/**
+ * 右键「置顶」菜单项的 id。顶层任务行与子任务行共用同一个约定
+ * （前者置顶到日清单顶部，后者置顶到任务集内部顶部），各写一份迟早会对不上。
+ */
+export const PIN_ITEM_ID = "pin-top";
+
 export function RowContextMenu({ x, y, groups, onSelect, onClose }: RowContextMenuProps) {
   const ref = useRef<HTMLDivElement>(null);
   // 先按鼠标点放一次，量出真实尺寸后再翻转；layout effect 里改不会闪

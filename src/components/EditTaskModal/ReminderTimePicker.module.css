@@ -1,0 +1,66 @@
+/* 提醒时间滚轮选择器。颜色一律引用 CSS 变量，跟随明暗主题。
+   收起态是可键盘输入的时间框，聚焦后 Popover 里才露出滚轮；
+   滚轮只渲染一列 00-23 / 00-59，位置在组件内 clamp，到边界即停。 */
+
+.wrapper {
+  min-width: 0;
+}
+
+/* 弹层里的滚轮区：两列 + 冒号 */
+.picker {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  width: fit-content;
+}
+
+.colon {
+  color: var(--dt-text-muted);
+  font-weight: 600;
+  user-select: none;
+}
+
+/* 单列滚轮：相对定位做裁剪，超出部分隐藏 */
+.wheel {
+  position: relative;
+  width: 64px;
+  overflow: hidden;
+  border-radius: 6px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.wheel:active {
+  cursor: grabbing;
+}
+
+.wheel:focus-visible {
+  outline: 2px solid var(--dt-accent);
+  outline-offset: 1px;
+}
+
+/* 整列上下平移；每行的透明度/缩放由行内样式按与选中行的距离计算 */
+.wheelTrack {
+  will-change: transform;
+}
+
+.wheelItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+/* 选中行指示条：上下各一根描边，浮在轨道之上，不挡点击 */
+.wheelHighlight {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  border-top: 1px solid var(--dt-border);
+  border-bottom: 1px solid var(--dt-border);
+  pointer-events: none;
+}

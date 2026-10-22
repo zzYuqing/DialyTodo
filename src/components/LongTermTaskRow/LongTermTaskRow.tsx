@@ -9,6 +9,7 @@ import {
   describeSchedule,
   isComposite,
   subtaskProgressOf,
+  compositeDdlView,
   type SubtaskEdit,
   type TaskMap,
 } from "@/lib";
@@ -139,6 +140,11 @@ export const LongTermTaskRow = memo(function LongTermTaskRow({
 
   const isDone = task.completedAt != null;
   const progress = composite && taskMap !== undefined ? subtaskProgressOf(taskMap, task) : null;
+  // 子任务逾期提示：与日清单同源（compositeDdlView），这里以真实今天为基准。
+  // 收起状态同样渲染，两个入口对同一任务集保持同一口径。
+  const ddlView =
+    composite && taskMap !== undefined ? compositeDdlView(taskMap, task, today) : null;
+  const overdueSubtaskCount = ddlView?.overdueCount ?? 0;
   const showExpand = composite && expanded;
   // endDate 为 null = 未指定截止日的长期任务：无紧迫性、无逾期，也不参与「提前/准时完成」计时
   const endDate = task.schedule.endDate;
@@ -210,7 +216,17 @@ export const LongTermTaskRow = memo(function LongTermTaskRow({
       )}
 
       <div className={taskStyles.body} onDoubleClick={() => onEdit(task)} title="双击编辑">
-        <div className={taskStyles.title}>{task.title}</div>
+        {/* 标题右侧的逾期提示：与日清单同一口径，收起状态也可见 */}
+        <div className={taskStyles.title}>
+          {task.title}
+          {overdueSubtaskCount > 0 && (
+            <span
+              className={`${taskStyles.badge} ${taskStyles.badgeExpired} ${taskStyles.titleBadge}`}
+            >
+              {overdueSubtaskCount} 项子任务逾期
+            </span>
+          )}
+        </div>
         {task.note.length > 0 && (
           <CollapsibleNote text={task.note} maxLines={noteCollapseLines} variant="block" />
         )}

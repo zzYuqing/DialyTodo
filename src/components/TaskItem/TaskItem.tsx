@@ -6,6 +6,7 @@
 //   未来日期由 occursOn 直接过滤，不渲染（DDL 同理）
 // - 双击标题 / 点击右侧编辑图标 → 触发 onEdit
 // - 点击右侧删除图标 → 触发 onRemove（硬删除）
+// - 右键「置顶」：仅出现在未勾选的行，把该行挪到未完成清单顶部（写 task.order）
 // - 已完成任务整体变灰、标题加删除线
 //
 // 方向 B（DDL 语义重定义）：
@@ -17,6 +18,13 @@
 //   未完成且未到截止日的长期 DDL 追加「剩 N 天」徽章（中性色，数字等宽）；
 //   截止日当天（含长期任务最后一天）显示「今日截止」；
 //   「已过期」走独立红徽章，置于周期徽章右侧、日期之前。
+//
+// 任务集（复合任务）的 DDL 表现：
+// - 行底色与倒计时按「有效截止日」= min(父自身 DDL 的 endDate, 未完成子任务的最小 endDate) 计算，
+//   子任务先到期时父行跟着加深，不会出现「子任务火烧眉毛、父行毫无提示」；
+//   已逾期的候选不参与取最小 —— 它的紧迫度交给下面的红徽章，不该压掉别的子任务的倒计时；
+// - 子任务逾期（endDate < 当前查看日且仍未完成）时，标题右侧追加红徽章「N 项子任务逾期」，
+//   收起状态同样可见；逾期子任务全部完成后徽章自动消失。
 
 import {
   memo,
@@ -36,7 +44,9 @@ import {
   isLongTermOnce,
   isOverdueDdl,
   subtaskProgressOf,
+  compositeDdlView,
   ddlUrgencyFor,
+  urgencyOfEndDate,
   todayKey,
   type DdlUrgency,
   type SubtaskEdit,
@@ -52,7 +62,9 @@ import {
 import { SubtaskPanel } from "@/components/SubtaskItem/SubtaskPanel";
 import {
   ATTACH_ITEM_PREFIX,
+  PIN_ITEM_ID,
   RowContextMenu,
+  type ContextMenuItem,
   type ContextMenuGroup,
 } from "@/components/RowContextMenu/RowContextMenu";
 import { CollapsibleNote } from "@/components/CollapsibleNote/CollapsibleNote";
@@ -87,6 +99,8 @@ interface TaskItemProps {
   onToggleDone: (id: string, done: boolean) => void;
   onEdit: (task: Task) => void;
   onRemove: (id: string) => void;
+  /** 右键「置顶」：把本行挪到未完成清单顶部；省略则不显示该项 */
+  onPinTop?: (id: string) => void;
   /** 拖拽排序：省略表示本行不参与排序（已完成条目） */
   drag?: DragSortHandle;
 
@@ -128,6 +142,7 @@ export const TaskItem = memo(function TaskItem({
   onToggleDone,
   onEdit,
   onRemove,
+  onPinTop,
   drag,
   taskMap,
   expanded = false,
@@ -156,6 +171,10 @@ export const TaskItem = memo(function TaskItem({
 
   const handleMenuSelect = (itemId: string) => {
     setMenu(null);
+    if (itemId === PIN_ITEM_ID) {
+      onPinTop?.(task.id);
+      return;
+    }
     if (itemId === "edit") {
       onEdit(task);
       return;
@@ -169,20 +188,19 @@ export const TaskItem = memo(function TaskItem({
     }
   };
 
-  // 菜单分组：任务操作恒有；「添加到任务集」只给普通任务（任务集不能嵌套）
-  const menuGroups: ContextMenuGroup[] = [
-    {
-      title: "任务",
-      items: [
-        { id: "edit", label: "编辑" },
-        {
-          id: "archive",
-          label: composite ? "删除任务集及其子任务" : "删除",
-          danger: true,
-        },
-      ],
-    },
-  ];
+  const done = isDoneOn(task, dateKey);
+
+  // 菜单分组：任务操作恒有；「添加到任务集」只给普通任务（任务集不能嵌套）。
+  // 「置顶」只给未勾选的行 —— 已完成条目恒沉底，给它置顶没有意义（子任务同理）。
+  const taskItems: ContextMenuItem[] = [];
+  if (!done) taskItems.push({ id: PIN_ITEM_ID, label: "置顶" });
+  taskItems.push({ id: "edit", label: "编辑" });
+  taskItems.push({
+    id: "archive",
+    label: composite ? "删除任务集及其子任务" : "删除",
+    danger: true,
+  });
+  const menuGroups: ContextMenuGroup[] = [{ title: "任务", items: taskItems }];
   if (!composite && compositeTargets !== undefined) {
     menuGroups.push({
       title: "添加到任务集",
@@ -198,7 +216,6 @@ export const TaskItem = memo(function TaskItem({
     });
   }
 
-  const done = isDoneOn(task, dateKey);
   const progress = composite && taskMap !== undefined ? subtaskProgressOf(taskMap, task) : null;
   const showExpand = composite && expanded;
   // 周期徽标：weekly 具体到星期（如「每周一、五」），其余类型用常量表文案。
@@ -213,21 +230,38 @@ export const TaskItem = memo(function TaskItem({
   const isDdlPastDay =
     isDdlCompleted && task.completedAt != null && dateKey < task.completedAt;
 
-  // 紧迫度档位：仅未完成时计算（含 overdue 档）。
-  // ddlUrgencyFor 内部仍要求 isLongDdlTask（有 endDate），无截止日的长期任务自然返回 null。
-  const urgency: DdlUrgency =
-    isLongOnce && !isDdlCompleted ? ddlUrgencyFor(task, dateKey) : null;
+  // 任务集的 DDL 收敛：在「尚未逾期」的候选里取最近截止日（父自身 + 未完成子任务），
+  // 并单独统计逾期子任务条数。收起状态也要看见逾期提示，故不依赖展开与否。
+  const ddlView =
+    composite && taskMap !== undefined ? compositeDdlView(taskMap, task, dateKey) : null;
+  const effectiveEndDate = ddlView?.effectiveEndDate ?? null;
+  const overdueSubtaskCount = ddlView?.overdueCount ?? 0;
+
   // 已过期：长期 DDL 在结束日当天且未完成（独立于档位，走红徽章）
   const overdue = isOverdueDdl(task, dateKey);
+
+  // 紧迫度档位：仅未完成时计算（含 overdue 档）。
+  // - 普通任务：ddlUrgencyFor 内部仍要求 isLongDdlTask（有 endDate），无截止日的长期任务自然返回 null；
+  // - 任务集：改按收敛出的有效截止日取档 —— 子任务先到期时，父行底色要跟着它一起加深。
+  const urgency: DdlUrgency = isDdlCompleted
+    ? null
+    : ddlView !== null
+      ? overdue
+        ? "overdue"
+        : effectiveEndDate === null
+          ? null
+          : urgencyOfEndDate(effectiveEndDate, dateKey)
+      : ddlUrgencyFor(task, dateKey);
 
   // 截止日徽章：仅未完成时计算，与「已过期」互斥（仅过去日标记已过期）。
   // - 长期 DDL 的剩余天数：正数 →「剩 N 天」；截止日当天（含长期任务最后一天）→「今日截止」；
   // - 非长期 DDL 但 endDate 命中真实今天且未完成（如起止同日的单日任务）→ 补「今日截止」。
+  // 任务集的倒计时基准是收敛后的有效截止日，与行底色同源 —— 否则会出现「有色无数字」。
   const endDate = task.schedule.endDate;
+  const countdownEnd =
+    ddlView !== null ? effectiveEndDate : isLongDdlTask(task.schedule) ? endDate : null;
   const daysLeft =
-    isLongDdlTask(task.schedule) && !isDdlCompleted && endDate != null
-      ? daysBetweenKeys(dateKey, endDate)
-      : null;
+    countdownEnd != null && !isDdlCompleted ? daysBetweenKeys(dateKey, countdownEnd) : null;
   const deadlineBadge =
     daysLeft !== null && !overdue
       ? daysLeft === 0
@@ -235,7 +269,7 @@ export const TaskItem = memo(function TaskItem({
         : `剩 ${daysLeft} 天`
       : null;
   const dueTodayBadge =
-    deadlineBadge === null && endDate != null && endDate === todayKey() && !isDdlCompleted
+    deadlineBadge === null && countdownEnd != null && countdownEnd === todayKey() && !isDdlCompleted
       ? "今日截止"
       : null;
   const deadlineText = deadlineBadge ?? dueTodayBadge;
@@ -330,7 +364,16 @@ export const TaskItem = memo(function TaskItem({
         onDoubleClick={() => onEdit(task)}
         title="双击编辑"
       >
-        <div className={styles.title}>{task.title}</div>
+        {/* 标题右侧的逾期提示：走流内排布，长标题时自然折到下一行；
+            收起状态同样渲染 —— 用户不展开也得一眼看见有子任务逾期。 */}
+        <div className={styles.title}>
+          {task.title}
+          {overdueSubtaskCount > 0 && (
+            <span className={`${styles.badge} ${styles.badgeExpired} ${styles.titleBadge}`}>
+              {overdueSubtaskCount} 项子任务逾期
+            </span>
+          )}
+        </div>
         {task.note.length > 0 && (
           <CollapsibleNote text={task.note} maxLines={noteCollapseLines} variant="block" />
         )}

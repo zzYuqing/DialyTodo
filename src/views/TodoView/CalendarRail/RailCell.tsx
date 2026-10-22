@@ -5,7 +5,8 @@
 // - 未来日期渲染为「未到」格：空心描边（透明填充 + 虚线边），可点开日视图、可加任务，但不可勾选完成；
 // - 今日及过去：悬浮显示「日期 · 完成 N 项」，有过期 DDL 时追加「N 项任务过期」；
 // - 未来：悬浮显示「日期 · 待完成 N 项」，有 DDL 命中该日时追加「X 项当日截止」；
-// - 阶段 6 DDL 扩展：当日过期 DDL 任务数 > 0 时，右下角显示数字角标，hover 追加「N 项任务过期」；
+// - 阶段 6 DDL 扩展：当日过期 DDL 任务数 > 0 时，右下角显示红点角标，hover 追加「N 项任务过期」；
+//   计数 = 顶层任务 + 任务集的子任务（子任务不进日清单顶层，但截止日同样要在墙上标出来）。
 // - 点击只 setSelectedDate，日视图随之加载当日任务，不做任何跳转。
 
 import { EMPTY_COMPLETION, formatDateLabel, todayKey, type DayCompletion } from "@/lib";
@@ -28,7 +29,9 @@ export function RailCell({ dateKey, completion: raw }: RailCellProps) {
   // 未来日期：空心描边的「未到」格，可点开日视图、可加任务，但不可勾选完成。
   // 未来日没有「已完成」可言，故提示口径换成「待完成」：应完成任务数减去已提前勾选的数量。
   // expiredDdlCount 的判定是「endDate 命中当天且未完成」，落在未来日即「当日截止」，
-  // 因此这里直接复用它，不需要为未来日另写一套 DDL 判定（见 lib/ddl.ts 的 isOverdueDdl）。
+  // 因此这里直接复用它，不需要为未来日另写一套 DDL 判定。
+  // 计数含任务集的子任务：子任务不进日清单顶层，但它的截止日同样是那天要交的事实，
+  // 父与子同日截止按 2 项计（见 lib/completion.ts 的 subtaskDueByDay）。
   if (dateKey > today) {
     const classes = [styles.cell, styles.cellFuture];
     if (dateKey === selectedDate) classes.push(styles.cellSelected);

@@ -1,5 +1,6 @@
 // 职责：复合任务（任务集）的纯函数层 —— 父子关系、进度推导、展示排序、DDL 收敛。
-// 硬性约束：不得 import @tauri-apps/*、react、zustand；只允许依赖 types/ 与 lib/date。
+// 硬性约束：不得 import @tauri-apps/*、react、zustand；只允许依赖 types/、lib/date
+// 与同层纯函数（./ddl 的 DDL 准入判定，避免父子两套口径）。
 //
 // 关系模型（见 docs/复合任务设计.md 第二节）：
 //   - 父的 children: string[] 是**权威源**（成员 + 顺序）；
@@ -9,6 +10,7 @@
 
 import type { CompositeEdit, SubtaskDraft, Task } from "@/types";
 import { daysBetweenKeys } from "@/lib/date";
+import { isLongDdlTask } from "./ddl";
 
 /** id → task 的索引。渲染层在进入列表循环前建一次，避免逐个父任务扫全表成 O(n·m) */
 export type TaskMap = Map<string, Task>;
@@ -292,6 +294,56 @@ export function toggleSubtask(
 }
 
 // ─────────────────────────────── DDL 收敛 ───────────────────────────────
+
+/** 任务集在 DDL 视角下的收敛结果（父自身截止日与子任务截止日合并后的展示口径） */
+export interface CompositeDdlView {
+  /**
+   * 倒计时基准 = min(父自身长期 DDL 的 endDate, 未完成子任务的最小 endDate)，
+   * **只取尚未逾期的候选**（endDate >= today）。
+   * 全部候选都已逾期、或压根没有候选时为 null —— 此时行不染色，逾期由 overdueCount 表达。
+   */
+  effectiveEndDate: string | null;
+  /** 已逾期且仍未完成的子任务条数：endDate < today 且 childDoneAt == null */
+  overdueCount: number;
+}
+
+/**
+ * 任务集的 DDL 收敛（单一真相源：日清单、长期任务页、贡献墙共用这一份判定）。
+ *
+ * 为什么父与子要合并取最近：任务集行的「倒计时」表达的是「最早要交的那一项什么时候交」，
+ * 只按父自身的截止日算，子任务先到期时父行会毫无提示，真正的紧迫点就看不见了。
+ *
+ * 为什么已逾期的候选要排除在 min 之外：逾期是「倒计时已结束」，紧迫度改由红徽章承担；
+ * 若让逾期那一项继续占据最小值，后面还有「3 天后到期」的子任务也带不出底色 ——
+ * 一条已过期的子任务不该把别的子任务的倒计时压掉。
+ *
+ * 口径（与单任务的 ddl.ts 保持同一套准入规则，避免父子两套写法）：
+ *   - 父侧：仅当它自己是长期 DDL（isLongDdlTask）时才参与取 min；
+ *   - 子侧：仅统计未完成（childDoneAt == null）且自身是长期 DDL 的子任务；
+ *          已完成的不参与紧迫度，也不再算「逾期」（逾期状态由完成而消解）；
+ *   - 归档的子任务、以及父任务集已归档时，整条不计。
+ *
+ * today 由调用方传入：日清单传当前查看的 dateKey（历史视图按那天算逾期），
+ * 长期任务页传真实今天。逾期判定是「endDate < today」，即截止日当天不算逾期。
+ */
+export function compositeDdlView(map: TaskMap, parent: Task, today: string): CompositeDdlView {
+  if (!isComposite(parent)) return { effectiveEndDate: null, overdueCount: 0 };
+  const parentEnd = isLongDdlTask(parent.schedule) ? parent.schedule.endDate : null;
+  let nearest: string | null = parentEnd !== null && parentEnd >= today ? parentEnd : null;
+  let overdueCount = 0;
+  for (const child of childTasksOf(map, parent)) {
+    if (child.archived || child.childDoneAt != null) continue;
+    const end = child.schedule.endDate;
+    if (end == null || !isLongDdlTask(child.schedule)) continue;
+    // 已逾期：只累加条数，不参与倒计时（紧迫度交给「N 项子任务逾期」徽章）
+    if (end < today) {
+      overdueCount += 1;
+      continue;
+    }
+    if (nearest === null || end < nearest) nearest = end;
+  }
+  return { effectiveEndDate: nearest, overdueCount };
+}
 
 /**
  * 单个子任务截止日在父区间内的收敛值。

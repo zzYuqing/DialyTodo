@@ -57,6 +57,22 @@ export function isActiveDdlTask(task: Task): boolean {
 }
 
 /**
+ * 按「有效截止日」计算紧迫度档位（不关心任务本身是不是 DDL、也不要求传入 Task）。
+ * 用途：任务集（复合任务）的行底色由父自身与子任务共同收敛出的截止日决定，
+ * 拿不到单一 Task 实体，故单独开放这一层；普通任务仍走 ddlUrgencyFor。
+ * 档位规则与单任务完全一致：0=today、1-2=imminent、3-4=soon、>=5=far；
+ * 截止日已落在 dateKey 之前（diff < 0）返回 null —— 倒计时结束，改由「逾期」表达。
+ */
+export function urgencyOfEndDate(endDate: string, dateKey: string): DdlUrgency {
+  const diff = daysBetweenKeys(dateKey, endDate);
+  if (diff < 0) return null;
+  if (diff === 0) return "today";
+  if (diff <= 2) return "imminent";
+  if (diff <= 4) return "soon";
+  return "far";
+}
+
+/**
  * 计算当前日期键在 DDL 任务上的紧迫度档位：
  * - 非长期 DDL 任务 → null
  * - 已过期（endDate 当天且未完成） → "overdue"
@@ -67,12 +83,7 @@ export function ddlUrgencyFor(task: Task, dateKey: string): DdlUrgency {
   if (isOverdueDdl(task, dateKey)) return "overdue";
   const endDate = task.schedule.endDate;
   if (endDate == null) return null;
-  const diff = daysBetweenKeys(dateKey, endDate);
-  if (diff < 0) return null;
-  if (diff === 0) return "today";
-  if (diff <= 2) return "imminent";
-  if (diff <= 4) return "soon";
-  return "far";
+  return urgencyOfEndDate(endDate, dateKey);
 }
 
 /** 长期任务在「长期任务预览」页中的归类 */
