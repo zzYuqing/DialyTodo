@@ -25,6 +25,7 @@
 //   已逾期的候选不参与取最小 —— 它的紧迫度交给下面的红徽章，不该压掉别的子任务的倒计时；
 // - 子任务逾期（endDate < 当前查看日且仍未完成）时，标题右侧追加红徽章「N 项子任务逾期」，
 //   收起状态同样可见；逾期子任务全部完成后徽章自动消失。
+//   该徽章只在查看今天或过去时出现 —— 未来日期还没到，逾期无从谈起（见 overdueSubtaskCount）。
 
 import {
   memo,
@@ -230,12 +231,18 @@ export const TaskItem = memo(function TaskItem({
   const isDdlPastDay =
     isDdlCompleted && task.completedAt != null && dateKey < task.completedAt;
 
+  // 真实今天：与「查看日」dateKey 区分开，供「今日截止」徽章、子任务逾期徽章是否该显示等判定共用
+  const today = todayKey();
+
   // 任务集的 DDL 收敛：在「尚未逾期」的候选里取最近截止日（父自身 + 未完成子任务），
   // 并单独统计逾期子任务条数。收起状态也要看见逾期提示，故不依赖展开与否。
   const ddlView =
     composite && taskMap !== undefined ? compositeDdlView(taskMap, task, dateKey) : null;
   const effectiveEndDate = ddlView?.effectiveEndDate ?? null;
-  const overdueSubtaskCount = ddlView?.overdueCount ?? 0;
+  // 子任务逾期徽章只在「查看今天或过去」时成立：compositeDdlView 以查看日为基准算逾期
+  // （历史视图按那天算，才有意义），落到未来日就会把「那天之后才到期」的子任务也算成逾期。
+  // 未来日期本身还没到，逾期无从谈起，因此在渲染层按真实今天把未来视图的徽章掐掉。
+  const overdueSubtaskCount = dateKey > today ? 0 : (ddlView?.overdueCount ?? 0);
 
   // 已过期：长期 DDL 在结束日当天且未完成（独立于档位，走红徽章）
   const overdue = isOverdueDdl(task, dateKey);
@@ -269,7 +276,7 @@ export const TaskItem = memo(function TaskItem({
         : `剩 ${daysLeft} 天`
       : null;
   const dueTodayBadge =
-    deadlineBadge === null && countdownEnd != null && countdownEnd === todayKey() && !isDdlCompleted
+    deadlineBadge === null && countdownEnd != null && countdownEnd === today && !isDdlCompleted
       ? "今日截止"
       : null;
   const deadlineText = deadlineBadge ?? dueTodayBadge;

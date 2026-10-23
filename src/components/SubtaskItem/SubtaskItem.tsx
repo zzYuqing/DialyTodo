@@ -20,6 +20,7 @@ import {
   nowIso,
   splitDoneAt,
   subtaskUrgencyOf,
+  todayKey,
   type SubtaskEdit,
   type SubtaskUrgency,
 } from "@/lib";
@@ -127,7 +128,12 @@ export const SubtaskItem = memo(function SubtaskItem({
   const endLocked = parentEnd !== null;
   // 备注折叠行数：来自设置，改后立即生效（CollapsibleNote 据此决定是否截断）。
   const noteCollapseLines = useSettingsStore((s) => s.settings.noteCollapseLines);
-  const urgency = subtaskUrgencyOf(task, dateKey);
+  // 紧迫度以 dateKey 为基准日（长期页传真实今天，日清单传当前查看日）。
+  // 但「逾期」只在查看今天或过去时成立：查看未来日期时那天还没到，不该把
+  // 「那天之后才到期」的子任务染红，故未来视图把 overdue 档降级为中性
+  // （与父行「N 项子任务逾期」徽章同口径）；今天截止 / 临近到期仍按该日提示。
+  const urgencyRaw = subtaskUrgencyOf(task, dateKey);
+  const urgency = urgencyRaw === "overdue" && dateKey > todayKey() ? null : urgencyRaw;
   const endDate = task.schedule.endDate;
   // 完成时间徽章文案：优先用 childDoneAt（ISO 时刻）格式化为「9月5日 14:30」，
   // 兜底用 endDate（仅日期）的月日文案，再不行就只显示「已完成」。

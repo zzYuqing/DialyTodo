@@ -3,9 +3,11 @@
 // - 完成度色阶与旧贡献墙同源（CONTRIBUTION_COLORS）；
 // - 只有「选中」= 实线描边（强调色）；今天不做任何视觉标记，由页面头部的「今天」按钮回跳定位；
 // - 未来日期渲染为「未到」格：空心描边（透明填充 + 虚线边），可点开日视图、可加任务，但不可勾选完成；
-// - 今日及过去：悬浮显示「日期 · 完成 N 项」，有过期 DDL 时追加「N 项任务过期」；
+// - 今日及过去：悬浮显示「日期 · 完成 N 项」；该日已过去且有 DDL 未完成追加「N 项任务过期」，
+//   今天有任务到期（含任务集的子任务）则只追加「N 项今日截止」—— 当天不算过期；
 // - 未来：悬浮显示「日期 · 待完成 N 项」，有 DDL 命中该日时追加「X 项当日截止」；
-// - 阶段 6 DDL 扩展：当日过期 DDL 任务数 > 0 时，右下角显示红点角标，hover 追加「N 项任务过期」；
+// - 阶段 6 DDL 扩展：右下角红点角标仅在「该日早于今天 且 当日截止未完成数 > 0」时出现 ——
+//   截止日当天不点（那天还来得及做），次日仍未完成，该格才点亮。
 //   计数 = 顶层任务 + 任务集的子任务（子任务不进日清单顶层，但截止日同样要在墙上标出来）。
 // - 点击只 setSelectedDate，日视图随之加载当日任务，不做任何跳转。
 
@@ -24,7 +26,11 @@ export function RailCell({ dateKey, completion: raw }: RailCellProps) {
   const setSelectedDate = useViewStore((s) => s.setSelectedDate);
   const today = todayKey();
   const completion = raw ?? EMPTY_COMPLETION;
-  const hasExpired = completion.expiredDdlCount > 0;
+  const dueCount = completion.expiredDdlCount;
+  // 红点口径对齐 ddl.ts 的 isOverdueDdl：截止日当天不算过期（那天还来得及做完），
+  // 只有「该日已落入过去且仍未完成」才点亮。今天到期的任务（含任务集的子任务）因此只出文案、
+  // 不点红点；若到明天仍未完成，这一格自然转入「过去」判定，红点届时补上。
+  const hasExpired = dateKey < today && dueCount > 0;
 
   // 未来日期：空心描边的「未到」格，可点开日视图、可加任务，但不可勾选完成。
   // 未来日没有「已完成」可言，故提示口径换成「待完成」：应完成任务数减去已提前勾选的数量。
@@ -36,7 +42,6 @@ export function RailCell({ dateKey, completion: raw }: RailCellProps) {
     const classes = [styles.cell, styles.cellFuture];
     if (dateKey === selectedDate) classes.push(styles.cellSelected);
     const pending = Math.max(0, completion.total - completion.done);
-    const dueCount = completion.expiredDdlCount;
     const cellTitle = [
       formatDateLabel(dateKey),
       `待完成 ${pending} 项`,
@@ -59,11 +64,12 @@ export function RailCell({ dateKey, completion: raw }: RailCellProps) {
   const classes = [styles.cell];
   if (dateKey === selectedDate) classes.push(styles.cellSelected);
 
-  // 悬浮文案：日期 + 完成数量；存在过期 DDL 任务时追加过期条数，避免与角标重复提示
+  // 悬浮文案：日期 + 完成数量；日期已过去且仍有 DDL 未完成 → 追加过期条数（避免与角标重复提示）；
+  // 今天到期 → 追加「今日截止」（当天还算得及做，不按过期处理，故不点红点、只给文案）。
   const cellTitle = [
     formatDateLabel(dateKey),
     `完成 ${completion.done} 项`,
-    hasExpired ? `${completion.expiredDdlCount} 项任务过期` : null,
+    dueCount > 0 ? (hasExpired ? `${dueCount} 项任务过期` : `${dueCount} 项今日截止`) : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -80,7 +86,7 @@ export function RailCell({ dateKey, completion: raw }: RailCellProps) {
       {hasExpired && (
         <span
           className={styles.expiredBadge}
-          aria-label={`${completion.expiredDdlCount} 项 DDL 任务已过期`}
+          aria-label={`${dueCount} 项 DDL 任务已过期`}
         />
       )}
     </button>
