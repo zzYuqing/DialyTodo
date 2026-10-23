@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>糊弄学工具 · 界面方案对比</title>
+<style>
+  /* 配色严格沿用 DailyTodo 浅色主题（src/styles/theme.css） */
+  :root {
+    --dt-bg: #f5f7f4;
+    --dt-panel: #ffffff;
+    --dt-panel-2: #eef2ed;
+    --dt-text: #2a332b;
+    --dt-text-muted: #75806f;
+    --dt-border: rgba(45, 60, 50, 0.12);
+    --dt-border-strong: rgba(45, 60, 50, 0.3);
+    --dt-accent: #2c7a53;
+    --dt-accent-contrast: #ffffff;
+    --dt-accent-soft: rgba(44, 122, 83, 0.1);
+    --dt-danger: #c2452d;
+    --dt-danger-contrast: #ffffff;
+    --dt-shadow-sm: 0 1px 2px rgba(44, 80, 60, 0.06);
+    --dt-shadow-md: 0 2px 6px rgba(44, 80, 60, 0.08), 0 6px 16px rgba(44, 80, 60, 0.07);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: var(--dt-bg);
+    color: var(--dt-text);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* 顶部方案切换 */
+  .topbar {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--dt-panel);
+    border-bottom: 1px solid var(--dt-border);
+    padding: 14px 24px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .topbar h1 { margin: 0; font-size: 16px; font-weight: 700; }
+  .topbar .hint { color: var(--dt-text-muted); font-size: 12px; }
+  .tabs { display: inline-flex; gap: 6px; margin-left: auto;
+    background: var(--dt-panel-2); padding: 4px; border-radius: 12px; }
+  .tab {
+    border: 0; background: transparent; color: var(--dt-text-muted);
+    font-size: 13px; font-weight: 600; padding: 7px 16px; border-radius: 9px;
+    cursor: pointer; transition: all .15s;
+  }
+  .tab:hover { color: var(--dt-accent); }
+  .tab.on { background: var(--dt-panel); color: var(--dt-accent); box-shadow: var(--dt-shadow-sm); }
+
+  /* 每版容器 */
+  .variant { display: none; padding: 24px; max-width: 920px; margin: 0 auto; }
+  .variant.on { display: block; animation: fade .25s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px);} to {opacity:1; transform:none;} }
+
+  /* 页头（与工具页工具内部页一致：返回 + 标题 + 取向标签） */
+  .head { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .back {
+    border: 1px solid var(--dt-border); background: var(--dt-panel);
+    color: var(--dt-text-muted); font-size: 13px; padding: 6px 12px;
+    border-radius: 10px; cursor: pointer;
+  }
+  .back:hover { background: var(--dt-accent-soft); color: var(--dt-accent); border-color: var(--dt-accent-soft); }
+  .title { margin: 0; font-size: 18px; font-weight: 700; }
+  .tag {
+    font-size: 11px; padding: 3px 10px; border-radius: 20px;
+    background: var(--dt-accent-soft); color: var(--dt-accent); font-weight: 600;
+  }
+  .sub { color: var(--dt-text-muted); font-size: 13px; margin: 4px 0 20px; }
+
+  /* 通用表单 */
+  .form { background: var(--dt-panel); border: 1px solid var(--dt-border);
+    border-radius: 14px; padding: 16px; box-shadow: var(--dt-shadow-sm); margin-bottom: 18px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 13px; font-weight: 600; color: var(--dt-text); }
+  .field label .opt { color: var(--dt-text-muted); font-weight: 400; font-size: 12px; margin-left: 4px; }
+  .input {
+    padding: 11px 13px; border: 1px solid var(--dt-border); border-radius: 10px;
+    font-size: 14px; background: var(--dt-panel); color: var(--dt-text); outline: none;
+    width: 100%;
+  }
+  .input:focus { border-color: var(--dt-accent); }
+  textarea.input { min-height: 50px; resize: vertical; font-family: inherit; line-height: 1.5; }
+  .input::placeholder { color: var(--dt-text-muted); }
+  .submit {
+    border: 0; background: var(--dt-accent); color: var(--dt-accent-contrast);
+    padding: 11px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer;
+    white-space: nowrap; transition: filter .15s, transform .1s;
+  }
+  .submit:hover { filter: brightness(1.05); }
+  .submit:active { transform: translateY(1px); }
+
+  .listHead { display: flex; align-items: baseline; gap: 10px; margin: 4px 0 12px; }
+  .listHead h2 { margin: 0; font-size: 15px; font-weight: 700; }
+  .listHead .cnt { font-size: 13px; color: var(--dt-text-muted); }
+
+  /* ===== 方案 A 行列表 ===== */
+  .A .form { display: grid; grid-template-columns: 1.4fr 1fr auto; gap: 12px; align-items: end; }
+  .A .row {
+    display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px;
+    border: 1px solid var(--dt-border); border-radius: 12px; background: var(--dt-panel);
+    margin-bottom: 8px; transition: border-color .15s;
+  }
+  .A .row:hover { border-color: var(--dt-accent-soft); }
+  .A .no { width: 22px; height: 22px; border-radius: 50%; background: var(--dt-accent-soft);
+    color: var(--dt-accent); font-size: 12px; display: flex; align-items: center; justify-content: center; flex: 0 0 22px; margin-top: 1px; }
+  .A .body { flex: 1; min-width: 0; }
+  .A .main { font-size: 15px; color: var(--dt-text); }
+  .A .ex { font-size: 12.5px; color: var(--dt-text-muted); margin-top: 3px; }
+  .A .ex::before { content: "例："; color: var(--dt-accent); font-weight: 600; }
+  .A .del { margin-left: auto; border: 0; background: transparent; color: var(--dt-text-muted);
+    font-size: 16px; line-height: 1; cursor: pointer; padding: 2px 8px; border-radius: 8px; flex: 0 0 auto; }
+  .A .del:hover { background: var(--dt-danger); color: var(--dt-danger-contrast); }
+
+  /* ===== 方案 B 锦囊卡片墙 ===== */
+  .B .form { display: flex; flex-direction: column; gap: 12px; position: sticky; bottom: 0; margin-top: 4px; }
+  .B .form .submit { align-self: flex-start; }
+  .B .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .B .card {
+    border: 1px solid var(--dt-border); border-radius: 16px; background: var(--dt-panel);
+    padding: 16px; position: relative; transition: transform .16s, box-shadow .16s, border-color .16s;
+  }
+  .B .card:hover { transform: translateY(-3px); box-shadow: var(--dt-shadow-md); border-color: var(--dt-accent-soft); }
+  .B .kicker { font-size: 11px; color: var(--dt-accent); font-weight: 700; letter-spacing: 1px; }
+  .B .main { font-size: 15px; font-weight: 600; color: var(--dt-text); margin: 6px 0 0; }
+  .B .exWrap { margin-top: 10px; padding: 8px 10px; background: var(--dt-panel-2);
+    border-left: 3px solid var(--dt-accent); border-radius: 0 8px 8px 0; font-size: 12.5px; color: var(--dt-text-muted); }
+  .B .exWrap b { color: var(--dt-accent); font-weight: 600; }
+  .B .del { position: absolute; top: 10px; right: 10px; border: 0; background: transparent;
+    color: var(--dt-text-muted); font-size: 15px; cursor: pointer; padding: 2px 7px; border-radius: 8px; }
+  .B .del:hover { background: var(--dt-danger); color: var(--dt-danger-contrast); }
+
+  /* ===== 方案 C 对话气泡（社交向） ===== */
+  .C .bubble {
+    display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 14px;
+  }
+  .C .say {
+    background: var(--dt-accent-soft); color: var(--dt-text); border-radius: 4px 16px 16px 16px;
+    padding: 11px 14px; font-size: 14.5px; max-width: 78%; border: 1px solid var(--dt-accent-soft);
+  }
+  .C .scene {
+    margin: 5px 0 0 4px; font-size: 12.5px; color: var(--dt-text-muted);
+    background: var(--dt-panel); border: 1px dashed var(--dt-border-strong);
+    border-radius: 10px; padding: 6px 10px; max-width: 70%;
+  }
+  .C .scene b { color: var(--dt-text-muted); font-weight: 600; }
+  .C .del { margin-left: 8px; border: 0; background: transparent; color: var(--dt-text-muted);
+    font-size: 14px; cursor: pointer; padding: 2px 6px; border-radius: 8px; align-self: flex-start; }
+  .C .del:hover { background: var(--dt-danger); color: var(--dt-danger-contrast); }
+  .C .form { display: grid; grid-template-columns: 1.4fr 1fr auto; gap: 12px; align-items: end;
+    position: sticky; bottom: 0; }
+
+  /* 设计说明卡 */
+  .note {
+    max-width: 920px; margin: 0 auto; padding: 0 24px 40px;
+  }
+  .note .card {
+    background: var(--dt-panel-2); border: 1px solid var(--dt-border); border-radius: 14px;
+    padding: 16px 18px; font-size: 13px; color: var(--dt-text-muted); line-height: 1.7;
+  }
+  .note b { color: var(--dt-text); }
+  .empty { text-align: center; color: var(--dt-text-muted); font-size: 13px;
+    border: 1px dashed var(--dt-border-strong); border-radius: 14px; padding: 30px; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>糊弄学工具 · 界面方案</h1>
+    <span class="hint">点上方切换三版 · 往输入框填字点提交可试手感</span>
+    <div class="tabs">
+      <button class="tab on" data-v="A">A 行列表</button>
+      <button class="tab" data-v="B">B 锦囊墙</button>
+      <button class="tab" data-v="C">C 气泡</button>
+    </div>
+  </div>
+
+  <!-- ============ A 行列表 ============ -->
+  <section class="variant on A" data-v="A">
+    <div class="head">
+      <button class="back">← 工具</button>
+      <h1 class="title">糊弄学</h1>
+      <span class="tag">克制 · 信息密度高</span>
+    </div>
+    <p class="sub">社交糊弄小技巧合集。每行一条，举例缩成次要小字，扫读快。</p>
+
+    <div class="form">
+      <div class="field">
+        <label>糊弄法 <span class="opt">必填</span></label>
+        <input class="input a-main" placeholder="例如：在忙，稍后回复你" />
+      </div>
+      <div class="field">
+        <label>举例 <span class="opt">可选</span></label>
+        <input class="input a-ex" placeholder="例如：同事甩锅时先停球" />
+      </div>
+      <button class="submit a-add">提交</button>
+    </div>
+
+    <div class="listHead"><h2>全部糊弄法</h2><span class="cnt">共 <span class="a-count">5</span> 条</span></div>
+    <div class="a-list">
+      <div class="row"><span class="no">1</span><div class="body"><div class="main">在忙，稍后回复你</div><div class="ex">同事甩锅时先不接话，把球停一下</div></div><button class="del">×</button></div>
+      <div class="row"><span class="no">2</span><div class="body"><div class="main">这个想法很有意思，我消化一下</div><div class="ex">领导画饼时既不得罪也不承诺</div></div><button class="del">×</button></div>
+      <div class="row"><span class="no">3</span><div class="body"><div class="main">我理解你的意思了</div><div class="ex">其实没听懂，但表示在听</div></div><button class="del">×</button></div>
+      <div class="row"><span class="no">4</span><div class="body"><div class="main">我看看日程再答复</div></div><button class="del">×</button></div>
+      <div class="row"><span class="no">5</span><div class="body"><div class="main">先同步一下现状哈</div><div class="ex">想结束话题时用来岔开</div></div><button class="del">×</button></div>
+    </div>
+  </section>
+
+  <!-- ============ B 锦囊卡片墙 ============ -->
+  <section class="variant B" data-v="B">
+    <div class="head">
+      <button class="back">← 工具</button>
+      <h1 class="title">糊弄学</h1>
+      <span class="tag">收藏 · 一眼多览</span>
+    </div>
+    <p class="sub">每条糊弄法是一张「锦囊卡」，举例作为卡片副文，适合慢慢攒宝典。</p>
+
+    <div class="listHead"><h2>糊弄锦囊</h2><span class="cnt">共 <span class="b-count">5</span> 张</span></div>
+    <div class="grid b-list">
+      <div class="card"><button class="del">×</button><div class="main">在忙，稍后回复你</div><div class="exWrap"><b>举例：</b>同事甩锅时先不接话，把球停一下</div></div>
+      <div class="card"><button class="del">×</button><div class="main">这个想法很有意思，我消化一下</div><div class="exWrap"><b>举例：</b>领导画饼时既不得罪也不承诺</div></div>
+      <div class="card"><button class="del">×</button><div class="main">我理解你的意思了</div><div class="exWrap"><b>举例：</b>其实没听懂，但表示在听</div></div>
+      <div class="card"><button class="del">×</button><div class="main">我看看日程再答复</div></div>
+      <div class="card"><button class="del">×</button><div class="main">先同步一下现状哈</div><div class="exWrap"><b>举例：</b>想结束话题时用来岔开</div></div>
+    </div>
+
+    <div class="form">
+      <div class="field">
+        <label>糊弄法 <span class="opt">必填</span></label>
+        <textarea class="input b-main" rows="2" placeholder="例如：在忙，稍后回复你"></textarea>
+      </div>
+      <div class="field">
+        <label>举例 <span class="opt">可选</span></label>
+        <textarea class="input b-ex" rows="2" placeholder="例如：同事甩锅时先停球"></textarea>
+      </div>
+      <button class="submit b-add">收入锦囊</button>
+    </div>
+  </section>
+
+  <!-- ============ C 对话气泡 ============ -->
+  <section class="variant C" data-v="C">
+    <div class="head">
+      <button class="back">← 工具</button>
+      <h1 class="title">糊弄学</h1>
+      <span class="tag">社交 · 场景化</span>
+    </div>
+    <p class="sub">每条糊弄法像「你会说的话」，举例像场景备注，调性更轻松。</p>
+
+    <div class="listHead"><h2>我的糊弄台词</h2><span class="cnt">共 <span class="c-count">5</span> 条</span></div>
+    <div class="c-list">
+      <div class="bubble"><div class="say">在忙，稍后回复你</div><div class="scene"><b>场景：</b>同事甩锅时先不接话，把球停一下</div><button class="del">×</button></div>
+      <div class="bubble"><div class="say">这个想法很有意思，我消化一下</div><div class="scene"><b>场景：</b>领导画饼时既不得罪也不承诺</div><button class="del">×</button></div>
+      <div class="bubble"><div class="say">我理解你的意思了</div><div class="scene"><b>场景：</b>其实没听懂，但表示在听</div><button class="del">×</button></div>
+      <div class="bubble"><div class="say">我看看日程再答复</div><button class="del">×</button></div>
+      <div class="bubble"><div class="say">先同步一下现状哈</div><div class="scene"><b>场景：</b>想结束话题时用来岔开</div><button class="del">×</button></div>
+    </div>
+
+    <div class="form">
+      <div class="field">
+        <label>糊弄法 <span class="opt">必填</span></label>
+        <input class="input c-main" placeholder="你会怎么说…" />
+      </div>
+      <div class="field">
+        <label>举例 <span class="opt">可选</span></label>
+        <input class="input c-ex" placeholder="什么场景下用…" />
+      </div>
+      <button class="submit c-add">发送</button>
+    </div>
+  </section>
+
+  <div class="note">
+    <div class="card">
+      <b>三版取舍提示：</b><br/>
+      <b>A 行列表</b>：和现有「防困小妙招·全部条目」同语言，零学习成本；举例以次要小字呈现，扫读最快。适合条目多、偏工具感。<br/>
+      <b>B 锦囊卡片墙</b>：收藏感强、一眼多览，举例作为卡片引用块更醒目；但长文本会参差不齐，条目少时更出彩。<br/>
+      <b>C 对话气泡</b>：社交调性最贴「糊弄」主题，举例像场景备注；与工具页其余风格偏离最大，活泼但要确认你能接受这种调性。<br/>
+      <span style="color:var(--dt-accent)">共同交互：</span>糊弄法必填、举例可选、Enter 提交、× 删除（原型里已可点试）。
+    </div>
+  </div>
+
+<script>
+  // 方案切换
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+      document.querySelectorAll('.variant').forEach(x => x.classList.remove('on'));
+      t.classList.add('on');
+      document.querySelector('.variant[data-v="'+t.dataset.v+'"]').classList.add('on');
+    });
+  });
+
+  // 通用：刷新序号 / 计数
+  function refresh(listSel, countSel) {
+    const list = document.querySelector(listSel);
+    const items = list.children;
+    document.querySelector(countSel).textContent = items.length;
+    // 方案 A 重排序号
+    if (listSel === '.a-list') {
+      [...items].forEach((row, i) => { row.querySelector('.no').textContent = i + 1; });
+    }
+  }
+
+  function addItem(v) {
+    const main = document.querySelector('.' + v + '-main');
+    const ex = document.querySelector('.' + v + '-ex');
+    const mv = main.value.trim();
+    if (!mv) { main.focus(); return; }
+    const ev = ex.value.trim();
+    const list = document.querySelector('.' + v + '-list');
+    const del = '<button class="del">×</button>';
+
+    if (v === 'A') {
+      const exHtml = ev ? '<div class="ex">' + ev + '</div>' : '';
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<span class="no"></span><div class="body"><div class="main">' + mv + '</div>' + exHtml + '</div>' + del;
+      list.appendChild(row);
+    } else if (v === 'B') {
+      const exHtml = ev ? '<div class="exWrap"><b>举例：</b>' + ev + '</div>' : '';
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = del + '<div class="main">' + mv + '</div>' + exHtml;
+      list.appendChild(card);
+    } else {
+      const exHtml = ev ? '<div class="scene"><b>场景：</b>' + ev + '</div>' : '';
+      const b = document.createElement('div');
+      b.className = 'bubble';
+      b.innerHTML = '<div class="say">' + mv + '</div>' + exHtml + del;
+      list.appendChild(b);
+    }
+    main.value = ''; ex.value = '';
+    main.focus();
+    refresh('.' + v + '-list', '.' + v + '-count');
+  }
+
+  function bind(v) {
+    document.querySelector('.' + v + '-add').addEventListener('click', () => addItem(v));
+    const main = document.querySelector('.' + v + '-main');
+    main.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(v); });
+    // 事件委托删除
+    document.querySelector('.' + v + '-list').addEventListener('click', e => {
+      if (e.target.classList.contains('del')) {
+        e.target.closest('.row, .card, .bubble').remove();
+        refresh('.' + v + '-list', '.' + v + '-count');
+      }
+    });
+  }
+  ['A','B','C'].forEach(bind);
+</script>
+</body>
+</html>

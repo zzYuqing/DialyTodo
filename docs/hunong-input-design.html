@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>糊弄学 · 底部输入区设计方案</title>
+<style>
+  :root{
+    --dt-bg:#f5f7f4; --dt-panel:#ffffff; --dt-panel-2:#eef2ed;
+    --dt-text:#2a332b; --dt-text-muted:#75806f;
+    --dt-border:rgba(45,60,50,0.12); --dt-border-strong:rgba(45,60,50,0.3);
+    --dt-accent:#2c7a53; --dt-accent-contrast:#ffffff; --dt-accent-soft:rgba(44,122,83,0.1);
+    --dt-danger:#c2452d; --dt-danger-contrast:#ffffff;
+    --dt-shadow-sm:0 1px 2px rgba(44,80,60,0.06);
+    --dt-shadow-md:0 2px 6px rgba(44,80,60,0.08),0 6px 16px rgba(44,80,60,0.07);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--dt-bg); color:var(--dt-text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    padding:28px 16px 60px;
+  }
+  .stage{max-width:880px; margin:0 auto;}
+  h1{font-size:20px; margin:0 0 4px;}
+  .lead{color:var(--dt-text-muted); font-size:13px; margin:0 0 20px;}
+
+  /* 版本切换 */
+  .tabs{display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap;}
+  .tab{
+    border:1px solid var(--dt-border); background:var(--dt-panel);
+    color:var(--dt-text-muted); padding:8px 16px; border-radius:999px;
+    font-size:13px; font-weight:600; cursor:pointer; transition:.15s;
+  }
+  .tab:hover{color:var(--dt-accent); border-color:var(--dt-accent-soft);}
+  .tab.on{background:var(--dt-accent); color:var(--dt-accent-contrast); border-color:var(--dt-accent);}
+
+  /* 模拟右栏容器 */
+  .panel{background:var(--dt-panel); border:1px solid var(--dt-border); border-radius:16px;
+    box-shadow:var(--dt-shadow-sm); padding:20px 22px; display:flex; flex-direction:column; gap:14px;}
+
+  .listHead{display:flex; align-items:baseline; gap:10px;}
+  .listHead h2{margin:0; font-size:16px; font-weight:600;}
+  .listHead span{font-size:13px; color:var(--dt-text-muted);}
+
+  .scroll{max-height:230px; overflow-y:auto;}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; align-content:start;}
+
+  .card{position:relative; border:1px solid var(--dt-border); border-radius:16px; background:var(--dt-panel); padding:16px; transition:.16s;}
+  .card:hover{transform:translateY(-3px); box-shadow:var(--dt-shadow-md); border-color:var(--dt-accent-soft);}
+  .card .main{font-size:15px; font-weight:600; line-height:1.45; white-space:pre-wrap;}
+  .card .ex{margin-top:10px; padding:8px 10px; background:var(--dt-panel-2); border-left:3px solid var(--dt-accent); border-radius:0 8px 8px 0; font-size:12.5px; color:var(--dt-text-muted); line-height:1.45; white-space:pre-wrap;}
+  .card .ex b{color:var(--dt-accent);}
+  .card .del{position:absolute; top:10px; right:10px; border:0; background:transparent; color:var(--dt-text-muted); font-size:15px; cursor:pointer; padding:2px 7px; border-radius:8px;}
+  .card .del:hover{background:var(--dt-danger); color:var(--dt-danger-contrast);}
+
+  .emptyNote{font-size:13px; color:var(--dt-text-muted); padding:14px 2px;}
+
+  /* ===== 公共输入元素 ===== */
+  .field{display:flex; flex-direction:column; gap:7px;}
+  .lbl{font-size:13px; font-weight:600; color:var(--dt-text); display:flex; align-items:center; gap:7px;}
+  .req{color:var(--dt-accent); font-weight:600; font-size:11px; background:var(--dt-accent-soft); padding:1px 8px; border-radius:8px;}
+  .opt{color:var(--dt-text-muted); font-weight:400; font-size:11.5px;}
+  textarea{
+    width:100%; box-sizing:border-box; padding:12px 14px; font:inherit; font-size:14px; line-height:1.55;
+    color:var(--dt-text); border-radius:12px; resize:none; min-height:58px; outline:none;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  textarea::placeholder{color:#8b958a;}
+  textarea:focus{border-color:var(--dt-accent); box-shadow:0 0 0 3px var(--dt-accent-soft);}
+
+  /* ===== A 草稿卡 ===== */
+  .form-A{background:var(--dt-panel); border:1px solid var(--dt-border); border-radius:16px; box-shadow:var(--dt-shadow-sm); padding:18px; display:flex; flex-direction:column; gap:14px;}
+  .form-A .cap{font-size:13px; font-weight:600; color:var(--dt-text-muted); display:flex; align-items:center; gap:6px;}
+  .form-A textarea{background:var(--dt-panel-2); border:1px solid var(--dt-border);}
+  .form-A textarea:focus{border-color:var(--dt-accent);}
+  .form-A .btn{align-self:flex-end; background:var(--dt-accent-soft); color:var(--dt-accent); border:0; padding:10px 22px; border-radius:10px; font-weight:600; font-size:14px; cursor:pointer; transition:.15s;}
+  .form-A .btn:hover{background:rgba(44,122,83,0.16);}
+
+  /* ===== B 浅盘托盘 ===== */
+  .form-B{background:var(--dt-panel-2); border:1px solid var(--dt-border); border-radius:16px; padding:18px; display:flex; flex-direction:column; gap:14px;}
+  .form-B textarea{background:var(--dt-panel); border:1px solid var(--dt-border-strong);}
+  .form-B .btn{width:100%; background:var(--dt-accent); color:var(--dt-accent-contrast); border:0; padding:12px; border-radius:12px; font-weight:600; font-size:14px; cursor:pointer; transition:filter .15s;}
+  .form-B .btn:hover{filter:brightness(1.05);}
+
+  /* ===== C 极简分隔 ===== */
+  .form-C{border-top:1px solid var(--dt-border); padding-top:18px; display:flex; flex-direction:column; gap:14px;}
+  .form-C textarea{background:var(--dt-panel); border:1px solid var(--dt-border-strong);}
+  .form-C .btn{align-self:flex-start; background:transparent; color:var(--dt-accent); border:1px solid var(--dt-accent); padding:10px 22px; border-radius:10px; font-weight:600; font-size:14px; cursor:pointer; transition:.15s;}
+  .form-C .btn:hover{background:var(--dt-accent-soft);}
+
+  .hint{font-size:12px; color:var(--dt-text-muted); margin-top:14px; line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="stage">
+  <h1>糊弄学 · 底部输入区</h1>
+  <p class="lead">三版对比（共用项目 --dt-* 变量）。上方两张卡仅为布局参照，正式页面<strong>不内置任何默认条目</strong>。</p>
+
+  <div class="tabs">
+    <div class="tab on" data-v="A">A · 草稿卡</div>
+    <div class="tab" data-v="B">B · 浅盘托盘</div>
+    <div class="tab" data-v="C">C · 极简分隔</div>
+  </div>
+
+  <div class="panel">
+    <div class="listHead"><h2>糊弄锦囊</h2><span>共 <span id="cnt">2</span> 张</span></div>
+
+    <div class="scroll">
+      <div class="grid" id="grid">
+        <div class="card"><div class="main">在忙，稍后回复你</div>
+          <div class="ex"><b>举例：</b>同事甩锅时先停球，不立刻接话</div></div>
+        <div class="card"><div class="main">先同步一下现状哈</div></div>
+      </div>
+    </div>
+
+    <!-- A -->
+    <div class="form-A vform" data-v="A">
+      <div class="cap">✎ 新增一条锦囊</div>
+      <div class="field">
+        <label class="lbl">糊弄法 <span class="req">必填</span></label>
+        <textarea rows="2" placeholder="例如：在忙，稍后回复你"></textarea>
+      </div>
+      <div class="field">
+        <label class="lbl">举例 <span class="opt">可选</span></label>
+        <textarea rows="2" placeholder="例如：同事甩锅时先停球"></textarea>
+      </div>
+      <button class="btn">收入锦囊</button>
+    </div>
+
+    <!-- B -->
+    <div class="form-B vform" data-v="B" style="display:none">
+      <div class="field">
+        <label class="lbl">糊弄法 <span class="req">必填</span></label>
+        <textarea rows="2" placeholder="例如：在忙，稍后回复你"></textarea>
+      </div>
+      <div class="field">
+        <label class="lbl">举例 <span class="opt">可选</span></label>
+        <textarea rows="2" placeholder="例如：同事甩锅时先停球"></textarea>
+      </div>
+      <button class="btn">收入锦囊</button>
+    </div>
+
+    <!-- C -->
+    <div class="form-C vform" data-v="C" style="display:none">
+      <div class="field">
+        <label class="lbl">糊弄法 <span class="req">必填</span></label>
+        <textarea rows="2" placeholder="例如：在忙，稍后回复你"></textarea>
+      </div>
+      <div class="field">
+        <label class="lbl">举例 <span class="opt">可选</span></label>
+        <textarea rows="2" placeholder="例如：同事甩锅时先停球"></textarea>
+      </div>
+      <button class="btn">收入锦囊</button>
+    </div>
+  </div>
+
+  <p class="hint">
+    交互：在任一版本填「糊弄法」后点「收入锦囊」（或 Ctrl/Cmd+Enter），上方会冒出一张新卡，可直观对比新增后观感。删除按钮仅演示用。<br>
+    三版差异只在<strong>新增区的容器与按钮重量</strong>：A 把输入区做成一张白卡（按钮浅绿轻盈）；B 用浅绿灰托盘分层（按钮实心通栏，主操作最明确）；C 不要卡片、仅分隔线 + 大留白（按钮描边最克制）。
+  </p>
+</div>
+
+<script>
+  const tabs = document.querySelectorAll('.tab');
+  const forms = document.querySelectorAll('.vform');
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => x.classList.remove('on'));
+    t.classList.add('on');
+    const v = t.dataset.v;
+    forms.forEach(f => f.style.display = (f.dataset.v === v) ? 'flex' : 'none');
+  }));
+
+  const grid = document.getElementById('grid');
+  const cnt = document.getElementById('cnt');
+  document.querySelectorAll('.btn').forEach(btn => btn.addEventListener('click', () => {
+    const form = btn.closest('.vform');
+    const tas = form.querySelectorAll('textarea');
+    const m = tas[0].value.trim();
+    if (!m) { tas[0].focus(); return; }
+    const ex = tas[1].value.trim();
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = '<button class="del" title="删除">×</button><div class="main"></div>'
+      + (ex ? '<div class="ex"><b>举例：</b></div>' : '');
+    card.querySelector('.main').textContent = m;
+    if (ex) card.querySelector('.ex').appendChild(document.createTextNode(ex));
+    grid.prepend(card);
+    cnt.textContent = grid.children.length;
+    tas[0].value = ''; tas[1].value = '';
+    card.querySelector('.del').addEventListener('click', () => {
+      card.remove(); cnt.textContent = grid.children.length;
+    });
+  }));
+  document.querySelectorAll('.card .del').forEach(d => d.addEventListener('click', () => {
+    d.closest('.card').remove(); cnt.textContent = grid.children.length;
+  }));
+</script>
+</body>
+</html>

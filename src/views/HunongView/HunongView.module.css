@@ -1,0 +1,294 @@
+/* 糊弄学工具页（B 版：单栏卡片墙 + 底部浅盘新增区）。
+   全部引用 theme.css 的 --dt-* 变量，不硬编码颜色/尺寸；深色主题由变量覆盖自动切换。 */
+
+.wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 24px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* 页头：返回 + 标题 */
+.head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back {
+  border: 1px solid var(--dt-border);
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.back:hover {
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+  border-color: var(--dt-accent-soft);
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+.listHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.listTitleRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.listTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+.listCount {
+  font-size: 13px;
+  color: var(--dt-text-muted);
+}
+
+/* 模糊搜索框：与标题左右分布，靠右收窄时自适应 */
+.search {
+  flex: 0 1 200px;
+  min-width: 120px;
+  box-sizing: border-box;
+  padding: 7px 12px;
+  border: 1px solid var(--dt-border-strong);
+  border-radius: 10px;
+  font-size: 13px;
+  background: var(--dt-panel);
+  color: var(--dt-text);
+  outline: none;
+  font-family: inherit;
+}
+
+.search::placeholder {
+  color: #8b958a;
+}
+
+.search:focus {
+  border-color: var(--dt-accent);
+  box-shadow: 0 0 0 3px var(--dt-accent-soft);
+}
+
+/* 可滚动卡片区；底部留白给右下角悬浮加号让位 */
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 72px;
+}
+
+/* 单栏：一行一条 */
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-content: start;
+}
+
+.card {
+  position: relative;
+  border: 1px solid var(--dt-border);
+  border-radius: 16px;
+  background: var(--dt-panel);
+  padding: 16px 44px 16px 16px;
+  transition: transform 0.16s, box-shadow 0.16s, border-color 0.16s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--dt-shadow-md);
+  border-color: var(--dt-accent-soft);
+}
+
+.main {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dt-text);
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.exWrap {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: var(--dt-panel-2);
+  border-left: 3px solid var(--dt-accent);
+  border-radius: 0 8px 8px 0;
+  font-size: 12.5px;
+  color: var(--dt-text-muted);
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.exWrap b {
+  color: var(--dt-accent);
+  font-weight: 600;
+}
+
+.del {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 2px 7px;
+  border-radius: 8px;
+}
+
+.del:hover {
+  background: var(--dt-danger);
+  color: var(--dt-danger-contrast);
+}
+
+/* 空状态 */
+.empty {
+  padding: 40px 16px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--dt-text-muted);
+  border: 1px dashed var(--dt-border-strong);
+  border-radius: 14px;
+  line-height: 1.7;
+}
+
+/* 底部固定新增区（B 版：浅绿灰托盘）；默认隐藏，由右下角悬浮加号展开 */
+.addForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--dt-panel-2);
+  border: 1px solid var(--dt-border);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+/* 抽屉头部：标题 + 收起按钮，避免和右下角悬浮加号抢占位置 */
+.formHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.formTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+.close {
+  border: 0;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.close:hover {
+  background: var(--dt-danger);
+  color: var(--dt-danger-contrast);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dt-text);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.label .req {
+  color: var(--dt-accent);
+  font-weight: 600;
+  font-size: 11px;
+  background: var(--dt-accent-soft);
+  padding: 1px 8px;
+  border-radius: 8px;
+}
+
+.label .opt {
+  color: var(--dt-text-muted);
+  font-weight: 400;
+  font-size: 11.5px;
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid var(--dt-border-strong);
+  border-radius: 12px;
+  font-size: 14px;
+  background: var(--dt-panel);
+  color: var(--dt-text);
+  outline: none;
+  min-height: 58px;
+  resize: none;
+  font-family: inherit;
+  line-height: 1.55;
+}
+
+.input::placeholder {
+  color: #8b958a;
+}
+
+.input:focus {
+  border-color: var(--dt-accent);
+  box-shadow: 0 0 0 3px var(--dt-accent-soft);
+}
+
+.submit {
+  width: 100%;
+  border: 0;
+  background: var(--dt-accent);
+  color: var(--dt-accent-contrast);
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.1s;
+}
+
+.submit:hover {
+  filter: brightness(1.05);
+}
+
+.submit:active {
+  transform: translateY(1px);
+}

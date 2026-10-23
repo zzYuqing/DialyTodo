@@ -1,12 +1,13 @@
 // 职责：回收站条目的领域模型。
-// 四类被「删除」的数据（任务 / 经验 / 附件 / 子任务）在用户点击删除时并不立即销毁，
+// 五类被「删除」的数据（任务 / 经验 / 附件 / 子任务 / 糊弄法）在用户点击删除时并不立即销毁，
 // 而是整份快照移入回收站，保留 trashRetentionDays 天后由启动扫描彻底清除。
 // 磁盘文件在回收站内始终保留，只有彻底删除（手动或过期）时才真正删盘。
 
 import type { Experience, ExperienceAttachment, Task } from "@/types";
+import type { HunongItem } from "@/services/hunongService";
 
 /** 回收站条目种类 */
-export type TrashKind = "task" | "experience" | "attachment" | "subtask";
+export type TrashKind = "task" | "experience" | "attachment" | "subtask" | "hunong";
 
 /** 附件类条目的还原 payload：还原时需要原经验仍存在 */
 export interface TrashAttachmentPayload {
@@ -48,4 +49,6 @@ export interface TrashEntry {
   attachment?: TrashAttachmentPayload;
   /** 子任务类：从任务集里删掉的单条子任务（含父任务集引用与原始位置） */
   subtask?: TrashSubtaskPayload;
+  /** 糊弄法类：被删的整组糊弄法条目（无磁盘文件，还原时写回 hunong.json） */
+  hunong?: HunongItem[];
 }

@@ -9,12 +9,15 @@ import { generateTaskId, isComposite } from "@/lib";
 import { SCHEDULE_TYPE_LABELS } from "@/constants";
 import {
   addTrashEntries,
+  loadHunong,
   purgeEntriesDisk,
   removeTrashEntries,
+  saveHunong,
   saveTrash,
   sweepTrash,
 } from "@/services";
 import type { CompositeEdit, ExperienceAttachment, Task, TrashEntry } from "@/types";
+import type { HunongItem } from "@/services/hunongService";
 import { useTaskStore } from "./useTaskStore";
 import { useExperienceStore } from "./useExperienceStore";
 import { useSettingsStore } from "./useSettingsStore";
@@ -34,6 +37,8 @@ interface TrashState {
   moveAttachmentToTrash: (expId: string, attachment: ExperienceAttachment) => Promise<void>;
   /** 单个子任务移入回收站：先快照（含父任务集引用与原始位置），再摘关系 + 移出主数组 */
   moveSubtaskToTrash: (parentId: string, childId: string) => Promise<void>;
+  /** 糊弄法条目移入回收站：先软删 hunong.json，再写快照（无独立磁盘文件） */
+  moveHunongToTrash: (items: HunongItem[]) => Promise<void>;
   /** 编辑任务集后，草稿里消失而被连带删除的子任务同样进回收站 */
   updateCompositeWithTrash: (id: string, edit: CompositeEdit) => Promise<void>;
   /** 还原一条目回原 store */
@@ -141,6 +146,25 @@ export const useTrashStore = create<TrashState>()(
       set({ entries: merged });
     },
 
+    async moveHunongToTrash(items) {
+      if (items.length === 0) return;
+      // 软删：按 method 从 hunong.json 移除（method 为去重键，唯一可标识一条糊弄法）
+      const cur = await loadHunong();
+      const dropMethods = new Set(items.map((it) => it.method));
+      const kept = cur.items.filter((it) => !dropMethods.has(it.method));
+      await saveHunong({ items: kept });
+      const entry: TrashEntry = {
+        id: generateTaskId(),
+        kind: "hunong",
+        deletedAt: Date.now(),
+        name: items.length === 1 ? items[0].method : `糊弄法 ${items.length} 条`,
+        source: "糊弄学",
+        hunong: items,
+      };
+      const merged = await addTrashEntries([entry]);
+      set({ entries: merged });
+    },
+
     async updateCompositeWithTrash(id, edit) {
       const removed = await useTaskStore.getState().updateComposite(id, edit);
       if (removed.length === 0) return;
@@ -183,6 +207,10 @@ export const useTrashStore = create<TrashState>()(
           entry.subtask.task,
           entry.subtask.index,
         );
+      } else if (entry.kind === "hunong" && entry.hunong !== undefined) {
+        // 糊弄法无独立磁盘文件，直接把快照写回 hunong.json（追加还原）
+        const cur = await loadHunong();
+        await saveHunong({ items: [...cur.items, ...entry.hunong] });
       } else {
         return;
       }

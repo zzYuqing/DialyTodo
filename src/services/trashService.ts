@@ -20,6 +20,7 @@ const TRASH_KINDS: ReadonlySet<string> = new Set<TrashKind>([
   "experience",
   "attachment",
   "subtask",
+  "hunong",
 ]);
 
 async function trashFilePath(): Promise<string> {
@@ -43,6 +44,8 @@ function isTrashEntry(value: unknown): value is TrashEntry {
       return typeof e.attachment === "object" && e.attachment !== null;
     case "subtask":
       return typeof e.subtask === "object" && e.subtask !== null;
+    case "hunong":
+      return Array.isArray(e.hunong);
     default:
       return false;
   }

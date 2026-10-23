@@ -1,6 +1,6 @@
 [package]
 name = "daily-todo"
-version = "0.2.5"
+version = "0.2.6"
 description = "DailyTodo —— Windows 本地轻量待办工具"
 authors = ["YoYo"]
 edition = "2021"

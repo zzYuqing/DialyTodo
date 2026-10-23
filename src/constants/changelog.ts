@@ -19,6 +19,16 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "0.2.6",
+    date: "2026-10-23",
+    tag: "",
+    highlights: [
+      "新增「糊弄学」工具（工具页 · 效率分类）：社交糊弄小技巧收藏，本地 JSON 持久化",
+      "锦囊卡片墙改为单栏一行一条，每条均带删除按钮，初始为空状态引导",
+      "底部新增区改为浅绿灰托盘样式：糊弄法（必填）+ 举例（可选）两行多行输入 + 通栏提交按钮",
+    ],
+  },
+  {
     version: "0.2.5",
     date: "2026-10-23",
     tag: "",

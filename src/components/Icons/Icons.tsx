@@ -327,3 +327,13 @@ export function HistoryIcon({ size }: IconProps) {
     </svg>
   );
 }
+
+/** 对话气泡：糊弄学工具语义（社交话术 / 锦囊） */
+export function ChatIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M3 3.5h10a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5H7l-2.5 2v-2H3A1.5 1.5 0 0 1 1.5 9V5A1.5 1.5 0 0 1 3 3.5z" />
+      <path d="M5 7h.01M8 7h.01M11 7h.01" />
+    </svg>
+  );
+}

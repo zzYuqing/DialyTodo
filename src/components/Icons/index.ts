@@ -2,6 +2,7 @@ export {
   AlertIcon,
   BellIcon,
   BoltIcon,
+  ChatIcon,
   CheckCircleIcon,
   CheckIcon,
   ChevronRightIcon,

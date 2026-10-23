@@ -5,17 +5,19 @@
 //   点左栏分类，右边出该分类下的工具宫格（主从导航）。
 // - 工具仅由开发在下方 TOOLS 登记，界面不暴露任何添加入口（用户无法手动添加工具）。
 // - 宫格列数随右栏宽度自适应：auto-fill + minmax，窗口/容器变窄时自动减少列数。
-// - 卡片点击暂留空（具体工具页面尚未设计），仅保留 TODO 接入点。
+// - 卡片点击：已设计的工具（防困小妙招 / 糊弄学）进入其独立页面；其余暂留空。
 
 import { useMemo, useState, type ComponentType } from "react";
 import {
   BoltIcon,
+  ChatIcon,
   CoffeeIcon,
   HealthIcon,
   LeafIcon,
   SparkIcon,
 } from "@/components/Icons";
 import { AntiDrowsyView } from "./AntiDrowsy/AntiDrowsyView";
+import { HunongView } from "./HunongView/HunongView";
 import styles from "./ToolsView.module.css";
 
 interface CategoryDef {
@@ -37,7 +39,7 @@ interface ToolDef {
 const CATEGORIES: CategoryDef[] = [
   { key: "health", label: "健康", desc: "缓解疲劳、保持状态的小工具。", Icon: HealthIcon },
   { key: "tech", label: "科技", desc: "借助 AI 与工具帮你理清思路、做判断。", Icon: SparkIcon },
-  { key: "eff", label: "效率", desc: "提升日常执行效率的工具（敬请期待）。", Icon: BoltIcon },
+  { key: "eff", label: "效率", desc: "提升日常执行效率的工具。", Icon: BoltIcon },
 ];
 
 // 工具：仅开发侧维护。新增工具在此追加一项并指定所属 category 即可。
@@ -63,6 +65,13 @@ const TOOLS: ToolDef[] = [
     category: "tech",
     Icon: SparkIcon,
   },
+  {
+    key: "hunong",
+    label: "糊弄学",
+    desc: "社交糊弄 · 话术锦囊",
+    category: "eff",
+    Icon: ChatIcon,
+  },
 ];
 
 export function ToolsView() {
@@ -78,9 +87,9 @@ export function ToolsView() {
     [activeCat],
   );
 
-  // 卡片点击：已设计的工具（防困小妙招）进入其独立页面；其余暂留空。
+  // 卡片点击：已设计的工具进入其独立页面；其余暂留空。
   const handleToolClick = (key: string) => {
-    if (key === "anti-drowsy") {
+    if (key === "anti-drowsy" || key === "hunong") {
       setActiveTool(key);
       return;
     }
@@ -89,6 +98,9 @@ export function ToolsView() {
 
   if (activeTool === "anti-drowsy") {
     return <AntiDrowsyView onBack={() => setActiveTool(null)} />;
+  }
+  if (activeTool === "hunong") {
+    return <HunongView onBack={() => setActiveTool(null)} />;
   }
 
   return (
