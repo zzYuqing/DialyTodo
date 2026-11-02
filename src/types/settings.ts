@@ -1,5 +1,7 @@
 // 职责：软件配置的类型定义，对应 %APPDATA%/DailyTodo/settings.json。
 
+import type { AiModelCacheEntry, AiProviderConfig } from "./insight";
+
 /** 主题模式（提示词 5.8） */
 export type ThemeMode = "light" | "dark";
 
@@ -47,4 +49,16 @@ export interface AppSettings {
   holidayUrlTemplate: string;
   /** 最后一次生成备份的日期，YYYY-MM-DD；每天只备份一次 */
   lastBackupDate: string | null;
+  /**
+   * 洞察AI的大模型服务商配置（阶段 7：API 地址 + Key + 模型名，OpenAI 兼容协议）。
+   * 该字段为洞察AI功能新增，存量设置文件没有它，由 loadSettings 的 merge + normalizeSettings 补齐为出厂值。
+   * 本地自用路线明文存储；key 仅本机直连服务商，绝不上传第三方。
+   */
+  aiProvider: AiProviderConfig;
+  /**
+   * 洞察AI的模型列表缓存：baseUrl → 该服务商经 GET /models 拉到的模型清单。
+   * 该字段为洞察AI「模型跟随服务地址 + 刷新拉取」新增，存量设置文件没有它，
+   * 由 loadSettings 的 merge + normalizeSettings 补齐为空对象。纯缓存，可随时丢弃重拉。
+   */
+  aiModelCache: Record<string, AiModelCacheEntry>;
 }

@@ -18,6 +18,7 @@ import {
 } from "@/components/Icons";
 import { AntiDrowsyView } from "./AntiDrowsy/AntiDrowsyView";
 import { HunongView } from "./HunongView/HunongView";
+import { InsightView } from "./InsightView/InsightView";
 import styles from "./ToolsView.module.css";
 
 interface CategoryDef {
@@ -89,11 +90,11 @@ export function ToolsView() {
 
   // 卡片点击：已设计的工具进入其独立页面；其余暂留空。
   const handleToolClick = (key: string) => {
-    if (key === "anti-drowsy" || key === "hunong") {
+    if (key === "anti-drowsy" || key === "hunong" || key === "insight-ai") {
       setActiveTool(key);
       return;
     }
-    /* TODO: 接入具体工具页面（洞察AI / 养身小技巧 等尚未设计） */
+    /* TODO: 接入具体工具页面（养身小技巧 等尚未设计） */
   };
 
   if (activeTool === "anti-drowsy") {
@@ -101,6 +102,9 @@ export function ToolsView() {
   }
   if (activeTool === "hunong") {
     return <HunongView onBack={() => setActiveTool(null)} />;
+  }
+  if (activeTool === "insight-ai") {
+    return <InsightView onBack={() => setActiveTool(null)} />;
   }
 
   return (

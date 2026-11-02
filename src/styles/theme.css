@@ -38,6 +38,10 @@
   --dt-contrib-3: #4fa372;
   --dt-contrib-4: #2c7a53;
 
+  /* 贡献墙格内文字色：浅档（1-2）底上用深墨，深档（3-4）底上用白 */
+  --dt-contrib-ink: #2b3d31;
+  --dt-contrib-ink-strong: #ffffff;
+
   /* 未来日期格：空心描边（透明填充 + 虚线边），与「过去空日(level-0，近透明)」及绿色数据档区分；
      本变量存的是虚线边的颜色，浅色下用微绿灰半透明，保证可见但不抢眼；随主题切换。 */
   --dt-contrib-future: rgba(45, 60, 50, 0.25);
@@ -93,6 +97,10 @@ html[data-theme="dark"] {
   --dt-contrib-2: #2f603f;
   --dt-contrib-3: #3d7b5e;
   --dt-contrib-4: #3ba574;
+
+  /* 深色格内文字色：整体底色偏暗，数字统一用亮墨即可 */
+  --dt-contrib-ink: #dcefe2;
+  --dt-contrib-ink-strong: #ffffff;
 
   /* 深色未来格：空心描边的虚线边色，明显区别于近透明的 level-0 与绿色数据档，
      用偏亮的白半透明，确保在深底上可见。 */

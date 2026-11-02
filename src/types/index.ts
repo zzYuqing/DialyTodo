@@ -6,3 +6,4 @@ export * from "./holiday";
 export * from "./storage";
 export * from "./experience";
 export * from "./trash";
+export * from "./insight";

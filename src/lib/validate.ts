@@ -16,6 +16,8 @@ import {
   TRASH_RETENTION_MIN,
 } from "@/constants";
 import type {
+  AiModelCacheEntry,
+  AiProviderConfig,
   AppSettings,
   DayRecord,
   Reminder,
@@ -312,6 +314,15 @@ export function isAppSettings(value: unknown): value is AppSettings {
   if (candidate.noteCollapseLines != null && typeof candidate.noteCollapseLines !== "number") {
     return false;
   }
+  // aiProvider 是洞察AI功能新增字段：缺失 / null 一律放行（由 normalizeSettings 补出厂值），
+  // 只有「类型不对」（非对象）才判废；对象内部的脏字段由 normalizeAiProvider 逐字段收敛。
+  if (candidate.aiProvider != null && typeof candidate.aiProvider !== "object") {
+    return false;
+  }
+  // aiModelCache 同理：模型列表缓存，缺失 / null 放行，非对象判废，内容脏由 normalize 收敛。
+  if (candidate.aiModelCache != null && typeof candidate.aiModelCache !== "object") {
+    return false;
+  }
   if (typeof candidate.holidayUrlTemplate !== "string") return false;
   if (candidate.lastBackupDate !== null && !isDateKey(candidate.lastBackupDate)) return false;
 
@@ -361,7 +372,54 @@ export function normalizeSettings(settings: AppSettings): AppSettings {
     subtaskDoneKeep: clampSubtaskDoneKeep(settings.subtaskDoneKeep),
     trashRetentionDays: clampTrashRetentionDays(settings.trashRetentionDays),
     noteCollapseLines: clampNoteCollapseLines(settings.noteCollapseLines),
+    aiProvider: normalizeAiProvider(settings.aiProvider),
+    aiModelCache: normalizeAiModelCache(settings.aiModelCache),
   };
+}
+
+/**
+ * 补齐 / 收敛洞察AI的服务商配置：存量设置文件没有 aiProvider 字段，
+ * 经 loadSettings 的 merge 后是部分缺失的对象，逐字段收敛为字符串（非字符串回空串）。
+ * 空串即「未配置」，由视图层引导用户填写。
+ */
+export function normalizeAiProvider(value: unknown): AiProviderConfig {
+  const record = (typeof value === "object" && value !== null ? value : {}) as Record<
+    string,
+    unknown
+  >;
+  const asString = (v: unknown): string => (typeof v === "string" ? v : "");
+  return {
+    baseUrl: asString(record.baseUrl),
+    apiKey: asString(record.apiKey),
+    model: asString(record.model),
+  };
+}
+
+/** 出厂的大模型配置：全部为空串，未配置态 */
+export function defaultAiProvider(): AiProviderConfig {
+  return { baseUrl: "", apiKey: "", model: "" };
+}
+
+/**
+ * 收敛模型列表缓存：逐条校验「models 为字符串数组、fetchedAt 为字符串」，
+ * 脏条目整条丢弃（缓存可随时重新拉取，不必宽容修复）。键非字符串一并丢弃。
+ */
+export function normalizeAiModelCache(
+  value: unknown,
+): Record<string, AiModelCacheEntry> {
+  if (typeof value !== "object" || value === null) return {};
+  const result: Record<string, AiModelCacheEntry> = {};
+  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const record = entry as Record<string, unknown>;
+    if (!Array.isArray(record.models)) continue;
+    const models = record.models.filter(
+      (m): m is string => typeof m === "string" && m.trim() !== "",
+    );
+    if (typeof record.fetchedAt !== "string") continue;
+    result[key] = { models, fetchedAt: record.fetchedAt };
+  }
+  return result;
 }
 
 /** 出厂设置。autoStart 默认 false，符合提示词第八节「不开机自启除非用户手动开启」。 */
@@ -382,6 +440,8 @@ export function defaultSettings(): AppSettings {
     noteCollapseLines: DEFAULT_NOTE_COLLAPSE_LINES,
     holidayUrlTemplate: HOLIDAY_URL_TEMPLATE,
     lastBackupDate: null,
+    aiProvider: defaultAiProvider(),
+    aiModelCache: {},
   };
 }
 

@@ -9,3 +9,4 @@ export * from "./subtask";
 export * from "./trash";
 export * from "./note";
 export * from "./changelog";
+export * from "./insight";

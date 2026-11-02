@@ -1,0 +1,670 @@
+/* 洞察AI工具页。全部引用 theme.css 的 --dt-* 变量，不硬编码颜色/尺寸；
+   深色主题由变量覆盖自动切换。 */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 24px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* 主体分栏：左月历 + 右详情 */
+.frame {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 16px;
+}
+
+/* 左栏年历（仿主页贡献栏：年份切换 + 全年竖排滚动） */
+.rail {
+  width: 232px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  padding-right: 16px;
+  border-right: 1px solid var(--dt-border);
+}
+
+.railHint {
+  flex-shrink: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--dt-text-muted);
+}
+
+/* 年份切换器：与主页粒度切换同一视觉语言（描边圆角组 + 透明小按钮） */
+.yearNav {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  background: var(--dt-bg);
+}
+
+.yearNavBtn {
+  width: 24px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.yearNavBtn:hover:not(:disabled) {
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+}
+
+.yearNavBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.yearLabel {
+  flex: 1;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dt-text);
+}
+
+/* 全年 12 个月竖排滚动容器 */
+.calScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  position: relative;
+  padding: 2px 2px 4px;
+}
+
+.monthBlock {
+  margin-bottom: 14px;
+}
+
+.monthBlock:last-child {
+  margin-bottom: 0;
+}
+
+.monthLabel {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dt-text);
+}
+
+.calWeek,
+.calGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.calWeekDay {
+  text-align: center;
+  font-size: 11px;
+  color: var(--dt-text-muted);
+  padding: 2px 0;
+}
+
+.calGrid > * {
+  aspect-ratio: 1;
+  box-sizing: border-box;
+}
+
+/* 格子：与主页贡献墙同风格 —— 圆角色块按当日累计加载条数上 5 档绿色，
+   格内显示条数；选中 = 实线描边；未来 = 空心虚线格（禁用） */
+.calCell {
+  position: relative;
+  padding: 0;
+  border: 1.5px solid transparent;
+  border-radius: 4px;
+  background: var(--dt-contrib-0);
+  color: var(--dt-contrib-ink);
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: filter 120ms ease;
+}
+
+.calCell:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.calCell:disabled {
+  cursor: not-allowed;
+}
+
+.calCellSelected {
+  border-color: var(--dt-accent);
+}
+
+.calCellFuture {
+  border: 1.5px dashed var(--dt-contrib-future);
+  background: transparent;
+}
+
+.calCellFuture.calCellSelected {
+  border-color: var(--dt-accent);
+}
+
+/* 深档底色上的数字改用亮墨 */
+.calCellInkStrong {
+  color: var(--dt-contrib-ink-strong);
+}
+
+.calCellEmpty {
+  border-radius: 4px;
+  background: transparent;
+}
+
+/* 右栏详情：可滚动内容区 + 底部固定操作区 */
+.detail {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding-bottom: 4px;
+}
+
+.detailTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+/* 页头：返回 + 标题 + 设置齿轮 */
+.head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back {
+  border: 1px solid var(--dt-border);
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.back:hover {
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+  border-color: var(--dt-accent-soft);
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+.gear,
+.gearActive {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--dt-border);
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.gear:hover,
+.gearActive {
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+  border-color: var(--dt-accent-soft);
+}
+
+/* 齿轮悬浮配置窗：定位在按钮正下方，点外部关闭 */
+.gearWrap {
+  position: relative;
+  margin-left: auto;
+}
+
+.gearWrap .gear,
+.gearWrap .gearActive {
+  margin-left: 0;
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  width: 340px;
+  box-sizing: border-box;
+  border: 1px solid var(--dt-border);
+  border-radius: 12px;
+  background: var(--dt-panel);
+  box-shadow: var(--dt-shadow-lg);
+  padding: 14px 16px;
+}
+
+.popover .config {
+  border: none;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* 渠道页签 */
+.tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tab,
+.tabActive {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid var(--dt-border);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.tab {
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+}
+
+.tab:hover {
+  border-color: var(--dt-border-strong);
+  color: var(--dt-text);
+}
+
+.tabActive {
+  background: var(--dt-accent);
+  border-color: var(--dt-accent);
+  color: var(--dt-accent-contrast);
+}
+
+/* API 设置面板 */
+.config {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--dt-border);
+  border-radius: 12px;
+  background: var(--dt-panel-2);
+}
+
+.configTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  color: var(--dt-text-muted);
+}
+
+.input,
+.select {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 13px;
+  color: var(--dt-text);
+  background: var(--dt-panel);
+  border: 1px solid var(--dt-border-strong);
+  border-radius: 8px;
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.input:focus,
+.select:focus {
+  border-color: var(--dt-accent);
+}
+
+/* 模型行：下拉 + 刷新按钮并排 */
+.modelRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.modelRow .select {
+  flex: 1;
+  min-width: 0;
+}
+
+.refreshModelsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--dt-border-strong);
+  background: var(--dt-panel);
+  color: var(--dt-text);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.refreshModelsBtn:hover:not(:disabled) {
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+  border-color: var(--dt-accent-soft);
+}
+
+.refreshModelsBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modelHint {
+  font-size: 12px;
+  color: var(--dt-text-muted);
+}
+
+.configActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.saveBtn {
+  font-size: 13px;
+  padding: 6px 18px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--dt-accent);
+  color: var(--dt-accent-contrast);
+  cursor: pointer;
+}
+
+.saveBtn:hover {
+  filter: brightness(1.05);
+}
+
+/* 报告主体：右栏滚动区内嵌卡片 */
+.reportCard {
+  border: 1px solid var(--dt-border);
+  border-radius: 12px;
+  background: var(--dt-panel);
+  padding: 16px 20px;
+}
+
+/* 模型推理过程面板：思考型模型的内部草稿，纯文本、小号灰字、限高滚动 */
+.reasoningBox {
+  border: 1px dashed var(--dt-border);
+  border-radius: 12px;
+  background: var(--dt-panel-2);
+  padding: 12px 16px;
+}
+
+.reasoningTitle {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dt-text-muted);
+}
+
+.reasoningBody {
+  max-height: 180px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--dt-text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.reportMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 12px;
+  color: var(--dt-text-muted);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px dashed var(--dt-border);
+}
+
+/* 报告正文内的 Markdown 渲染排版（react-markdown 输出标准标签，用 :global 约束） */
+.markdown {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--dt-text);
+  word-break: break-word;
+}
+
+.markdown :global(h1) {
+  margin: 0 0 12px;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.markdown :global(h2) {
+  margin: 20px 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  padding-left: 10px;
+  border-left: 3px solid var(--dt-accent);
+}
+
+.markdown :global(p) {
+  margin: 8px 0;
+}
+
+.markdown :global(ul),
+.markdown :global(ol) {
+  margin: 8px 0;
+  padding-left: 22px;
+}
+
+.markdown :global(li) {
+  margin: 6px 0;
+}
+
+.markdown :global(a) {
+  color: var(--dt-accent);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--dt-accent);
+}
+
+.markdown :global(a:hover) {
+  border-bottom-style: solid;
+}
+
+.markdown :global(strong) {
+  font-weight: 600;
+}
+
+.markdown :global(hr) {
+  border: 0;
+  border-top: 1px solid var(--dt-border);
+  margin: 16px 0;
+}
+
+.markdown :global(blockquote) {
+  margin: 10px 0;
+  padding: 6px 12px;
+  border-left: 3px solid var(--dt-border-strong);
+  color: var(--dt-text-muted);
+  background: var(--dt-panel-2);
+  border-radius: 0 8px 8px 0;
+}
+
+/* 空状态 / 进度 / 报错 */
+.empty,
+.errorBox {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--dt-text-muted);
+  text-align: center;
+  padding: 24px;
+}
+
+/* 生成进度日志：像对话一样逐行汇报「检索了哪些资料」 */
+.progList {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  list-style: none;
+  border: 1px dashed var(--dt-border-strong);
+  border-radius: 10px;
+  background: var(--dt-panel-2);
+  font-size: 12px;
+  color: var(--dt-text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.progList li::before {
+  content: "✓ ";
+  color: var(--dt-accent);
+}
+
+.progList li.progActive::before {
+  content: "… ";
+  color: var(--dt-text-muted);
+}
+
+.progList li.progActive {
+  color: var(--dt-text);
+}
+
+/* 生成中的实时预览：与正式报告同版式，轻微淡化表示还在写 */
+.reportLive {
+  opacity: 0.85;
+  border-style: dashed;
+}
+
+.empty p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--dt-text);
+}
+
+.emptyHint {
+  font-size: 12px !important;
+  color: var(--dt-text-muted) !important;
+}
+
+.errorBox {
+  justify-content: center;
+}
+
+.errorTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dt-danger);
+}
+
+.errorMsg {
+  margin: 0;
+  font-size: 13px;
+  color: var(--dt-text-muted);
+  max-width: 480px;
+  word-break: break-all;
+}
+
+/* 底部操作区：提示 + 生成/补充按钮。吸在右栏底部 */
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  padding-top: 10px;
+  margin-top: auto;
+  border-top: 1px solid var(--dt-border);
+}
+
+/* 中性信息条（如「该时段没有新资讯，无需补充」） */
+.infoBox {
+  padding: 10px 14px;
+  border: 1px dashed var(--dt-border-strong);
+  border-radius: 10px;
+  background: var(--dt-panel-2);
+  font-size: 13px;
+  color: var(--dt-text-muted);
+  text-align: center;
+}
+
+.staleHint {
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--dt-text-muted);
+}
+
+.refreshBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 9px 22px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--dt-accent);
+  color: var(--dt-accent-contrast);
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.refreshBtn:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.refreshBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

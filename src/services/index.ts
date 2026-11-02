@@ -10,3 +10,5 @@ export * from "./holidayService";
 export * from "./reminderService";
 export * from "./migration";
 export * from "./windowService";
+export * from "./aiService";
+export * from "./insightService";
