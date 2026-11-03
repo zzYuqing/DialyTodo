@@ -13,11 +13,13 @@ import {
   ChatIcon,
   CoffeeIcon,
   HealthIcon,
+  HistoryIcon,
   LeafIcon,
   SparkIcon,
 } from "@/components/Icons";
 import { AntiDrowsyView } from "./AntiDrowsy/AntiDrowsyView";
 import { HunongView } from "./HunongView/HunongView";
+import { IndustryNewsView } from "./IndustryNewsView/IndustryNewsView";
 import { InsightView } from "./InsightView/InsightView";
 import styles from "./ToolsView.module.css";
 
@@ -62,9 +64,16 @@ const TOOLS: ToolDef[] = [
   {
     key: "insight-ai",
     label: "洞察AI",
-    desc: "分析 · 追问 · 给建议",
+    desc: "AI 资讯 · 每日日报",
     category: "tech",
     Icon: SparkIcon,
+  },
+  {
+    key: "industry-news",
+    label: "行业资讯",
+    desc: "行业动态 · 前沿资讯",
+    category: "tech",
+    Icon: HistoryIcon,
   },
   {
     key: "hunong",
@@ -90,7 +99,7 @@ export function ToolsView() {
 
   // 卡片点击：已设计的工具进入其独立页面；其余暂留空。
   const handleToolClick = (key: string) => {
-    if (key === "anti-drowsy" || key === "hunong" || key === "insight-ai") {
+    if (["anti-drowsy", "hunong", "insight-ai", "industry-news"].includes(key)) {
       setActiveTool(key);
       return;
     }
@@ -105,6 +114,9 @@ export function ToolsView() {
   }
   if (activeTool === "insight-ai") {
     return <InsightView onBack={() => setActiveTool(null)} />;
+  }
+  if (activeTool === "industry-news") {
+    return <IndustryNewsView onBack={() => setActiveTool(null)} />;
   }
 
   return (

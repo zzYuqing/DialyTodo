@@ -1,13 +1,27 @@
 // 职责：回收站条目的领域模型。
-// 五类被「删除」的数据（任务 / 经验 / 附件 / 子任务 / 糊弄法）在用户点击删除时并不立即销毁，
+// 六类被「删除」的数据（任务 / 经验 / 附件 / 子任务 / 糊弄法 / 行业）在用户点击删除时并不立即销毁，
 // 而是整份快照移入回收站，保留 trashRetentionDays 天后由启动扫描彻底清除。
 // 磁盘文件在回收站内始终保留，只有彻底删除（手动或过期）时才真正删盘。
 
-import type { Experience, ExperienceAttachment, Task } from "@/types";
+import type {
+  Experience,
+  ExperienceAttachment,
+  IndustryProfile,
+  InsightReport,
+  RawBatch,
+  Task,
+} from "@/types";
 import type { HunongItem } from "@/services/hunongService";
 
 /** 回收站条目种类 */
-export type TrashKind = "task" | "experience" | "attachment" | "subtask" | "hunong";
+export type TrashKind = "task" | "experience" | "attachment" | "subtask" | "hunong" | "industry";
+
+/** 行业类条目的还原 payload：行业档案 + 该渠道全部日报 + 已消费素材归档 */
+export interface TrashIndustryPayload {
+  industry: IndustryProfile;
+  reports: Record<string, InsightReport>;
+  rawArchive: RawBatch[];
+}
 
 /** 附件类条目的还原 payload：还原时需要原经验仍存在 */
 export interface TrashAttachmentPayload {
@@ -30,14 +44,14 @@ export interface TrashSubtaskPayload {
   task: Task;
 }
 
-/** 一条回收站条目。payload 按 kind 二选一非空 */
+/** 一条回收站条目。payload 按 kind 非空 */
 export interface TrashEntry {
   /** 回收站条目唯一 id（与业务 id 区分，避免还原后撞键） */
   id: string;
   kind: TrashKind;
   /** 移入回收站的时间戳（epoch ms），用于计算保留期限 */
   deletedAt: number;
-  /** 展示名：任务标题 / 经验标题 / 附件原始文件名 */
+  /** 展示名：任务标题 / 经验标题 / 附件原始文件名 / 行业名 */
   name: string;
   /** 来源说明（人话），如「经验 · 2026-10-08」「任务 · 一次性」 */
   source: string;
@@ -51,4 +65,6 @@ export interface TrashEntry {
   subtask?: TrashSubtaskPayload;
   /** 糊弄法类：被删的整组糊弄法条目（无磁盘文件，还原时写回 hunong.json） */
   hunong?: HunongItem[];
+  /** 行业类：行业及其全部日报、素材归档，还原时一并写回 */
+  industry?: TrashIndustryPayload;
 }

@@ -18,6 +18,7 @@ const KIND_LABEL: Record<TrashKind, string> = {
   attachment: "附件",
   subtask: "子任务",
   hunong: "糊弄法",
+  industry: "行业",
 };
 
 const KIND_COLOR: Record<TrashKind, string> = {
@@ -26,6 +27,7 @@ const KIND_COLOR: Record<TrashKind, string> = {
   attachment: "teal",
   subtask: "orange",
   hunong: "green",
+  industry: "cyan",
 };
 
 function formatDate(ms: number): string {
@@ -77,7 +79,7 @@ export function TrashView() {
         <div className={styles.titleBlock}>
           <Text fw={600} className={styles.title}>回收站</Text>
           <Text size="xs" className={styles.muted}>
-            删除的任务、经验、附件、糊弄法在此保留 {retention} 天，到期前可随时还原
+            删除的任务、经验、附件、糊弄法、行业及其日报在此保留 {retention} 天，到期前可随时还原
           </Text>
         </div>
         <Button

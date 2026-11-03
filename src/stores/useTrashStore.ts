@@ -10,13 +10,23 @@ import { SCHEDULE_TYPE_LABELS } from "@/constants";
 import {
   addTrashEntries,
   loadHunong,
+  mergeIndustriesWithReports,
   purgeEntriesDisk,
+  removeIndustryWithReports,
   removeTrashEntries,
+  restoreIndustryWithReports,
   saveHunong,
   saveTrash,
   sweepTrash,
 } from "@/services";
-import type { CompositeEdit, ExperienceAttachment, Task, TrashEntry } from "@/types";
+import type {
+  AiProviderConfig,
+  CompositeEdit,
+  ExperienceAttachment,
+  IndustryProfile,
+  Task,
+  TrashEntry,
+} from "@/types";
 import type { HunongItem } from "@/services/hunongService";
 import { useTaskStore } from "./useTaskStore";
 import { useExperienceStore } from "./useExperienceStore";
@@ -39,6 +49,15 @@ interface TrashState {
   moveSubtaskToTrash: (parentId: string, childId: string) => Promise<void>;
   /** 糊弄法条目移入回收站：先软删 hunong.json，再写快照（无独立磁盘文件） */
   moveHunongToTrash: (items: HunongItem[]) => Promise<void>;
+  /** 行业及全部日报移入回收站：快照含行业档案、报告与素材归档 */
+  moveIndustryToTrash: (industryId: string) => Promise<void>;
+  /** AI 合并为新行业；原行业及各自历史日报分别保留为回收站快照 */
+  mergeIndustries: (
+    industryIds: string[],
+    config: AiProviderConfig,
+    onProgress?: (line: string) => void,
+    onReasoning?: (accumulated: string) => void,
+  ) => Promise<IndustryProfile>;
   /** 编辑任务集后，草稿里消失而被连带删除的子任务同样进回收站 */
   updateCompositeWithTrash: (id: string, edit: CompositeEdit) => Promise<void>;
   /** 还原一条目回原 store */
@@ -165,6 +184,43 @@ export const useTrashStore = create<TrashState>()(
       set({ entries: merged });
     },
 
+    async moveIndustryToTrash(industryId) {
+      const snapshot = await removeIndustryWithReports(industryId);
+      if (snapshot === null) return;
+      const reportCount = Object.keys(snapshot.reports).length;
+      const entry: TrashEntry = {
+        id: generateTaskId(),
+        kind: "industry",
+        deletedAt: Date.now(),
+        name: snapshot.industry.name,
+        source: `行业资讯 · ${reportCount} 份日报`,
+        industry: snapshot,
+      };
+      const merged = await addTrashEntries([entry]);
+      set({ entries: merged });
+    },
+
+    async mergeIndustries(industryIds, config, onProgress, onReasoning) {
+      const result = await mergeIndustriesWithReports(
+        industryIds,
+        config,
+        onProgress,
+        onReasoning,
+      );
+      const deletedAt = Date.now();
+      const entries: TrashEntry[] = result.removed.map((snapshot) => ({
+        id: generateTaskId(),
+        kind: "industry",
+        deletedAt,
+        name: snapshot.industry.name,
+        source: `行业资讯 · 合并前存档 · ${Object.keys(snapshot.reports).length} 份日报`,
+        industry: snapshot,
+      }));
+      const merged = await addTrashEntries(entries);
+      set({ entries: merged });
+      return result.industry;
+    },
+
     async updateCompositeWithTrash(id, edit) {
       const removed = await useTaskStore.getState().updateComposite(id, edit);
       if (removed.length === 0) return;
@@ -211,6 +267,10 @@ export const useTrashStore = create<TrashState>()(
         // 糊弄法无独立磁盘文件，直接把快照写回 hunong.json（追加还原）
         const cur = await loadHunong();
         await saveHunong({ items: [...cur.items, ...entry.hunong] });
+      } else if (entry.kind === "industry" && entry.industry !== undefined) {
+        // 同名行业已存在时不覆盖，回收站条目保留，稍后仍可处理
+        const restored = await restoreIndustryWithReports(entry.industry);
+        if (!restored) return;
       } else {
         return;
       }

@@ -1,0 +1,479 @@
+/* 行业资讯专属的行业管理与初审样式；日报主体完整复用 InsightView 样式。 */
+
+.industryTabs {
+  flex-wrap: wrap;
+}
+
+.addIndustryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px dashed var(--dt-border-strong);
+  background: transparent;
+  color: var(--dt-text-muted);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.addIndustryBtn:hover {
+  border-color: var(--dt-accent);
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+}
+
+.reviewPanel {
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.reviewHint {
+  margin: 5px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--dt-text-muted);
+}
+
+.reviewRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reviewInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.reviewRow button {
+  flex-shrink: 0;
+}
+
+.reviewRow button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reviewError {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--dt-panel);
+  color: var(--dt-danger);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.emptyIndustry {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  border: 1px dashed var(--dt-border-strong);
+  border-radius: 12px;
+  color: var(--dt-text-muted);
+  background: var(--dt-panel-2);
+}
+
+.emptyIndustry p {
+  margin: 0;
+  color: var(--dt-text);
+  font-size: 14px;
+}
+
+.emptyIndustry button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reviewPanel {
+  max-height: min(72vh, 760px);
+  overflow-y: auto;
+}
+
+.reviewForm,
+.relationChoice,
+.relationPicker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reviewSuccess h2 {
+  margin-top: 6px;
+}
+
+.stepBadge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.relationTitle {
+  margin: 0;
+  color: var(--dt-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.choiceActions,
+.pickerActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reviewPanel button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modeGuide {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.modeGuide > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--dt-border);
+  border-radius: 10px;
+  background: var(--dt-panel-2);
+}
+
+.modeGuide strong {
+  color: var(--dt-text);
+  font-size: 13px;
+}
+
+.modeGuide span {
+  color: var(--dt-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.relationGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.relationGroupHead {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.relationGroupHead h4 {
+  margin: 0;
+  color: var(--dt-text);
+  font-size: 13px;
+}
+
+.relationGroupHead span {
+  color: var(--dt-text-muted);
+  font-size: 11px;
+}
+
+.relationList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.relationCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--dt-border);
+  border-radius: 10px;
+  background: var(--dt-panel);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.relationCardChecked {
+  border-color: var(--dt-accent);
+  background: var(--dt-accent-soft);
+}
+
+.relationCheck {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  cursor: pointer;
+}
+
+.relationCheck input,
+.modeOption input {
+  flex-shrink: 0;
+  margin: 2px 0 0;
+  accent-color: var(--dt-accent);
+}
+
+.relationCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  color: var(--dt-text);
+  line-height: 1.5;
+}
+
+.relationCopy strong {
+  font-size: 13px;
+}
+
+.relationCopy > span {
+  font-size: 12px;
+}
+
+.relationCopy small {
+  color: var(--dt-text-muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.modeOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 23px;
+}
+
+.modeOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  color: var(--dt-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.modeOption:has(input:checked) {
+  color: var(--dt-accent);
+}
+
+.modeOption:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.noRelations {
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed var(--dt-border-strong);
+  border-radius: 10px;
+  color: var(--dt-text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.pickerActions {
+  justify-content: flex-end;
+}
+
+.managePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.manageList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(42vh, 360px);
+  overflow-y: auto;
+}
+
+.manageRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--dt-border);
+  border-radius: 10px;
+  background: var(--dt-panel-2);
+}
+
+.manageRowChecked {
+  border-color: var(--dt-accent);
+  background: var(--dt-accent-soft);
+}
+
+.manageCheck {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  cursor: pointer;
+}
+
+.manageCheck input {
+  flex-shrink: 0;
+  margin-top: 3px;
+  accent-color: var(--dt-accent);
+}
+
+/* Mantine 弹窗标题默认收缩宽度，占满后问号与关闭键才能贴到右上角 */
+.modalTitle {
+  flex: 1;
+}
+
+.manageTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-right: 4px;
+}
+
+.manageHeaderActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 与 Mantine 默认关闭按钮同风格：28px 方形、透明底、悬浮出底色 */
+.headerIconBtn {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.headerIconBtn:hover:not(:disabled) {
+  background: var(--dt-panel);
+  color: var(--dt-text);
+}
+
+.headerIconBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.headerIconBtn[aria-expanded="true"] {
+  background: var(--dt-panel);
+  color: var(--dt-accent);
+}
+
+.helpPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px dashed var(--dt-border-strong);
+  border-radius: 10px;
+  background: var(--dt-accent-soft);
+}
+
+.helpEntry {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--dt-text-muted);
+}
+
+.helpEntry strong {
+  color: var(--dt-accent);
+  font-size: 12.5px;
+}
+
+.manageRowActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.manageDeleteBtn {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  cursor: pointer;
+}
+
+.manageDeleteBtn:hover:not(:disabled) {
+  background: var(--dt-panel);
+  color: var(--dt-danger);
+}
+
+.manageDeleteBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.manageActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.manageStatus {
+  margin-right: auto;
+  color: var(--dt-text-muted);
+  font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  .modeGuide {
+    grid-template-columns: 1fr;
+  }
+
+  .relationList {
+    grid-template-columns: 1fr;
+  }
+
+  .reviewRow {
+    flex-wrap: wrap;
+  }
+
+  .reviewInput {
+    flex-basis: 100%;
+  }
+}

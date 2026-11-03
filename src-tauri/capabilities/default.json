@@ -103,6 +103,7 @@
     "dialog:allow-open",
     "dialog:allow-save",
     "notification:default",
+    "http:default",
     "autostart:allow-enable",
     "autostart:allow-disable",
     "autostart:allow-is-enabled",

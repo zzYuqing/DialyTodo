@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "industries": [
+    {
+      "id": "7b6bf50f-66d0-4802-a703-a0f68c07034b",
+      "name": "汽车照明",
+      "aliases": [
+        "车用照明",
+        "汽车车灯",
+        "汽车灯具",
+        "车灯",
+        "LED芯片与封装",
+        "车用LED器件",
+        "LED封装",
+        "发光二极管器件",
+        "车规级芯片",
+        "汽车半导体",
+        "车规MCU",
+        "车灯驱动芯片",
+        "汽车电子",
+        "车载电子",
+        "汽车控制器",
+        "电子电气架构",
+        "整车制造",
+        "乘用车OEM",
+        "主机厂",
+        "整车厂"
+      ],
+      "includedTopics": [
+        "LED芯片与封装",
+        "车规级芯片",
+        "汽车电子",
+        "整车制造"
+      ],
+      "sources": [
+        {
+          "name": "雷锋网",
+          "query": "https://www.leiphone.com/feed",
+          "take": 12
+        },
+        {
+          "name": "IT之家",
+          "query": "https://www.ithome.com/rss/",
+          "take": 12
+        },
+        {
+          "name": "爱范儿",
+          "query": "https://www.ifanr.com/feed",
+          "take": 12
+        }
+      ],
+      "reviewNote": "汽车照明是汽车零部件中边界清晰的细分领域，涵盖车灯总成、LED 光源与智能照明，动态持续可跟踪；细分垂直 RSS 稀缺，推荐覆盖汽车产业与科技的综合资讯源，交由系统抓取验证。",
+      "createdAt": "2026-11-03T03:18:11.480Z"
+    },
+    {
+      "id": "114acd4f-177d-4d33-bc4c-e19fd45e6bf9",
+      "name": "新能源汽车",
+      "aliases": [
+        "电动车",
+        "新能源车",
+        "智能电动车"
+      ],
+      "includedTopics": [],
+      "sources": [
+        {
+          "name": "爱范儿",
+          "query": "https://www.ifanr.com/feed",
+          "take": 12
+        }
+      ],
+      "reviewNote": "由「汽车照明」的上下游建议添加：新能源车型大量采用贯穿式灯带、智能大灯等新配置，是车灯单车价值量提升的主要增量需求来源。",
+      "createdAt": "2026-11-03T03:18:11.480Z"
+    },
+    {
+      "id": "fe52f9ec-fbfb-4e05-9cd6-379cb2dbd4bf",
+      "name": "智能驾驶",
+      "aliases": [
+        "智能网联汽车",
+        "自动驾驶",
+        "ADAS"
+      ],
+      "includedTopics": [],
+      "sources": [
+        {
+          "name": "雷锋网",
+          "query": "https://www.leiphone.com/feed",
+          "take": 12
+        }
+      ],
+      "reviewNote": "由「汽车照明」的上下游建议添加：智能驾驶推动ADB自适应大灯、投影交互灯等智能车灯功能落地，是车灯技术升级的需求牵引端。",
+      "createdAt": "2026-11-03T03:18:11.480Z"
+    }
+  ]
+}

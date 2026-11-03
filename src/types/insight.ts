@@ -2,7 +2,7 @@
 // 渠道模型：每个渠道 = 一组资讯信源 + 写死提示词 + 按天缓存的报告。
 // 新增渠道（如行业动态）只需在 constants/insight.ts 登记渠道定义，本文件类型无需改动。
 
-/** 大模型服务商配置（用户在洞察AI页填写，存 settings.json 的 aiProvider 字段） */
+/** 大模型服务商配置（设置页与 AI 工具内部共用，存 settings.json 的 aiProvider 字段） */
 export interface AiProviderConfig {
   /** OpenAI 兼容接口根地址，如 https://api.deepseek.com/v1 */
   baseUrl: string;

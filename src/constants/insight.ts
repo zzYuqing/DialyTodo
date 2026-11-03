@@ -14,8 +14,8 @@ export interface InsightSourceDef {
   /**
    * 抓取策略：
    * - rss  RSS / Atom 订阅源（XML，正文有摘要）
-   * 信源必须「国内可达 + 自带 CORS 放行」双达标，登记前实测验证；
-   * 前端直连被 CORS 拦截时会尝试境外公共转发兜底，但访问不了境外的网络下兜底同样失效。
+   * Tauri 内优先通过系统网络抓取，不受 WebView CORS 限制，登记前仍需实测验证；
+   * 非 Tauri 环境或系统通道失败时回退前端直连，最后才尝试公共转发。
    */
   kind: "rss";
   /** 订阅地址（RSS / Atom） */
@@ -69,11 +69,9 @@ export const INSIGHT_LLM_TIMEOUT_MS = 300000;
 export const INSIGHT_LLM_IDLE_TIMEOUT_MS = 60000;
 
 /**
- * 公共 CORS 转发兜底（allorigins）。前端直连被目标站 CORS 拦截时
- * （fetch 以 TypeError 失败，可捕获）改走转发再试一次。
- * 注意：allorigins 自身在境外，访问不了国外站点的网络环境下本兜底同样失效——
- * 因此渠道登记的信源必须「国内可达 + 自带 CORS 放行」双达标（均已实测验证），
- * 本兜底只作为个别网络环境下的补充，不能当主力通道。
+ * 公共 CORS 转发兜底（allorigins）。仅在系统网络与前端直连都失败后尝试。
+ * allorigins 自身在境外，部分网络环境或目标站点下不可用，不能作为主力通道；
+ * 该转发只接收无鉴权的公开资讯地址，模型 API 与对话内容绝不经过这里。
  */
 export const CORS_RELAY_RAW_URL = "https://api.allorigins.win/raw?url=";
 

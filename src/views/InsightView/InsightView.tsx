@@ -44,34 +44,47 @@ function loadLevel(count: number): ContributionLevel {
  * 剥掉 Markdown 链接：来源标注不再展示（点击在 webview 里没意义）。
  * 存量报告里模型生成的 [来源](url) 在渲染时移除（连同前导空白），新报告经提示词约束不再产生。
  */
-function stripMarkdownLinks(content: string): string {
+export function stripMarkdownLinks(content: string): string {
   return content.replace(/[ \t]*\[([^\]]*)\]\([^)]*\)/g, "");
 }
 
 /**
- * 渲染前给报告各模块内的条目段落加序号：每个 ## 小标题内的段落从 1 起编号。
- * 「今日观察」是归纳性文字不编号；已是列表项（- / * / 数字开头）的段落保持原样；
- * 流式预览同样经过本函数 —— 正在输入的未完成段落还没遇到空行，自然暂不被编号。
+ * 渲染前把各模块内条目统一重排为有序编号：每个 ## 小标题内的条目段落从 1 起。
+ * 先识别并移除段首原有的数字 / 符号列表标记（含 AI 偶发的重复编号），再生成一套连续序号；
+ * 「今日观察」是归纳性文字不编号；流式预览同样生效。
  */
-function numberSectionItems(content: string): string {
+export function numberSectionItems(content: string): string {
   const SKIP_SECTION = /今日观察/;
-  const LIST_LIKE = /^\s*([-*+]|\d{1,2}[.、)])\s/;
+  // 段首连续旧编号（支持全角数字、中文括号、点/顿号/冒号）；整体识别，避免漏掉第二组
+  const NUMBER_RUN =
+    /^\s*(?:(\*\*|\*)\s*)?(?:(?:[（\(][0-9０-９]{1,3}[）\)]\s*)|(?:[0-9０-９]{1,3}[.、．:：]\s*))+/u;
+  // 符号列表必须后面跟空白才是列表项；不能误吞「**加粗**」的第一个星号
+  const BULLET_MARKER = /^\s*[-*+](?=\s)/u;
   const lines = content.split("\n");
   const out: string[] = [];
   let section: string | null = null;
   let para: string[] = [];
   let seq = 0;
 
+  const stripLeadingItemMarker = (line: string): string => {
+    // 先把 - / * / + 符号列表转成有序编号，再完整移除段首旧数字编号
+    const unbulleted = BULLET_MARKER.test(line) ? line.replace(BULLET_MARKER, "") : line;
+    const match = NUMBER_RUN.exec(unbulleted);
+    if (match === null) return unbulleted.trimStart();
+    return `${match[1] ?? ""}${unbulleted.slice(match[0].length).trimStart()}`;
+  };
+
   const flushPara = () => {
     if (para.length === 0) return;
-    const text = para.join("\n");
-    para = [];
-    if (section === null || SKIP_SECTION.test(section) || LIST_LIKE.test(text)) {
-      out.push(text);
+    if (section === null || SKIP_SECTION.test(section)) {
+      out.push(para.join("\n"));
+      para = [];
       return;
     }
     seq += 1;
-    out.push(`${seq}. ${text}`);
+    para[0] = stripLeadingItemMarker(para[0]);
+    out.push(`${seq}. ${para.join("\n")}`);
+    para = [];
   };
 
   for (const line of lines) {
@@ -172,8 +185,8 @@ export function InsightView({ onBack }: { onBack: () => void }) {
   // 结果属于其他日期时，只更新月历打标并提示一句，不干扰当前查看。
   useEffect(() => {
     if (taskResult === null) return;
-    const { kind, channelId: resultChannel, dateKey: resultDate } = taskResult;
-    reloadDates();
+    const { kind, channelId: resultChannel, channelLabel, dateKey: resultDate } = taskResult;
+    if (resultChannel === channelId) reloadDates();
     if (resultChannel === channelId && resultDate === selectedDate) {
       if (kind === "ok") {
         setReport(taskResult.report);
@@ -186,10 +199,12 @@ export function InsightView({ onBack }: { onBack: () => void }) {
         setGenError(taskResult.message);
       }
     } else if (kind === "ok") {
-      setInfoMsg(`后台已生成 ${format(fromDateKey(resultDate), "M月d日")} 日报，月历已更新。`);
+      setInfoMsg(
+        `后台已生成 ${format(fromDateKey(resultDate), "M月d日")} ${channelLabel}，切换到对应渠道即可查看。`,
+      );
     } else if (kind === "error") {
       setInfoMsg(
-        `后台生成 ${format(fromDateKey(resultDate), "M月d日")} 日报失败：${taskResult.message}`,
+        `后台生成 ${format(fromDateKey(resultDate), "M月d日")} ${channelLabel}失败：${taskResult.message}`,
       );
     }
     clearResult();
@@ -304,14 +319,8 @@ export function InsightView({ onBack }: { onBack: () => void }) {
           {/* 后台任务在跑但不属于当前选中日期时，给一句提示避免误以为没反应 */}
           {taskRunning !== null && taskForSelection === null && (
             <div className={styles.infoBox}>
-              正在后台生成{" "}
-              {format(fromDateKey(taskRunning.dateKey), "M月d日")}
-              {taskRunning.channelId !== channelId
-                ? ` ${
-                    INSIGHT_CHANNELS.find((c) => c.id === taskRunning.channelId)?.label ?? ""
-                  }`
-                : ""}
-              日报，可切去其他页面，完成后月历自动打标。
+              正在后台生成 {format(fromDateKey(taskRunning.dateKey), "M月d日")} {taskRunning.channelLabel}
+              ，可切去其他页面，完成后对应年历自动打标。
             </div>
           )}
 
@@ -406,7 +415,7 @@ export function InsightView({ onBack }: { onBack: () => void }) {
  * 左栏年历：仿主页贡献栏 —— 顶部年份切换器选中的年份内 12 个月竖排滚动。
  * 当年默认滚动到本月；切到其他年份回到顶部（1 月）。不越过今年往后翻。
  */
-function YearCalendar({
+export function YearCalendar({
   year,
   stats,
   selectedDate,
@@ -488,8 +497,11 @@ function MonthBlock({
         ))}
         {days.map((key) => {
           const isFuture = key > today;
+          const hasReport = stats[key] !== undefined;
           const count = stats[key] ?? 0;
-          const level = loadLevel(count);
+          // 已生成报告即算查过：0 条也显示 1 档绿色，与从未生成的空白日期区分
+          const loadedLevel = loadLevel(count);
+          const level: ContributionLevel = hasReport && loadedLevel === 0 ? 1 : loadedLevel;
           const cellClass = [
             styles.calCell,
             key === selectedDate ? styles.calCellSelected : "",
@@ -499,7 +511,7 @@ function MonthBlock({
             .filter(Boolean)
             .join(" ");
           const cellTitle = `${format(fromDateKey(key), "M月d日")} · ${
-            count > 0 ? `报告 ${count} 条` : "未加载"
+            hasReport ? `报告 ${count} 条` : "未加载"
           }`;
           return (
             <button
@@ -512,7 +524,7 @@ function MonthBlock({
               disabled={isFuture}
               onClick={() => onSelect(key)}
             >
-              {count > 0 ? count : ""}
+              {hasReport ? count : ""}
             </button>
           );
         })}
@@ -527,7 +539,14 @@ function MonthBlock({
  * settings.aiModelCache（settings.json），下拉优先显示缓存；无缓存时退回内置预设。
  * 「刷新」按钮重新拉取当前服务商的模型列表并更新缓存（需已填 API Key）。
  */
-function ProviderConfigForm({ onSaved }: { onSaved: () => void }) {
+export function ProviderConfigForm({
+  onSaved,
+  embedded = false,
+}: {
+  onSaved?: () => void;
+  /** 嵌入设置页卡片时去掉表单自身的边框、背景与内边距 */
+  embedded?: boolean;
+}) {
   const aiProvider = useSettingsStore((s) => s.settings.aiProvider);
   const aiModelCache = useSettingsStore((s) => s.settings.aiModelCache);
   const updateSettings = useSettingsStore((s) => s.update);
@@ -620,13 +639,13 @@ function ProviderConfigForm({ onSaved }: { onSaved: () => void }) {
     setSavedTip(true);
     window.setTimeout(() => {
       setSavedTip(false);
-      onSaved();
+      onSaved?.();
     }, 800);
   };
 
   return (
-    <section className={styles.config}>
-      <h2 className={styles.configTitle}>API 设置（OpenAI 兼容协议）</h2>
+    <section className={`${styles.config} ${embedded ? styles.configEmbedded : ""}`}>
+      {!embedded && <h2 className={styles.configTitle}>API 设置（OpenAI 兼容协议）</h2>}
       <label className={styles.field}>
         <span className={styles.fieldLabel}>服务地址</span>
         <select

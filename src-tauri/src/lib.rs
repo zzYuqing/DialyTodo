@@ -30,6 +30,7 @@ pub fn run() {
 
     let app = builder
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(
@@ -44,6 +45,7 @@ pub fn run() {
             commands::quit_app,
             commands::restart_app,
             commands::authorize_dir,
+            commands::fetch_public_text,
         ])
         .setup(setup_app)
         .build(tauri::generate_context!())

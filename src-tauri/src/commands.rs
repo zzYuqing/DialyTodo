@@ -66,6 +66,40 @@ pub fn authorize_dir(app: tauri::AppHandle, path: String) -> Result<(), String> 
     Ok(())
 }
 
+/// 通过系统网络读取公开资讯文本，不带任何鉴权请求头。
+/// 为何必须 Rust：WebView 的 fetch 受 CORS 限制，大量公开 RSS 虽可访问却不允许浏览器读取。
+/// 仅接受 HTTP(S) 域名；拒绝 localhost 与 IP 字面量，避免借此访问本机服务。
+#[tauri::command]
+pub async fn fetch_public_text(url: String, timeout_ms: u64) -> Result<String, String> {
+    use tauri_plugin_http::reqwest;
+
+    let parsed = reqwest::Url::parse(url.trim()).map_err(|_| "无效的资讯地址".to_string())?;
+    if parsed.scheme() != "https" && parsed.scheme() != "http" {
+        return Err("仅支持 HTTP(S) 资讯地址".to_string());
+    }
+    let host = parsed.host_str().ok_or_else(|| "资讯地址缺少主机名".to_string())?;
+    if host.eq_ignore_ascii_case("localhost")
+        || host.ends_with(".local")
+        || host.parse::<std::net::IpAddr>().is_ok()
+    {
+        return Err("不允许读取本机或 IP 地址".to_string());
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_millis(timeout_ms.max(1000)))
+        .user_agent("DailyTodo/0.3")
+        .build()
+        .map_err(|err| err.to_string())?;
+    let response = client
+        .get(parsed)
+        .send()
+        .await
+        .map_err(|err| err.to_string())?
+        .error_for_status()
+        .map_err(|err| err.to_string())?;
+    response.text().await.map_err(|err| err.to_string())
+}
+
 /// 重启应用：先脱离当前进程树拉起一个新实例，再退出当前实例（托盘菜单「重启」用）。
 /// 为何必须 Rust：拉起新进程并终止自身属于宿主进程能力，WebView 做不到。
 /// 用 `cmd /c start` 启动使新实例不被父进程 job 一并结束，拉起成功后再退出当前实例。

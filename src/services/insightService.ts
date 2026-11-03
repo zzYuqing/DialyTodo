@@ -11,6 +11,7 @@ import { join } from "@tauri-apps/api/path";
 import { exists, readTextFile } from "@tauri-apps/plugin-fs";
 import { format } from "date-fns";
 import {
+  buildIndustryChannel,
   INSIGHT_CHANNELS,
   INSIGHT_RAW_ARCHIVE_KEEP,
   INSIGHT_REPORT_KEEP_DAYS,
@@ -22,6 +23,7 @@ import {
 import { addDaysToKey, fromDateKey, todayKey } from "@/lib";
 import type {
   AiProviderConfig,
+  IndustryProfile,
   InsightReport,
   InsightsFile,
   NewsItem,
@@ -144,6 +146,15 @@ export function getDayAvailability(
   loadedToday: boolean = false,
 ): DayAvailability {
   if (getInsightChannel(channelId) === null) return { allowed: false, reason: "未知渠道" };
+  return getDateAvailability(dateKey, now, loadedToday);
+}
+
+/** 行业日报与洞察AI共用同一套日期规则，动态行业渠道无需经过静态渠道表校验 */
+export function getDateAvailability(
+  dateKey: string,
+  now: Date = new Date(),
+  loadedToday: boolean = false,
+): DayAvailability {
   const today = todayKey();
   if (dateKey > today) return { allowed: false, reason: "未来日期不能生成" };
   if (dateKey === today) {
@@ -198,6 +209,31 @@ export async function generateInsightReport(
 ): Promise<InsightReport> {
   const channel = getInsightChannel(channelId);
   if (channel === null) throw new Error(`未知渠道：${channelId}`);
+  return generateChannelReport(channel, config, dateKey, opts, existing);
+}
+
+/** 行业资讯入口：动态构造渠道后进入与洞察AI完全相同的生成、去重、补充和存储管线 */
+export async function generateIndustryReport(
+  industry: IndustryProfile,
+  config: AiProviderConfig,
+  dateKey: string = todayKey(),
+  opts: GenerateOptions = {},
+  existing: InsightReport | null = null,
+): Promise<InsightReport> {
+  if (industry.sources.length === 0) {
+    throw new Error("该行业还没有可用信源，请删除后重新添加，让 AI 重新推荐并验证信源");
+  }
+  return generateChannelReport(buildIndustryChannel(industry), config, dateKey, opts, existing);
+}
+
+async function generateChannelReport(
+  channel: InsightChannelDef,
+  config: AiProviderConfig,
+  dateKey: string,
+  opts: GenerateOptions,
+  existing: InsightReport | null,
+): Promise<InsightReport> {
+  const channelId = channel.id;
   const say = (line: string) => opts.onProgress?.(line);
   const dayLabel = format(fromDateKey(dateKey), "M月d日");
 
@@ -349,8 +385,8 @@ function pruneChannelReports(byDate: Record<string, InsightReport>): Record<stri
   return next;
 }
 
-/** RSS / Atom：用 DOMParser 解析，摘要去 HTML 标签并截断 */
-async function fetchRssItems(name: string, feedUrl: string, take: number): Promise<NewsItem[]> {
+/** RSS / Atom：用 DOMParser 解析，摘要去 HTML 标签并截断；行业初审也用它实测验证 AI 推荐的地址 */
+export async function fetchRssItems(name: string, feedUrl: string, take: number): Promise<NewsItem[]> {
   const xml = await fetchPublicText(feedUrl, INSIGHT_SOURCE_TIMEOUT_MS);
   const doc = new DOMParser().parseFromString(xml, "text/xml");
   if (doc.querySelector("parsererror") !== null) throw new Error("RSS 解析失败");

@@ -1,4 +1,5 @@
-// 职责：设置视图 —— 数据存储、窗口与托盘、开机自启、节假日数据四个区块。
+// 职责：设置视图 —— 通用、AI 服务、任务区、数据存储、回收站与更新日志分类。
+// AI 服务：所有 AI 工具共用 settings.aiProvider；此处与工具内部表单读写同一数据源。
 // 数据存储：展示当前数据目录，支持迁移到其他磁盘；迁移成功后原目录数据会被删除（用户已确认语义）。
 // 窗口与托盘：窗口置顶、界面模式、关闭按钮行为（提示词 5.5）。
 // 开机自启：仅写 HKCU Run（提示词第八节），开关即时落盘。
@@ -47,7 +48,15 @@ import {
   type MigrationResult,
 } from "@/services";
 import type { LayoutMode } from "@/types";
-import { DownloadIcon, HistoryIcon, SettingsIcon, TodoIcon, TrashIcon } from "@/components/Icons";
+import {
+  DownloadIcon,
+  HistoryIcon,
+  SettingsIcon,
+  SparkIcon,
+  TodoIcon,
+  TrashIcon,
+} from "@/components/Icons";
+import { ProviderConfigForm } from "./InsightView/InsightView";
 import styles from "./SettingsView.module.css";
 
 /** 迁移/操作结果提示：错误（红）与成功/警示（中性色）分开呈现 */
@@ -194,10 +203,11 @@ export function SettingsView() {
     void update({ noteCollapseLines: clampNoteCollapseLines(value) });
   };
 
-  type SettingsCategory = "general" | "tasks" | "storage" | "trash" | "changelog";
+  type SettingsCategory = "general" | "ai" | "tasks" | "storage" | "trash" | "changelog";
 
   const CATEGORIES: { id: SettingsCategory; label: string; icon: typeof SettingsIcon }[] = [
     { id: "general", label: "通用", icon: SettingsIcon },
+    { id: "ai", label: "AI 服务", icon: SparkIcon },
     { id: "tasks", label: "任务区", icon: TodoIcon },
     { id: "storage", label: "数据存储", icon: DownloadIcon },
     { id: "trash", label: "回收站", icon: TrashIcon },
@@ -320,6 +330,18 @@ export function SettingsView() {
       </Paper>
 
               </>
+            )}
+            {activeCategory === "ai" && (
+              <Paper withBorder p="md" radius="md">
+                <Text fw={600} className={styles.cardTitle}>AI API 配置</Text>
+                <Text size="xs" className={styles.muted}>
+                  洞察AI、行业资讯以及后续接入的 AI 功能共用这一套 OpenAI 兼容接口。
+                  这里与工具内部的配置实时同步，API Key 仅保存在本机设置文件中。
+                </Text>
+                <Stack mt="md">
+                  <ProviderConfigForm embedded />
+                </Stack>
+              </Paper>
             )}
             {activeCategory === "tasks" && (
               <>

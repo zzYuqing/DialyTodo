@@ -10,3 +10,4 @@ export * from "./trash";
 export * from "./note";
 export * from "./changelog";
 export * from "./insight";
+export * from "./industry";

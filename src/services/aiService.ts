@@ -1,7 +1,7 @@
 // 职责：洞察AI的网络层 —— 大模型对话请求（OpenAI 兼容 /chat/completions，SSE 流式）与资讯抓取。
-// 通道约定（阶段 7 决策）：先用前端直连（零新增依赖）打通通路；
-// fetch 被目标站 CORS 拦截时会以 TypeError 失败，资讯抓取可据此回退公共转发；
-// 后续如需更稳（含大模型接口的 CORS 兜底），再评估 tauri-plugin-http 走 Rust 侧。
+// 通道约定：Tauri 内的公开资讯优先走系统网络，避开 WebView 的 CORS 限制；
+// 非 Tauri 环境或系统通道失败时才回退前端直连，最后再尝试公共转发。
+// 大模型请求仍由本机直连服务商，不使用资讯转发通道。
 //
 // 安全约定：API Key 仅由本机直连服务商使用，绝不上传到任何第三方；
 // 公共转发只用于无鉴权的公开资讯页，Key 与对话内容绝不走转发。
@@ -9,6 +9,7 @@
 // 生成采用流式（stream:true）：推理模型（如 kimi-k3）归纳长素材动辄数分钟，
 // 非流式要等全文返回极易超时；流式逐块返回，既不怕慢，界面也能实时预览生成过程。
 
+import { isTauri, tauriBridge } from "@/bridge";
 import { CORS_RELAY_RAW_URL, INSIGHT_LLM_IDLE_TIMEOUT_MS, INSIGHT_LLM_TIMEOUT_MS } from "@/constants";
 import type { AiProviderConfig } from "@/types";
 
@@ -203,7 +204,10 @@ export async function listModels(
   config: AiProviderConfig,
   timeoutMs: number = 15000,
 ): Promise<string[]> {
-  if (!isAiProviderReady(config)) throw new AiConfigMissingError();
+  // 拉取模型列表只依赖服务地址和 Key；模型名为空正是需要刷新列表的常见场景
+  if (config.baseUrl.trim() === "" || config.apiKey.trim() === "") {
+    throw new Error("刷新模型前请填写服务地址与 API Key");
+  }
 
   const base = config.baseUrl.trim().replace(/\/+$/, "");
   const controller = new AbortController();
@@ -272,10 +276,17 @@ export async function fetchText(url: string, timeoutMs: number): Promise<string>
 }
 
 /**
- * 抓取公开资讯文本：先直连，被 CORS 拦截（TypeError）或网络失败时
- * 经公共转发（CORS_RELAY_RAW_URL）再试一次。全部失败抛出最后一个错误。
+ * 抓取公开资讯文本：Tauri 内优先走系统网络，不受 RSS 站点 CORS 限制；
+ * 前端单独调试时仍用浏览器直连，最后才尝试公共转发。此通道不携带任何鉴权信息。
  */
 export async function fetchPublicText(url: string, timeoutMs: number): Promise<string> {
+  if (isTauri()) {
+    try {
+      return await tauriBridge.invoke<string>("fetch_public_text", { url, timeoutMs });
+    } catch {
+      // 系统通道失败时继续尝试浏览器直连，避免单一路径故障阻断资讯
+    }
+  }
   try {
     return await fetchText(url, timeoutMs);
   } catch {

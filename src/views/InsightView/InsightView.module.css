@@ -330,6 +330,14 @@
   background: var(--dt-panel-2);
 }
 
+/* 嵌入设置页 Paper：外层已有卡片，不再叠一层边框与背景 */
+.configEmbedded {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
 .configTitle {
   margin: 0;
   font-size: 13px;
