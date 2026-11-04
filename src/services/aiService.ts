@@ -34,6 +34,17 @@ export class AiConfigMissingError extends Error {
   }
 }
 
+/**
+ * 调用方主动取消（外部 AbortSignal 触发）。
+ * 区别于超时 / 断流：调用方应静默吞掉它，不要当失败提示给用户。
+ */
+export class AiCancelledError extends Error {
+  constructor() {
+    super("已取消");
+    this.name = "AiCancelledError";
+  }
+}
+
 /** 配置是否齐全（baseUrl / apiKey / model 均非空白） */
 export function isAiProviderReady(config: AiProviderConfig): boolean {
   return (
@@ -45,6 +56,7 @@ export function isAiProviderReady(config: AiProviderConfig): boolean {
  * 调用 OpenAI 兼容的对话接口（SSE 流式）。
  * 双超时：整体 INSIGHT_LLM_TIMEOUT_MS（默认 5 分钟）+ 块间空闲 INSIGHT_LLM_IDLE_TIMEOUT_MS
  * （默认 60 秒无数据即断开，区分「慢」与「卡死」）。HTTP 错误尽力解析服务商 error.message。
+ * signal：外部取消（如用户关闭编辑器）——触发后整个请求与流读取一并中断，抛 AiCancelledError。
  * 返回累计的完整正文。
  */
 export async function streamChatCompletion(
@@ -53,11 +65,17 @@ export async function streamChatCompletion(
   handlers: StreamHandlers,
   timeoutMs: number = INSIGHT_LLM_TIMEOUT_MS,
   idleMs: number = INSIGHT_LLM_IDLE_TIMEOUT_MS,
+  signal?: AbortSignal,
 ): Promise<string> {
   if (!isAiProviderReady(config)) throw new AiConfigMissingError();
 
   const base = config.baseUrl.trim().replace(/\/+$/, "");
   const controller = new AbortController();
+  // 外部取消透传到内部 controller（fetch 与流读取共用同一 signal）
+  if (signal !== undefined) {
+    if (signal.aborted) throw new AiCancelledError();
+    signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
   const startedAt = Date.now();
   // 整体超时（不可取消）；块间空闲超时（每收到一块就重置，判断连接是否卡死）
   const hardTimer = setTimeout(() => controller.abort(), timeoutMs);
@@ -84,6 +102,7 @@ export async function streamChatCompletion(
   } catch (error) {
     clearTimeout(hardTimer);
     clearTimeout(idleTimer);
+    if (signal?.aborted) throw new AiCancelledError();
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new Error(
         Date.now() - startedAt >= timeoutMs
@@ -99,6 +118,13 @@ export async function streamChatCompletion(
   if (!response.ok) {
     clearTimeout(hardTimer);
     clearTimeout(idleTimer);
+    // 429 = 服务商还有请求在处理（试用接口通常同时只允许一个任务；
+    // 刚取消 / 刚结束一个请求就立刻发新的，大概率吃这个）
+    if (response.status === 429) {
+      throw new Error(
+        "接口正忙（HTTP 429）：服务商还在处理上一个请求，请过一会儿再试（试用接口通常同时只允许一个任务）",
+      );
+    }
     const detail = await extractProviderError(response);
     throw new Error(`模型接口返回 HTTP ${response.status}${detail === null ? "" : `：${detail}`}`);
   }
@@ -131,6 +157,8 @@ export async function streamChatCompletion(
   } catch (error) {
     clearTimeout(hardTimer);
     clearTimeout(idleTimer);
+    // 外部取消：不要把已收到的半截内容当成功返回，也不当失败提示
+    if (signal?.aborted) throw new AiCancelledError();
     if (error instanceof DOMException && error.name === "AbortError") {
       // 已经收到部分内容时按成功截断处理，比整份丢弃更可用
       if (accumulated.trim() !== "") return accumulated;

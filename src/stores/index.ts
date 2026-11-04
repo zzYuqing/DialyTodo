@@ -7,4 +7,6 @@ export * from "./useViewStore";
 export * from "./useHolidayStore";
 export * from "./useTrashStore";
 export * from "./useInsightTaskStore";
+export * from "./useReportTaskStore";
 export * from "./useIndustryAddStore";
+export * from "./useTemplateAiStore";

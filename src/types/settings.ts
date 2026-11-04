@@ -1,6 +1,7 @@
 // 职责：软件配置的类型定义，对应 %APPDATA%/DailyTodo/settings.json。
 
 import type { AiModelCacheEntry, AiProviderConfig } from "./insight";
+import type { ReportTemplateEntry } from "./report";
 
 /** 主题模式（提示词 5.8） */
 export type ThemeMode = "light" | "dark";
@@ -61,4 +62,11 @@ export interface AppSettings {
    * 由 loadSettings 的 merge + normalizeSettings 补齐为空对象。纯缓存，可随时丢弃重拉。
    */
   aiModelCache: Record<string, AiModelCacheEntry>;
+  /**
+   * AI 报告的模板库：用户保存的多个具名模板（含名称 / 内容 / 创建时间）。
+   * 该字段为 AI 报告功能新增，存量设置文件没有它，由 loadSettings 的 merge +
+   * normalizeSettings 补齐为空数组；选中哪个模板由视图层状态决定（"default" = 内置默认模板）。
+   * 真实性硬约束在提示词层单独拼接，不受模板内容影响。
+   */
+  reportTemplates: ReportTemplateEntry[];
 }

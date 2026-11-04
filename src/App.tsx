@@ -7,6 +7,7 @@ import { Sidebar, TitleBar, WindowResizer } from "@/components";
 import {
   ExperienceView,
   LongTermView,
+  ReportsView,
   SettingsView,
   SimpleModeView,
   TodoView,
@@ -27,6 +28,7 @@ import styles from "./App.module.css";
 /** 视图名 → 组件，避免每次渲染重建对象 */
 const VIEW_COMPONENTS: Record<ViewName, () => JSX.Element> = {
   todo: () => <TodoView />,
+  aireport: () => <ReportsView />,
   experience: () => <ExperienceView />,
   longterm: () => <LongTermView />,
   tools: () => <ToolsView />,

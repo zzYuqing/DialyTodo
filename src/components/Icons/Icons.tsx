@@ -41,6 +41,16 @@ export function LongTermIcon({ size }: IconProps) {
   );
 }
 
+/** AI 报告：文档 + 数据折线（区间总结 / 报告） */
+export function ReportIcon({ size }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M3.5 2.5h7l2 2v9h-9z" />
+      <path d="M5.5 10.5l1.8-2.2 1.4 1.2 2-2.5" />
+    </svg>
+  );
+}
+
 /** 待完成：时钟 */
 export function ClockIcon({ size }: IconProps) {
   return (

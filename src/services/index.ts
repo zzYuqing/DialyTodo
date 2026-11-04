@@ -12,4 +12,5 @@ export * from "./migration";
 export * from "./windowService";
 export * from "./aiService";
 export * from "./insightService";
+export * from "./reportService";
 export * from "./industryService";

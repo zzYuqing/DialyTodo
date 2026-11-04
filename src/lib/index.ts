@@ -10,4 +10,6 @@ export * from "./task";
 export * from "./validate";
 export * from "./ddl";
 export * from "./composite";
+export * from "./report";
+export * from "./ai";
 export * from "./experienceImages";

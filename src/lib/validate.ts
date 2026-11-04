@@ -21,6 +21,7 @@ import type {
   AppSettings,
   DayRecord,
   Reminder,
+  ReportTemplateEntry,
   Schedule,
   SpecialSchedule,
   Task,
@@ -323,6 +324,11 @@ export function isAppSettings(value: unknown): value is AppSettings {
   if (candidate.aiModelCache != null && typeof candidate.aiModelCache !== "object") {
     return false;
   }
+  // reportTemplates 是 AI 报告模板库新增字段：缺失 / null 一律放行（由 normalizeSettings 补空数组），
+  // 只有「类型不对」（非数组）才判废；条目内部的脏值由 normalizeReportTemplates 逐条收敛。
+  if (candidate.reportTemplates != null && !Array.isArray(candidate.reportTemplates)) {
+    return false;
+  }
   if (typeof candidate.holidayUrlTemplate !== "string") return false;
   if (candidate.lastBackupDate !== null && !isDateKey(candidate.lastBackupDate)) return false;
 
@@ -374,7 +380,37 @@ export function normalizeSettings(settings: AppSettings): AppSettings {
     noteCollapseLines: clampNoteCollapseLines(settings.noteCollapseLines),
     aiProvider: normalizeAiProvider(settings.aiProvider),
     aiModelCache: normalizeAiModelCache(settings.aiModelCache),
+    // 模板库：非数组 / 条目脏值逐条收敛（防御手改；merge 后缺失已由出厂值兜底）
+    reportTemplates: normalizeReportTemplates(settings.reportTemplates),
   };
+}
+
+/**
+ * 收敛 AI 报告模板库：非数组回空数组；条目必须是对象且 id/name/content 均为字符串，
+ * 脏条目直接丢弃（模板丢了可重建，不影响任务数据）。id 空白视为脏条目。
+ */
+function normalizeReportTemplates(value: unknown): ReportTemplateEntry[] {
+  if (!Array.isArray(value)) return [];
+  const entries: ReportTemplateEntry[] = [];
+  for (const raw of value) {
+    if (typeof raw !== "object" || raw === null) continue;
+    const record = raw as Partial<ReportTemplateEntry>;
+    if (
+      typeof record.id !== "string" ||
+      record.id.trim() === "" ||
+      typeof record.name !== "string" ||
+      typeof record.content !== "string"
+    ) {
+      continue;
+    }
+    entries.push({
+      id: record.id,
+      name: record.name,
+      content: record.content,
+      createdAt: typeof record.createdAt === "string" ? record.createdAt : "",
+    });
+  }
+  return entries;
 }
 
 /**
@@ -440,6 +476,8 @@ export function defaultSettings(): AppSettings {
     noteCollapseLines: DEFAULT_NOTE_COLLAPSE_LINES,
     holidayUrlTemplate: HOLIDAY_URL_TEMPLATE,
     lastBackupDate: null,
+    // AI 报告：默认模板库为空（视图层默认选中内置默认模板）
+    reportTemplates: [],
     aiProvider: defaultAiProvider(),
     aiModelCache: {},
   };

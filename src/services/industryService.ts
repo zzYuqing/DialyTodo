@@ -16,6 +16,7 @@ import {
   INSIGHT_RAW_ARCHIVE_KEEP,
   industryChannelId,
 } from "@/constants";
+import { parseAiObject } from "@/lib";
 import type {
   AiProviderConfig,
   IndustriesFile,
@@ -775,22 +776,6 @@ function parseIndustryMerge(content: string, selected: IndustryProfile[]) {
         ? candidate.reason.trim()
         : `由 ${selected.map((item) => item.name).join("、")} 合并`,
   };
-}
-
-function parseAiObject(content: string, operation: string): Record<string, unknown> {
-  const fenced = content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  const start = fenced.indexOf("{");
-  const end = fenced.lastIndexOf("}");
-  if (start < 0 || end <= start) throw new Error(`AI ${operation}结果无法识别，请重试`);
-  try {
-    const parsed: unknown = JSON.parse(fenced.slice(start, end + 1));
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-      throw new Error("not an object");
-    }
-    return parsed as Record<string, unknown>;
-  } catch {
-    throw new Error(`AI ${operation}结果不是有效 JSON，请重试`);
-  }
 }
 
 function parseIndustrySource(value: unknown): IndustrySource | null {

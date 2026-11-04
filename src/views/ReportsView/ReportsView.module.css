@@ -1,0 +1,1091 @@
+/* AI 报告页：头部（标题 + API 设置）+ 主体（左周条栏 + 右报告面板）。
+   左栏骨架与 Todo 页 CalendarRail 同一套视觉语言（间距 4px 基准、
+   色值一律引用 theme.css 变量，不硬编码）。 */
+
+.wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 头部：标题居左，API 设置齿轮居右（悬浮窗绝对定位于其下） */
+.head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+}
+
+.headTitle {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 28px;
+  color: var(--dt-text);
+}
+
+.gearWrap {
+  position: relative;
+  display: flex;
+}
+
+.gear,
+.gearActive {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+  cursor: pointer;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.gear:hover,
+.gearActive {
+  color: var(--dt-accent);
+  background: var(--dt-accent-soft);
+}
+
+.popover {
+  position: absolute;
+  top: 34px;
+  right: 0;
+  z-index: 30;
+  width: 360px;
+  padding: 14px;
+  border: 1px solid var(--dt-border);
+  border-radius: 12px;
+  background: var(--dt-panel);
+}
+
+/* 主体：左周条栏 + 右面板 */
+.body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  min-height: 0;
+}
+
+/* ---------- 左栏骨架（与 CalendarRail.module.css 同款） ---------- */
+
+.rail {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--dt-border);
+  background: var(--dt-panel);
+}
+
+.railScroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 12px 8px;
+}
+
+
+.railFooter {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px 12px;
+  border-top: 1px solid var(--dt-border);
+}
+
+.railStats {
+  font-size: 12px;
+  color: var(--dt-text-muted);
+  white-space: nowrap;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.legendItem {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 7px;
+  height: 100%;
+  z-index: 5;
+  cursor: col-resize;
+}
+
+.resizer:hover {
+  background: var(--dt-accent-soft);
+}
+
+.bodyResizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* ---------- 周条（一整格 = 一周） ---------- */
+
+.strip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 8px 10px 9px;
+  border: 1px solid var(--dt-border);
+  border-radius: 9px;
+  background: var(--dt-panel);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+  box-sizing: border-box;
+}
+
+.strip:hover {
+  background: var(--dt-panel-2);
+}
+
+/* 已生成：实线描边 + 右上实心点 */
+.stripGenerated {
+  border-color: var(--dt-accent-soft);
+}
+
+.stripGenerated::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--dt-panel);
+  background: var(--dt-accent);
+  box-sizing: border-box;
+}
+
+/* 未生成（含本周进行中）：虚线描边 */
+.stripCurrent {
+  border: 1px dashed var(--dt-contrib-future);
+}
+
+.stripSelected {
+  border-color: var(--dt-accent) !important;
+  border-style: solid !important;
+}
+
+.stripRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.stripRange {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dt-text);
+  white-space: nowrap;
+}
+
+.stripTag {
+  font-size: 11px;
+  color: var(--dt-accent);
+  white-space: nowrap;
+}
+
+.stripMinis {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.stripMini {
+  width: 9px;
+  height: 9px;
+  border-radius: 2.5px;
+  flex-shrink: 0;
+}
+
+/* 本周的未来日：虚线空心占位（未到，待填） */
+.stripMiniFuture {
+  width: 9px;
+  height: 9px;
+  border-radius: 2.5px;
+  border: 1px dashed var(--dt-contrib-future);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.stripCount {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--dt-text-muted);
+  white-space: nowrap;
+}
+
+/* ---------- 模板说明悬浮提示 ---------- */
+
+/* 「?」按钮：点击打开模板详情弹窗（原为悬浮弹层，2026-11-04 改版） */
+.hintMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 1px solid var(--dt-border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.hintMark:hover {
+  color: var(--dt-accent);
+  border-color: var(--dt-accent);
+}
+
+/* 模板详情弹窗内容：等宽预览块，超长可滚动（pre 保留模板原始换行） */
+.hintModalBody {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--dt-border);
+  border-radius: 10px;
+  background: var(--dt-panel-2);
+  color: var(--dt-text);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+/* 弹窗底部操作区：右对齐放复制按钮 */
+.hintModalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+/* ---------- 自定义分区 ---------- */
+
+/* 新建报告入口：固定在列表上方，用主色强调 */
+.genEntry {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--dt-accent-soft);
+  border-radius: 9px;
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  transition: filter 120ms ease, background-color 120ms ease, color 120ms ease;
+  box-sizing: border-box;
+}
+
+.genEntry:hover {
+  background: var(--dt-accent);
+  color: var(--dt-bg);
+}
+
+/* 生成中禁用：降低存在感，悬浮提示说明原因 */
+.genEntry:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.genEntry:disabled:hover {
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+}
+
+/* ---------- 右栏面板 ---------- */
+
+.panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px 20px;
+  overflow-y: auto;
+}
+
+.panelHead {
+  flex-shrink: 0;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 26px;
+  color: var(--dt-text);
+}
+
+.panelMeta {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--dt-text-muted);
+}
+
+.dateRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+/* 日期控件包裹：左日历图标 + 原生输入框，统一描边圆角，告别浏览器原生外观 */
+.dateWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.dateCal {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--dt-text-muted);
+}
+
+.dateInput {
+  height: 30px;
+  /* 左侧留位给日历图标 */
+  padding: 0 8px 0 28px;
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  background: var(--dt-panel);
+  color: var(--dt-text);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* 隐藏浏览器原生日历指示图标：左侧已叠加统一图标，避免双图标 */
+.dateInput::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.dateInput::-moz-calendar-picker-indicator {
+  display: none;
+}
+
+.dateSep {
+  font-size: 12px;
+  color: var(--dt-text-muted);
+}
+
+/* ---------- 新建报告：起止日期区间 ---------- */
+
+.thisWeekBtn {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.thisWeekBtn:hover:not(:disabled) {
+  color: var(--dt-accent);
+  border-color: var(--dt-accent);
+}
+
+.rangeSummary {
+  margin: 0;
+  font-size: 12px;
+  color: var(--dt-text-muted);
+}
+
+/* 覆盖旧稿提示：用辅色而非红色（红色在本应用仅保留给「已过期」徽章） */
+.overwriteTip {
+  margin: 0;
+  font-size: 12px;
+  color: var(--dt-text-muted);
+}
+
+/* ---------- 新建报告：单卡分步（版本 C） ---------- */
+
+/* 单张外卡：把三步收进同一张带框卡，内部用细分隔线切分 */
+.composeCard {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 16px;
+  border: 1px solid var(--dt-border);
+  border-radius: 12px;
+  background: var(--dt-panel);
+}
+
+/* 一个步骤：上下留白；除最后一步外，用细分隔线与下一步隔开 */
+.composeStep {
+  padding: 14px 0;
+}
+
+.composeStep:not(:last-child) {
+  border-bottom: 1px solid var(--dt-border);
+}
+
+/* 步骤头：圆形序号 + 步骤标题 */
+.stepHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.stepNum {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.stepTitle {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--dt-text);
+}
+
+/* 步骤 3 的序号用实心主色，与 1/2 的浅底序号区分，强化「主操作」锚点 */
+.stepNumAccent {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dt-accent);
+  color: var(--dt-accent-contrast, #ffffff);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btnGhost {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.btnGhost:hover:not(:disabled) {
+  background: var(--dt-panel-2);
+  color: var(--dt-text);
+}
+
+.btnGhost:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.btnPrimary {
+  height: 34px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 8px;
+  background: var(--dt-accent);
+  color: var(--dt-bg);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: filter 120ms ease;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.btnPrimary:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.reportCard {
+  flex-shrink: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--dt-border);
+  border-radius: 12px;
+  background: var(--dt-panel);
+}
+
+.generating {
+  margin: 0;
+  font-size: 13px;
+  color: var(--dt-text-muted);
+}
+
+.templateBox {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--dt-border);
+  border-radius: 12px;
+  background: var(--dt-panel);
+}
+
+/* 嵌入「单卡分步」时：去掉外框与内边距，让模板卡片直接落在步骤内，避免嵌套卡片 */
+.templateBoxEmbedded {
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.templateLegend {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dt-text);
+}
+
+/* ---------- 模板库：选择态（卡片列表） ---------- */
+
+.tplCards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 一条模板 = 一张卡：名称 + 一行摘要；选中主色描边 + 「使用中」徽标 */
+.tplCard {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 11px;
+  border: 1px solid var(--dt-border);
+  border-radius: 10px;
+  background: var(--dt-panel);
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.tplCard:hover {
+  border-color: var(--dt-border-strong);
+  box-shadow: var(--dt-shadow-sm);
+}
+
+.tplCardOn {
+  border-color: var(--dt-accent);
+  background: var(--dt-accent-soft);
+}
+
+.tplCardOn:hover {
+  border-color: var(--dt-accent);
+}
+
+.tplCard input {
+  accent-color: var(--dt-accent);
+  margin: 2px 0 0;
+  flex-shrink: 0;
+}
+
+.tplCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.tplCardName {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dt-text);
+}
+
+.tplCardDesc {
+  max-width: 100%;
+  font-size: 11px;
+  color: var(--dt-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tplCardTail {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.tplCardDate {
+  font-size: 11px;
+  color: var(--dt-text-muted);
+  white-space: nowrap;
+}
+
+/* 行内动作悬浮才出现；出现时让位隐藏日期，避免挤压 */
+.tplCardActions {
+  display: none;
+  gap: 6px;
+}
+
+.tplCard:hover .tplCardActions {
+  display: inline-flex;
+}
+
+.tplCard:hover .tplCardDate {
+  display: none;
+}
+
+.tplBadge {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--dt-panel-2);
+  color: var(--dt-text-muted);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.tplBadgeOn {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--dt-accent);
+  color: var(--dt-accent-contrast, #ffffff);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.tplMini {
+  padding: 2px 8px;
+  border: 1px solid var(--dt-border);
+  border-radius: 7px;
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.tplMini:hover {
+  color: var(--dt-accent);
+  border-color: var(--dt-accent);
+}
+
+/* ＋ 新建模板：与上方模板卡同宽同圆角的虚线卡，是列表的延续而非独立色块 */
+.tplNewCard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border: 1px dashed var(--dt-border-strong);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.tplNewCard:hover {
+  color: var(--dt-accent);
+  border-color: var(--dt-accent);
+  background: var(--dt-accent-soft);
+}
+
+.templateTextarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  background: var(--dt-bg);
+  color: var(--dt-text);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.6;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.templateTextarea:focus {
+  outline: none;
+  border-color: var(--dt-accent);
+}
+
+/* ---------- 模板库：编辑态与弹窗 ---------- */
+
+/* 编辑态顶部状态条：一眼看出正在改哪份，取消就地可退 */
+.tplEditStatus {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--dt-accent-soft);
+  color: var(--dt-accent);
+  font-size: 11.5px;
+}
+
+.tplEditStatus strong {
+  font-weight: 500;
+}
+
+.tplEditCancel {
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--dt-accent);
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.tplEditCancel:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.tplNameInput {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  background: var(--dt-bg);
+  color: var(--dt-text);
+  font-family: inherit;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.tplNameInput:focus {
+  outline: none;
+  border-color: var(--dt-accent);
+}
+
+/* 编辑态动作行：来源（获取模板）→ 加工（AI 润色）→ 落库（保存模板，右对齐） */
+.tplActionsRow {
+  display: flex;
+  gap: 8px;
+}
+
+.tplActionsRow > .tplBtnPrimary {
+  margin-left: auto;
+}
+
+.tplBtnGhost {
+  padding: 7px 14px;
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  background: var(--dt-panel);
+  color: var(--dt-text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.tplBtnGhost:hover:not(:disabled) {
+  color: var(--dt-text);
+  border-color: var(--dt-text-muted);
+  background: var(--dt-panel-2);
+}
+
+.tplBtnAccent {
+  padding: 7px 14px;
+  border: 1px solid var(--dt-accent);
+  border-radius: 8px;
+  background: var(--dt-panel);
+  color: var(--dt-accent);
+  font-family: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.tplBtnAccent:hover:not(:disabled) {
+  background: var(--dt-accent-soft);
+}
+
+.tplBtnPrimary {
+  padding: 7px 16px;
+  border: 1px solid var(--dt-accent);
+  border-radius: 8px;
+  background: var(--dt-accent);
+  color: var(--dt-accent-contrast, #ffffff);
+  font-family: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: filter 120ms ease;
+}
+
+.tplBtnPrimary:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+/* 三类按钮统一的禁用态：整体褪色 + 禁用光标，明确「不可用」而非「坏了」 */
+.tplBtnGhost:disabled,
+.tplBtnAccent:disabled,
+.tplBtnPrimary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tplHint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--dt-text-muted);
+}
+
+.tplError {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--dt-danger);
+}
+
+/* 模板保存前的 AI 初审：进行中的一行（转圈 + 文案），与 .tplError 共用同一套间距 */
+.tplChecking {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--dt-text-muted);
+}
+
+/* 编辑态就地状态行：驳回原因 / 初审失败 + 同行的出口按钮 */
+.tplReviewRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 0;
+}
+
+.tplReviewRow .tplError {
+  flex: 1;
+  margin: 0;
+}
+
+.tplSpinner {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--dt-border);
+  border-top-color: var(--dt-accent);
+  border-radius: 50%;
+  animation: tplSpin 0.8s linear infinite;
+}
+
+@keyframes tplSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 获取模板弹窗：顶部模式开关（库导入 / 粘贴识别），一个模式只做一件事 */
+.fetchSeg {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  margin-bottom: 12px;
+  border-radius: 9px;
+  background: var(--dt-panel-2);
+}
+
+.fetchSegBtn {
+  flex: 1;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.fetchSegBtn:hover {
+  color: var(--dt-text);
+}
+
+.fetchSegOn {
+  background: var(--dt-panel);
+  color: var(--dt-accent);
+  font-weight: 500;
+  box-shadow: var(--dt-shadow-sm);
+}
+
+.fetchCards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.fetchCard {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border: 1px solid var(--dt-border);
+  border-radius: 9px;
+  background: var(--dt-panel);
+  font-size: 12px;
+  color: var(--dt-text);
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.fetchCard:hover {
+  background: var(--dt-panel-2);
+}
+
+.fetchCardOn {
+  border-color: var(--dt-accent);
+  background: var(--dt-accent-soft);
+}
+
+.fetchCard input {
+  accent-color: var(--dt-accent);
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.fetchCardName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fetchCardTail {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--dt-text-muted);
+  white-space: nowrap;
+}
+
+.fetchTip {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--dt-text-muted);
+}
+
+/* 步骤 3：生成强调区（主色浅底把主操作锚定在末尾；与 .panel 的列间距叠加，勿再加 margin-top） */
+.generateStep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--dt-accent-soft);
+  border-radius: 12px;
+  background: var(--dt-accent-soft);
+}
+
+.generateHint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--dt-text-muted);
+}
+
+.errorBox {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--dt-danger);
+  border-radius: 10px;
+  background: var(--dt-panel);
+  color: var(--dt-danger);
+  font-size: 13px;
+}
+
+/* ---------- 空态（无选中报告且未在编辑） ---------- */
+
+.emptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--dt-text-muted);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: 14px;
+  color: var(--dt-text);
+}
+
+.emptyHint {
+  margin: 0;
+  font-size: 12px;
+}

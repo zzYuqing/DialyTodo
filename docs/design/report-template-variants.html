@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>AI 报告 · 模板模块 UI 三版方案</title>
+<style>
+  :root {
+    --dt-bg: #f5f7f4;
+    --dt-panel: #ffffff;
+    --dt-panel-2: #eef2ed;
+    --dt-text: #2a332b;
+    --dt-text-muted: #75806f;
+    --dt-border: rgba(45, 60, 50, 0.12);
+    --dt-border-strong: rgba(45, 60, 50, 0.3);
+    --dt-accent: #2c7a53;
+    --dt-accent-contrast: #ffffff;
+    --dt-accent-soft: rgba(44, 122, 83, 0.1);
+    --dt-danger: #c2452d;
+    --dt-shadow-sm: 0 1px 2px rgba(44, 80, 60, 0.06);
+    --dt-shadow-md: 0 2px 6px rgba(44, 80, 60, 0.08), 0 6px 16px rgba(44, 80, 60, 0.07);
+    --dt-shadow-lg: 0 4px 12px rgba(44, 80, 60, 0.1), 0 12px 28px rgba(44, 80, 60, 0.1);
+    --dt-contrib-0: rgba(0, 0, 0, 0.04);
+    --dt-contrib-future: rgba(45, 60, 50, 0.25);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 24px 64px;
+    background: var(--dt-bg);
+    color: var(--dt-text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .page-head { max-width: 860px; margin: 0 auto 24px; }
+  .page-head h1 { margin: 0 0 6px; font-size: 18px; font-weight: 600; }
+  .page-head p { margin: 0; font-size: 12.5px; color: var(--dt-text-muted); }
+
+  .tabs { max-width: 860px; margin: 0 auto 22px; display: flex; gap: 8px; }
+  .tab {
+    padding: 7px 16px; border: 1px solid var(--dt-border); border-radius: 999px;
+    background: var(--dt-panel); color: var(--dt-text-muted);
+    font-family: inherit; font-size: 12.5px; cursor: pointer;
+    transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+  }
+  .tab:hover { border-color: var(--dt-border-strong); color: var(--dt-text); }
+  .tab.on { background: var(--dt-accent); border-color: var(--dt-accent); color: var(--dt-accent-contrast); }
+
+  .variant { max-width: 860px; margin: 0 auto 40px; display: none; }
+  .variant.on { display: block; }
+
+  .variant-head { margin-bottom: 14px; }
+  .variant-head h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+  .variant-head p { margin: 0; font-size: 12px; color: var(--dt-text-muted); }
+
+  .panel-label {
+    margin: 22px 0 8px; font-size: 11px; font-weight: 600;
+    color: var(--dt-text-muted); letter-spacing: 0.06em; text-transform: uppercase;
+  }
+
+  /* ---------- 公共：fieldset 卡片 ---------- */
+  .field {
+    border: 1px solid var(--dt-border); border-radius: 12px;
+    background: var(--dt-panel); padding: 14px 16px 16px;
+    box-shadow: var(--dt-shadow-sm);
+  }
+  .field legend {
+    padding: 0 6px; margin-left: 4px; font-size: 12px; font-weight: 500;
+    color: var(--dt-text);
+  }
+
+  .row { display: flex; align-items: center; gap: 8px; }
+  .muted { color: var(--dt-text-muted); }
+  .tiny { font-size: 11px; }
+
+  input[type="radio"] { accent-color: var(--dt-accent); margin: 0; flex-shrink: 0; }
+
+  /* ================= 方案 A：线框紧凑 ================= */
+  .a-list { display: flex; flex-direction: column; }
+  .a-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px; border-radius: 7px; cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  .a-row:hover { background: var(--dt-panel-2); }
+  .a-row.on { background: var(--dt-accent-soft); border-left-color: var(--dt-accent); }
+  .a-row .name { font-weight: 500; }
+  .a-row .meta { margin-left: auto; font-size: 11px; color: var(--dt-text-muted); }
+  .a-row .acts { margin-left: auto; display: none; gap: 4px; }
+  .a-row:hover .acts { display: inline-flex; }
+  .a-row:hover .meta { display: none; }
+  .mini {
+    padding: 2px 7px; border: 1px solid var(--dt-border); border-radius: 6px;
+    background: var(--dt-panel); color: var(--dt-text-muted);
+    font-family: inherit; font-size: 11px; cursor: pointer;
+  }
+  .mini:hover { color: var(--dt-accent); border-color: var(--dt-accent); }
+
+  .a-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .a-head .lbl { font-size: 12px; font-weight: 500; }
+  .linkbtn {
+    border: none; background: transparent; color: var(--dt-accent);
+    font-family: inherit; font-size: 12px; cursor: pointer; padding: 2px 4px;
+  }
+  .linkbtn:hover { text-decoration: underline; }
+
+  .hintmark {
+    width: 15px; height: 15px; padding: 0; border: 1px solid var(--dt-border);
+    border-radius: 50%; background: transparent; color: var(--dt-text-muted);
+    font-family: inherit; font-size: 10px; line-height: 1; cursor: help;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .hintmark:hover { color: var(--dt-accent); border-color: var(--dt-accent); }
+
+  .empty { padding: 10px 0 12px; text-align: center; font-size: 12px; color: var(--dt-text-muted); }
+
+  textarea {
+    width: 100%; padding: 9px 10px; border: 1px solid var(--dt-border); border-radius: 8px;
+    background: var(--dt-bg); color: var(--dt-text); font-family: inherit;
+    font-size: 12px; line-height: 1.65; resize: vertical;
+  }
+  textarea:focus { outline: none; border-color: var(--dt-accent); }
+  textarea:disabled { background: var(--dt-panel-2); color: var(--dt-text-muted); cursor: not-allowed; resize: none; }
+
+  .input {
+    padding: 8px 10px; border: 1px solid var(--dt-border); border-radius: 8px;
+    background: var(--dt-bg); color: var(--dt-text); font-family: inherit; font-size: 12px;
+  }
+  .input:focus { outline: none; border-color: var(--dt-accent); }
+
+  .btns { display: flex; gap: 8px; margin-top: 10px; }
+  .btns.right { justify-content: flex-end; }
+  .btn {
+    padding: 7px 14px; border-radius: 8px; border: 1px solid transparent;
+    font-family: inherit; font-size: 12px; white-space: nowrap; cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, filter 120ms ease;
+  }
+  .btn.ghost { border-color: var(--dt-border); background: var(--dt-panel); color: var(--dt-text-muted); }
+  .btn.ghost:hover { color: var(--dt-text); border-color: var(--dt-border-strong); background: var(--dt-panel-2); }
+  .btn.accent { border-color: var(--dt-accent); background: var(--dt-panel); color: var(--dt-accent); }
+  .btn.accent:hover { background: var(--dt-accent-soft); }
+  .btn.primary { border-color: var(--dt-accent); background: var(--dt-accent); color: var(--dt-accent-contrast); }
+  .btn.primary:hover { filter: brightness(0.95); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* ================= 方案 B：卡片选中 ================= */
+  .b-list { display: flex; flex-direction: column; gap: 8px; }
+  .b-card {
+    position: relative; display: flex; align-items: flex-start; gap: 9px;
+    padding: 10px 12px; border: 1px solid var(--dt-border); border-radius: 10px;
+    background: var(--dt-panel); cursor: pointer;
+    transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+  }
+  .b-card:hover { border-color: var(--dt-border-strong); box-shadow: var(--dt-shadow-sm); }
+  .b-card.on { border-color: var(--dt-accent); background: var(--dt-accent-soft); }
+  .b-card .txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .b-card .name { font-weight: 500; }
+  .b-card .desc { font-size: 11px; color: var(--dt-text-muted); }
+  .b-card .tail { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .badge {
+    padding: 1px 7px; border-radius: 999px; background: var(--dt-panel-2);
+    color: var(--dt-text-muted); font-size: 10.5px; white-space: nowrap;
+  }
+  .badge.ok { background: var(--dt-accent); color: var(--dt-accent-contrast); }
+  .b-new {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px; border: 1px dashed var(--dt-border-strong); border-radius: 10px;
+    background: transparent; color: var(--dt-text-muted);
+    font-family: inherit; font-size: 12px; cursor: pointer;
+  }
+  .b-new:hover { color: var(--dt-accent); border-color: var(--dt-accent); background: var(--dt-accent-soft); }
+
+  .b-status {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+    padding: 6px 10px; border-radius: 8px;
+    background: var(--dt-accent-soft); color: var(--dt-accent); font-size: 11.5px;
+  }
+  .b-status .x { margin-left: auto; cursor: pointer; color: var(--dt-accent); opacity: 0.7; }
+  .b-status .x:hover { opacity: 1; }
+
+  /* ================= 方案 C：左列表右预览 ================= */
+  .c-split { display: grid; grid-template-columns: 240px 1fr; gap: 12px; }
+  .c-side { border-right: 1px solid var(--dt-border); padding-right: 12px; }
+  .c-item {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+    border-radius: 7px; cursor: pointer; font-size: 12px;
+  }
+  .c-item:hover { background: var(--dt-panel-2); }
+  .c-item.on { background: var(--dt-accent-soft); color: var(--dt-accent); font-weight: 500; }
+  .c-item .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dt-border-strong); flex-shrink: 0; }
+  .c-item.on .dot { background: var(--dt-accent); }
+  .c-item .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .c-preview { min-width: 0; display: flex; flex-direction: column; }
+  .c-preview .pv-head {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+  }
+  .c-preview .pv-head .t { font-size: 12px; font-weight: 500; }
+  .c-preview .pv-head .tail { margin-left: auto; display: flex; gap: 6px; }
+  .pv-body {
+    flex: 1; max-height: 132px; overflow-y: auto;
+    padding: 9px 10px; border: 1px solid var(--dt-border); border-radius: 8px;
+    background: var(--dt-bg); font-size: 11.5px; line-height: 1.7; white-space: pre-wrap;
+    color: var(--dt-text); font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  }
+
+  /* ---------- 弹窗 ---------- */
+  .overlay {
+    border-radius: 14px; background: rgba(42, 51, 43, 0.42);
+    padding: 26px; display: flex; justify-content: center;
+  }
+  .dialog {
+    width: 100%; max-width: 520px; background: var(--dt-panel);
+    border-radius: 12px; box-shadow: var(--dt-shadow-lg); padding: 18px 20px 16px;
+  }
+  .dialog h3 { margin: 0 0 14px; font-size: 14px; font-weight: 600; }
+  .dlg-x { float: right; border: none; background: transparent; color: var(--dt-text-muted); font-size: 16px; cursor: pointer; line-height: 1; }
+  .dlg-x:hover { color: var(--dt-text); }
+
+  .step { display: flex; align-items: center; gap: 7px; margin: 0 0 7px; font-size: 11.5px; color: var(--dt-text-muted); }
+  .step .n {
+    width: 15px; height: 15px; border-radius: 50%; background: var(--dt-panel-2);
+    color: var(--dt-text-muted); font-size: 10px; display: inline-flex;
+    align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .step.on { color: var(--dt-text); font-weight: 500; }
+  .step.on .n { background: var(--dt-accent-soft); color: var(--dt-accent); }
+
+  .radio-list { display: flex; flex-direction: column; margin-bottom: 14px; }
+  .radio-row {
+    display: flex; align-items: center; gap: 8px; padding: 7px 9px;
+    border-radius: 7px; cursor: pointer; font-size: 12px;
+  }
+  .radio-row:hover { background: var(--dt-panel-2); }
+  .radio-row .tail { margin-left: auto; font-size: 11px; color: var(--dt-text-muted); }
+
+  .locked-wrap { position: relative; }
+  .locked-tip {
+    display: flex; align-items: center; gap: 5px; margin-top: 6px;
+    font-size: 11px; color: var(--dt-text-muted);
+  }
+
+  /* B 版弹窗：分区卡片 */
+  .zone {
+    padding: 10px 12px 12px; border: 1px solid var(--dt-border); border-radius: 10px;
+    background: var(--dt-panel); margin-bottom: 10px;
+  }
+  .zone.soft { background: var(--dt-panel-2); border-color: transparent; }
+  .zone.locked { opacity: 0.62; }
+  .zone h4 { margin: 0 0 8px; font-size: 11.5px; font-weight: 600; color: var(--dt-text); }
+
+  .footer-note { max-width: 860px; margin: 0 auto; padding: 14px 16px; border-radius: 10px; background: var(--dt-panel); border: 1px solid var(--dt-border); font-size: 12px; color: var(--dt-text-muted); }
+  .footer-note b { color: var(--dt-text); }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>AI 报告 · 模板模块 UI 三版方案</h1>
+  <p>全部使用 theme.css 真实令牌（底 #f5f7f4 / 面板 #ffffff / 主色 #2c7a53）。每版含「选择态 · 编辑态 · 获取模板弹窗」三屏，点上方标签切换。</p>
+</div>
+
+<div class="tabs">
+  <button class="tab on" data-v="a">A · 线框紧凑</button>
+  <button class="tab" data-v="b">B · 卡片选中</button>
+  <button class="tab" data-v="c">C · 左列表右预览</button>
+</div>
+
+<!-- ============ A ============ -->
+<section class="variant on" id="v-a">
+  <div class="variant-head">
+    <h2>A · 线框紧凑</h2>
+    <p>去掉所有边框盒子，靠行高与底色区分层级；「新建」改为标题行右侧文字按钮，底部不再有大块入口。</p>
+  </div>
+
+  <p class="panel-label">① 选择态</p>
+  <fieldset class="field">
+    <legend>报告模板</legend>
+    <div class="a-head">
+      <span class="lbl">当前使用</span>
+      <button class="linkbtn">＋ 新建模板</button>
+    </div>
+    <div class="a-list">
+      <label class="a-row on">
+        <input type="radio" name="a1" checked />
+        <span class="name">默认周报模板</span>
+        <button class="hintmark">?</button>
+        <span class="meta">内置</span>
+      </label>
+      <label class="a-row">
+        <input type="radio" name="a1" />
+        <span class="name">技术复盘向</span>
+        <span class="acts"><button class="mini">编辑</button><button class="mini">删除</button></span>
+        <span class="meta">10/28</span>
+      </label>
+      <label class="a-row">
+        <input type="radio" name="a1" />
+        <span class="name">周会汇报版</span>
+        <span class="acts"><button class="mini">编辑</button><button class="mini">删除</button></span>
+        <span class="meta">10/21</span>
+      </label>
+    </div>
+  </fieldset>
+
+  <p class="panel-label">② 编辑态</p>
+  <fieldset class="field">
+    <legend>模板编辑</legend>
+    <div class="row" style="margin-bottom:8px">
+      <input class="input" style="flex:1;min-width:0" value="技术复盘向" />
+      <button class="linkbtn" style="color:var(--dt-text-muted)">取消</button>
+    </div>
+    <textarea rows="5">## 本周概览
+用一段话概括节奏与重心。
+
+## 关键进展
+1. ……
+2. ……
+
+## AI 解读
+两到三段，按素材取舍。</textarea>
+    <div class="btns right">
+      <button class="btn ghost">获取模板</button>
+      <button class="btn accent" disabled>AI 润色</button>
+      <button class="btn primary">保存模板</button>
+    </div>
+  </fieldset>
+
+  <p class="panel-label">③ 获取模板弹窗</p>
+  <div class="overlay">
+    <div class="dialog">
+      <button class="dlg-x">✕</button>
+      <h3>获取模板</h3>
+      <p class="step on"><span class="n">1</span>从模板库导入（再次点击可取消）</p>
+      <div class="radio-list">
+        <label class="radio-row"><input type="radio" name="a2" checked /><span>默认周报模板</span><span class="tail">内置</span></label>
+        <label class="radio-row"><input type="radio" name="a2" /><span>技术复盘向</span><span class="tail">10/28</span></label>
+        <label class="radio-row"><input type="radio" name="a2" /><span>周会汇报版</span><span class="tail">10/21</span></label>
+      </div>
+      <p class="step"><span class="n">2</span>或粘贴一段已有报告，让 AI 识别格式</p>
+      <textarea rows="3" disabled>已选择库内模板；再次点击所选项取消勾选后，这里才可输入</textarea>
+      <div class="btns right">
+        <button class="btn accent" disabled>AI 识别并生成模板</button>
+        <button class="btn primary">导入所选</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ B ============ -->
+<section class="variant" id="v-b">
+  <div class="variant-head">
+    <h2>B · 卡片选中</h2>
+    <p>模板做成可点选的卡片，右侧一枚「使用中」徽标点明状态；弹窗按「库导入 / 粘贴识别」分成两张独立分区卡，禁用区整体降透明度。</p>
+  </div>
+
+  <p class="panel-label">① 选择态</p>
+  <fieldset class="field">
+    <legend>报告模板</legend>
+    <div class="b-list">
+      <div class="b-card on">
+        <input type="radio" name="b1" checked />
+        <span class="txt">
+          <span class="name">默认周报模板 <button class="hintmark" style="vertical-align:1px">?</button></span>
+          <span class="desc">概览 · 关键进展 · AI 解读，三节结构</span>
+        </span>
+        <span class="tail"><span class="badge ok">使用中</span></span>
+      </div>
+      <div class="b-card">
+        <input type="radio" name="b1" />
+        <span class="txt">
+          <span class="name">技术复盘向</span>
+          <span class="desc">侧重技术难点与沉淀建议 · 10/28 更新</span>
+        </span>
+        <span class="tail"><button class="mini">编辑</button><button class="mini">删除</button></span>
+      </div>
+      <div class="b-card">
+        <input type="radio" name="b1" />
+        <span class="txt">
+          <span class="name">周会汇报版</span>
+          <span class="desc">对外汇报口吻，弱化个人细节 · 10/21 更新</span>
+        </span>
+        <span class="tail"><button class="mini">编辑</button><button class="mini">删除</button></span>
+      </div>
+      <button class="b-new">＋ 新建模板</button>
+    </div>
+  </fieldset>
+
+  <p class="panel-label">② 编辑态</p>
+  <fieldset class="field">
+    <legend>模板编辑</legend>
+    <div class="b-status">正在编辑：技术复盘向 <span class="x">✕ 取消</span></div>
+    <div class="row" style="margin-bottom:8px">
+      <input class="input" style="flex:1;min-width:0" value="技术复盘向" />
+      <span class="badge">30 字上限</span>
+    </div>
+    <textarea rows="5">## 本周概览
+用一段话概括节奏与重心。</textarea>
+    <div class="btns">
+      <button class="btn ghost">获取模板</button>
+      <button class="btn accent" disabled>AI 润色</button>
+      <button class="btn primary" style="margin-left:auto">保存模板</button>
+    </div>
+  </fieldset>
+
+  <p class="panel-label">③ 获取模板弹窗</p>
+  <div class="overlay">
+    <div class="dialog">
+      <button class="dlg-x">✕</button>
+      <h3>获取模板</h3>
+      <div class="zone">
+        <h4>从模板库导入</h4>
+        <div class="radio-list" style="margin-bottom:0">
+          <label class="radio-row"><input type="radio" name="b2" checked /><span>默认周报模板</span><span class="tail">内置</span></label>
+          <label class="radio-row"><input type="radio" name="b2" /><span>技术复盘向</span><span class="tail">10/28</span></label>
+        </div>
+      </div>
+      <div class="zone soft locked">
+        <h4>或粘贴已有报告，AI 识别格式</h4>
+        <textarea rows="3" disabled>取消上方勾选后可在此粘贴</textarea>
+        <p class="locked-tip">🔒 已选择库内模板，取消勾选后解锁</p>
+      </div>
+      <div class="btns right">
+        <button class="btn accent" disabled>AI 识别并生成模板</button>
+        <button class="btn primary">导入所选</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ C ============ -->
+<section class="variant" id="v-c">
+  <div class="variant-head">
+    <h2>C · 左列表右预览</h2>
+    <p>模板不再「看不见内容」——左边选，右边直接读全文并就地编辑。这一版把「?」弹窗彻底省掉。</p>
+  </div>
+
+  <p class="panel-label">① 选择态（含右侧预览）</p>
+  <fieldset class="field">
+    <legend>报告模板</legend>
+    <div class="c-split">
+      <div class="c-side">
+        <div class="c-item on"><span class="dot"></span><span class="nm">默认周报模板</span></div>
+        <div class="c-item"><span class="dot"></span><span class="nm">技术复盘向</span></div>
+        <div class="c-item"><span class="dot"></span><span class="nm">周会汇报版</span></div>
+        <button class="linkbtn" style="padding:6px 8px">＋ 新建模板</button>
+      </div>
+      <div class="c-preview">
+        <div class="pv-head">
+          <span class="t">默认周报模板</span>
+          <span class="badge">内置</span>
+          <span class="tail">
+            <button class="btn ghost" style="padding:3px 10px;font-size:11px">复制</button>
+            <button class="btn accent" style="padding:3px 10px;font-size:11px">基于此新建</button>
+          </span>
+        </div>
+        <div class="pv-body">## 本周概览
+用一段话概括这一周的节奏：完成了多少事项、精力主要花在哪些方面。
+
+## 关键进展
+用有序列表列出真正推进的工作，每条一两句完整叙述。
+
+## AI 解读
+两到三段观察与建议，按素材取舍，不硬凑。</div>
+      </div>
+    </div>
+  </fieldset>
+
+  <p class="panel-label">② 编辑态</p>
+  <fieldset class="field">
+    <legend>模板编辑</legend>
+    <div class="row" style="margin-bottom:8px">
+      <input class="input" style="flex:1;min-width:0" value="技术复盘向" />
+      <button class="linkbtn" style="color:var(--dt-text-muted)">取消</button>
+    </div>
+    <textarea rows="5">## 本周概览
+……</textarea>
+    <div class="btns">
+      <button class="btn ghost">获取模板</button>
+      <button class="btn accent" disabled>AI 润色</button>
+      <button class="btn primary" style="margin-left:auto">保存模板</button>
+    </div>
+  </fieldset>
+
+  <p class="panel-label">③ 获取模板弹窗</p>
+  <div class="overlay">
+    <div class="dialog">
+      <button class="dlg-x">✕</button>
+      <h3>获取模板</h3>
+      <p class="step on"><span class="n">1</span>从模板库导入</p>
+      <div class="radio-list">
+        <label class="radio-row"><input type="radio" name="c2" checked /><span>默认周报模板</span><span class="tail">内置</span></label>
+        <label class="radio-row"><input type="radio" name="c2" /><span>技术复盘向</span><span class="tail">10/28</span></label>
+      </div>
+      <p class="step"><span class="n">2</span>或粘贴文本，由 AI 识别成模板</p>
+      <textarea rows="3" disabled></textarea>
+      <div class="btns right">
+        <button class="btn ghost">取消</button>
+        <button class="btn primary">导入所选</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="footer-note">
+  <b>我的建议：</b>C 版最解决实际问题——「看不到模板内容」这件事被右侧预览直接消灭，还顺手省掉了「?」弹窗与「导入已有模板」两个入口；A 版最轻最克制，改动最小；B 版信息最完整（每条模板带一行说明），但卡片会比现在更高，右栏空间吃紧。
+</div>
+
+<script>
+  const tabs = document.querySelectorAll(".tab");
+  const variants = { a: document.getElementById("v-a"), b: document.getElementById("v-b"), c: document.getElementById("v-c") };
+  tabs.forEach((t) => {
+    t.addEventListener("click", () => {
+      tabs.forEach((x) => x.classList.remove("on"));
+      t.classList.add("on");
+      Object.entries(variants).forEach(([k, el]) => el.classList.toggle("on", k === t.dataset.v));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
+</script>
+</body>
+</html>

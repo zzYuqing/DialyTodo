@@ -9,6 +9,24 @@
   align-items: center;
 }
 
+/* 底组容器：margin-top:auto 把它顶到侧栏最底部，与上方主组拉开距离 */
+.footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+/* 主组 / 底组之间的细分隔线 */
+.footerDivider {
+  width: 28px;
+  height: 1px;
+  background: var(--dt-border);
+  margin: 8px 0;
+}
+
 .tab {
   position: relative;
   display: flex;

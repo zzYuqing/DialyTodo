@@ -22,6 +22,7 @@ export {
   NoteIcon,
   PanelToggleIcon,
   PlusIcon,
+  ReportIcon,
   SearchIcon,
   SettingsIcon,
   SortIcon,

@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>AI 报告 · 新建报告页 排版四版方案</title>
+<style>
+  :root {
+    --dt-bg: #f5f7f4;
+    --dt-panel: #ffffff;
+    --dt-panel-2: #eef2ed;
+    --dt-text: #2a332b;
+    --dt-text-muted: #75806f;
+    --dt-border: rgba(45, 60, 50, 0.12);
+    --dt-border-strong: rgba(45, 60, 50, 0.3);
+    --dt-accent: #2c7a53;
+    --dt-accent-contrast: #ffffff;
+    --dt-accent-soft: rgba(44, 122, 83, 0.1);
+    --dt-danger: #c2452d;
+    --dt-shadow-sm: 0 1px 2px rgba(44, 80, 60, 0.06);
+    --dt-shadow-md: 0 2px 6px rgba(44, 80, 60, 0.08), 0 6px 16px rgba(44, 80, 60, 0.07);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 28px 20px 64px;
+    background: var(--dt-bg);
+    color: var(--dt-text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .page-head { max-width: 680px; margin: 0 auto 22px; }
+  .page-head h1 { margin: 0 0 6px; font-size: 18px; font-weight: 600; }
+  .page-head p { margin: 0; font-size: 12.5px; color: var(--dt-text-muted); }
+
+  .tabs { max-width: 680px; margin: 0 auto 22px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .tab {
+    padding: 7px 15px; border: 1px solid var(--dt-border); border-radius: 999px;
+    background: var(--dt-panel); color: var(--dt-text-muted);
+    font-family: inherit; font-size: 12.5px; cursor: pointer;
+    transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+  }
+  .tab:hover { border-color: var(--dt-border-strong); color: var(--dt-text); }
+  .tab.on { background: var(--dt-accent); border-color: var(--dt-accent); color: var(--dt-accent-contrast); }
+
+  .variant { max-width: 680px; margin: 0 auto 44px; display: none; }
+  .variant.on { display: block; }
+
+  .variant-head { margin-bottom: 14px; }
+  .variant-head h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+  .variant-head p { margin: 0; font-size: 12px; color: var(--dt-text-muted); }
+
+  /* ============ 通用：面板与基础控件（四版共用真实令牌） ============ */
+  .panel {
+    flex: 1; min-width: 0; display: flex; flex-direction: column;
+    padding: 18px 20px 20px; background: var(--dt-bg);
+    border: 1px solid var(--dt-border); border-radius: 14px;
+    box-shadow: var(--dt-shadow-sm);
+  }
+  .phead { margin-bottom: 16px; }
+  .phead h1 { margin: 0; font-size: 20px; font-weight: 600; line-height: 26px; }
+  .phead p { margin: 5px 0 0; font-size: 13px; color: var(--dt-text-muted); }
+
+  /* 日期控件：统一包裹成手写药丸，告别浏览器原生样式 */
+  .datewrap { position: relative; display: inline-flex; align-items: center; }
+  .datewrap .cal { position: absolute; left: 9px; pointer-events: none; color: var(--dt-text-muted); }
+  .date {
+    height: 32px; padding: 0 10px 0 28px; border: 1px solid var(--dt-border-strong);
+    border-radius: 9px; background: var(--dt-panel); color: var(--dt-text);
+    font-family: inherit; font-size: 12.5px; line-height: 1; cursor: pointer;
+  }
+  .date:focus { outline: none; border-color: var(--dt-accent); }
+  .date::-webkit-calendar-picker-indicator { opacity: 0.45; cursor: pointer; }
+  .sep { font-size: 12.5px; color: var(--dt-text-muted); padding: 0 2px; }
+
+  .weekbtn {
+    height: 32px; padding: 0 12px; border: 1px solid var(--dt-border); border-radius: 9px;
+    background: var(--dt-panel); color: var(--dt-text-muted); font-family: inherit;
+    font-size: 12.5px; cursor: pointer; transition: color 120ms ease, border-color 120ms ease;
+  }
+  .weekbtn:hover { color: var(--dt-accent); border-color: var(--dt-accent); }
+  .weekbtn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .stats { margin: 0; font-size: 12px; color: var(--dt-text-muted); }
+
+  .genbtn {
+    height: 36px; padding: 0 20px; border: none; border-radius: 9px;
+    background: var(--dt-accent); color: var(--dt-accent-contrast); font-family: inherit;
+    font-size: 13px; font-weight: 500; cursor: pointer; transition: filter 120ms ease;
+  }
+  .genbtn:hover:not(:disabled) { filter: brightness(1.06); }
+  .genbtn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .genhint { margin: 0; font-size: 12px; color: var(--dt-text-muted); }
+
+  /* 模板选择块（内嵌于页面，弹窗内部不动） */
+  .tpl-card {
+    display: flex; align-items: flex-start; gap: 9px;
+    padding: 10px 12px; border: 1px solid var(--dt-border); border-radius: 10px;
+    background: var(--dt-panel); cursor: pointer; margin-bottom: 8px;
+    transition: border-color 120ms ease, background 120ms ease;
+  }
+  .tpl-card.on { border-color: var(--dt-accent); background: var(--dt-accent-soft); }
+  .tpl-card input { accent-color: var(--dt-accent); margin: 2px 0 0; flex-shrink: 0; }
+  .tpl-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+  .tpl-name { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; }
+  .tpl-desc { font-size: 11px; color: var(--dt-text-muted); }
+  .tpl-tail { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .badge { padding: 1px 8px; border-radius: 999px; background: var(--dt-panel-2); color: var(--dt-text-muted); font-size: 10.5px; }
+  .badge.ok { background: var(--dt-accent); color: var(--dt-accent-contrast); }
+  .tpl-new {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px; border: 1px dashed var(--dt-border-strong); border-radius: 10px;
+    background: transparent; color: var(--dt-text-muted); font-family: inherit;
+    font-size: 12px; cursor: pointer; width: 100%; box-sizing: border-box;
+  }
+  .tpl-new:hover { color: var(--dt-accent); border-color: var(--dt-accent); background: var(--dt-accent-soft); }
+  .hintmark {
+    width: 15px; height: 15px; padding: 0; border: 1px solid var(--dt-border); border-radius: 50%;
+    background: transparent; color: var(--dt-text-muted); font-family: inherit; font-size: 10px;
+    line-height: 1; cursor: help; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .hintmark:hover { color: var(--dt-accent); border-color: var(--dt-accent); }
+
+  .section-label {
+    font-size: 11px; font-weight: 600; color: var(--dt-text-muted);
+    letter-spacing: 0.05em; margin: 0 0 9px;
+  }
+
+  .footer-note {
+    max-width: 680px; margin: 0 auto; padding: 14px 16px; border-radius: 10px;
+    background: var(--dt-panel); border: 1px solid var(--dt-border);
+    font-size: 12px; color: var(--dt-text-muted); line-height: 1.7;
+  }
+  .footer-note b { color: var(--dt-text); }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>AI 报告 · 新建报告页 排版四版方案</h1>
+  <p>全部使用 theme.css 真实令牌（墨绿工房）。只重排「新建报告」页面本身；模板的编辑 / 获取 / 详情弹窗内部不在此范围内。点上方标签切换四版。</p>
+</div>
+
+<div class="tabs">
+  <button class="tab on" data-v="a">A · 分区卡片</button>
+  <button class="tab" data-v="b">B · 表单行</button>
+  <button class="tab" data-v="c">C · 单卡分步</button>
+  <button class="tab" data-v="d">D · 摘要侧栏</button>
+</div>
+
+<!-- ================= 版本 A：分区卡片 ================= -->
+<section class="variant on" id="v-a">
+  <div class="variant-head">
+    <h2>A · 分区卡片</h2>
+    <p>把四块内容各自收进带小标题的卡片，日期控件换成手写药丸，消除「散乱」最直白的一版。</p>
+  </div>
+
+  <div class="panel">
+    <header class="phead">
+      <h1>新建报告</h1>
+      <p>基于本机已完成事项生成总结</p>
+    </header>
+
+    <!-- 卡片 1：时间范围 -->
+    <div style="border:1px solid var(--dt-border); border-radius:12px; padding:14px 16px; margin-bottom:12px; background:var(--dt-panel);">
+      <p class="section-label">时间范围</p>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <span class="datewrap">
+          <svg class="cal" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <input class="date" type="date" value="2026-11-02" />
+        </span>
+        <span class="sep">至</span>
+        <span class="datewrap">
+          <svg class="cal" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <input class="date" type="date" value="2026-11-04" />
+        </span>
+        <button class="weekbtn">本周</button>
+      </div>
+      <p class="stats" style="margin-top:10px;">已完成 10 项 · 去重 9 个事项 · 有记录 2 天</p>
+    </div>
+
+    <!-- 卡片 2：报告模板 -->
+    <div style="border:1px solid var(--dt-border); border-radius:12px; padding:14px 16px; margin-bottom:12px; background:var(--dt-panel);">
+      <p class="section-label">报告模板</p>
+      <label class="tpl-card on">
+        <input type="radio" name="ta" checked />
+        <span class="tpl-body">
+          <span class="tpl-name">默认周报模板 <button class="hintmark" type="button">?</button></span>
+          <span class="tpl-desc">概览 · 关键进展 · AI 解读，三节结构</span>
+        </span>
+        <span class="tpl-tail"><span class="badge ok">使用中</span></span>
+      </label>
+      <label class="tpl-card">
+        <input type="radio" name="ta" />
+        <span class="tpl-body">
+          <span class="tpl-name">技术复盘向</span>
+          <span class="tpl-desc">侧重技术难点与沉淀建议 · 10/28 更新</span>
+        </span>
+        <span class="tpl-tail"><span class="badge">10/28</span></span>
+      </label>
+      <button class="tpl-new" type="button">＋ 新建模板</button>
+    </div>
+
+    <!-- 卡片 3：生成 -->
+    <div style="border:1px solid var(--dt-border); border-radius:12px; padding:14px 16px; background:var(--dt-panel);">
+      <p class="section-label">生成</p>
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <button class="genbtn">生成本周至今</button>
+        <p class="genhint">生成基于本机任务数据，只归纳不编造</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 版本 B：表单行 ================= -->
+<section class="variant" id="v-b">
+  <div class="variant-head">
+    <h2>B · 表单行（左标签右内容）</h2>
+    <p>像设置页一样：左侧固定宽度的字段名，右侧内容，全程基线对齐。最紧凑、最整齐，适合信息密度高的表单。</p>
+  </div>
+
+  <div class="panel">
+    <header class="phead">
+      <h1>新建报告</h1>
+      <p>基于本机已完成事项生成总结</p>
+    </header>
+
+    <div style="border:1px solid var(--dt-border); border-radius:12px; padding:4px 16px; background:var(--dt-panel);">
+      <!-- 行：时间范围 -->
+      <div style="display:flex; align-items:flex-start; gap:16px; padding:13px 0; border-bottom:1px solid var(--dt-border);">
+        <div style="width:72px; flex-shrink:0; font-size:12.5px; font-weight:500; color:var(--dt-text); padding-top:5px;">时间范围</div>
+        <div style="flex:1; min-width:0;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span class="datewrap">
+              <svg class="cal" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <input class="date" type="date" value="2026-11-02" />
+            </span>
+            <span class="sep">至</span>
+            <span class="datewrap">
+              <svg class="cal" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <input class="date" type="date" value="2026-11-04" />
+            </span>
+            <button class="weekbtn">本周</button>
+          </div>
+          <p class="stats" style="margin-top:9px;">已完成 10 项 · 去重 9 个事项 · 有记录 2 天</p>
+        </div>
+      </div>
+      <!-- 行：报告模板 -->
+      <div style="display:flex; align-items:flex-start; gap:16px; padding:13px 0;">
+        <div style="width:72px; flex-shrink:0; font-size:12.5px; font-weight:500; color:var(--dt-text); padding-top:5px;">报告模板</div>
+        <div style="flex:1; min-width:0;">
+          <label class="tpl-card on">
+            <input type="radio" name="tb" checked />
+            <span class="tpl-body">
+              <span class="tpl-name">默认周报模板 <button class="hintmark" type="button">?</button></span>
+              <span class="tpl-desc">概览 · 关键进展 · AI 解读，三节结构</span>
+            </span>
+            <span class="tpl-tail"><span class="badge ok">使用中</span></span>
+          </label>
+          <label class="tpl-card">
+            <input type="radio" name="tb" />
+            <span class="tpl-body">
+              <span class="tpl-name">技术复盘向</span>
+              <span class="tpl-desc">侧重技术难点与沉淀建议 · 10/28 更新</span>
+            </span>
+            <span class="tpl-tail"><span class="badge">10/28</span></span>
+          </label>
+          <button class="tpl-new" type="button">＋ 新建模板</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px;">
+      <button class="genbtn">生成本周至今</button>
+      <p class="genhint">生成基于本机任务数据，只归纳不编造</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 版本 C：单卡分步 ================= -->
+<section class="variant" id="v-c">
+  <div class="variant-head">
+    <h2>C · 单卡分步（带步骤号）</h2>
+    <p>整页一张外卡，内部用「①②③」步骤号 + 细分隔线串起，最有引导感、最省竖向空间。</p>
+  </div>
+
+  <div class="panel">
+    <header class="phead">
+      <h1>新建报告</h1>
+      <p>基于本机已完成事项生成总结</p>
+    </header>
+
+    <div style="border:1px solid var(--dt-border); border-radius:12px; padding:4px 16px; background:var(--dt-panel);">
+      <!-- 步骤 1 -->
+      <div style="padding:14px 0; border-bottom:1px solid var(--dt-border);">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+          <span style="width:18px;height:18px;border-radius:50%;background:var(--dt-accent-soft);color:var(--dt-accent);font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">1</span>
+          <span style="font-size:12.5px; font-weight:500;">选择时间范围</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span class="datewrap">
+            <svg class="cal" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <input class="date" type="date" value="2026-11-02" />
+          </span>
+          <span class="sep">至</span>
+          <span class="datewrap">
+            <svg class="cal" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <input class="date" type="date" value="2026-11-04" />
+          </span>
+          <button class="weekbtn">本周</button>
+        </div>
+        <p class="stats" style="margin-top:10px;">已完成 10 项 · 去重 9 个事项 · 有记录 2 天</p>
+      </div>
+      <!-- 步骤 2 -->
+      <div style="padding:14px 0;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+          <span style="width:18px;height:18px;border-radius:50%;background:var(--dt-accent-soft);color:var(--dt-accent);font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">2</span>
+          <span style="font-size:12.5px; font-weight:500;">选择报告模板</span>
+        </div>
+        <label class="tpl-card on">
+          <input type="radio" name="tc" checked />
+          <span class="tpl-body">
+            <span class="tpl-name">默认周报模板 <button class="hintmark" type="button">?</button></span>
+            <span class="tpl-desc">概览 · 关键进展 · AI 解读，三节结构</span>
+          </span>
+          <span class="tpl-tail"><span class="badge ok">使用中</span></span>
+        </label>
+        <label class="tpl-card">
+          <input type="radio" name="tc" />
+          <span class="tpl-body">
+            <span class="tpl-name">技术复盘向</span>
+            <span class="tpl-desc">侧重技术难点与沉淀建议 · 10/28 更新</span>
+          </span>
+          <span class="tpl-tail"><span class="badge">10/28</span></span>
+        </label>
+        <button class="tpl-new" type="button">＋ 新建模板</button>
+      </div>
+    </div>
+
+    <!-- 步骤 3：生成（强调区） -->
+    <div style="display:flex; align-items:center; gap:8px; margin-top:14px; padding:12px 14px; border:1px solid var(--dt-accent-soft); border-radius:12px; background:var(--dt-accent-soft);">
+      <span style="width:18px;height:18px;border-radius:50%;background:var(--dt-accent);color:var(--dt-accent-contrast);font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">3</span>
+      <button class="genbtn">生成本周至今</button>
+      <p class="genhint">生成基于本机任务数据，只归纳不编造</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 版本 D：摘要侧栏 ================= -->
+<section class="variant" id="v-d">
+  <div class="variant-head">
+    <h2>D · 摘要侧栏（左表单 + 右常驻摘要）</h2>
+    <p>左侧放表单，右侧一张常驻「本次生成」摘要卡（区间 / 模板 / 数据量 / 生成按钮），随选择实时反映，按钮锚定在右下。</p>
+  </div>
+
+  <div class="panel">
+    <header class="phead">
+      <h1>新建报告</h1>
+      <p>基于本机已完成事项生成总结</p>
+    </header>
+
+    <div style="display:grid; grid-template-columns: 1fr 200px; gap:16px; align-items:start;">
+      <!-- 左：主表单 -->
+      <div style="display:flex; flex-direction:column; gap:14px; min-width:0;">
+        <div>
+          <p class="section-label">时间范围</p>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span class="datewrap">
+              <svg class="cal" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <input class="date" type="date" value="2026-11-02" />
+            </span>
+            <span class="sep">至</span>
+            <span class="datewrap">
+              <svg class="cal" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <input class="date" type="date" value="2026-11-04" />
+            </span>
+            <button class="weekbtn">本周</button>
+          </div>
+        </div>
+        <div>
+          <p class="section-label">报告模板</p>
+          <label class="tpl-card on">
+            <input type="radio" name="td" checked />
+            <span class="tpl-body">
+              <span class="tpl-name">默认周报模板 <button class="hintmark" type="button">?</button></span>
+              <span class="tpl-desc">概览 · 关键进展 · AI 解读</span>
+            </span>
+            <span class="tpl-tail"><span class="badge ok">使用中</span></span>
+          </label>
+          <label class="tpl-card">
+            <input type="radio" name="td" />
+            <span class="tpl-body">
+              <span class="tpl-name">技术复盘向</span>
+              <span class="tpl-desc">侧重技术难点 · 10/28</span>
+            </span>
+            <span class="tpl-tail"><span class="badge">10/28</span></span>
+          </label>
+          <button class="tpl-new" type="button">＋ 新建模板</button>
+        </div>
+      </div>
+
+      <!-- 右：常驻摘要卡 -->
+      <div style="border:1px solid var(--dt-border); border-radius:12px; padding:14px; background:var(--dt-panel); position:sticky; top:8px;">
+        <p class="section-label" style="margin-bottom:10px;">本次生成</p>
+        <div style="display:flex; flex-direction:column; gap:9px; font-size:12px;">
+          <div style="display:flex; justify-content:space-between; gap:8px;">
+            <span style="color:var(--dt-text-muted);">区间</span>
+            <span style="text-align:right;">11/02 – 11/04</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; gap:8px;">
+            <span style="color:var(--dt-text-muted);">模板</span>
+            <span style="text-align:right;">默认周报</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; gap:8px;">
+            <span style="color:var(--dt-text-muted);">数据</span>
+            <span style="text-align:right;">10 项 / 2 天</span>
+          </div>
+        </div>
+        <button class="genbtn" style="width:100%; margin-top:14px;">生成本周至今</button>
+        <p class="genhint" style="margin-top:8px; text-align:center;">只归纳不编造</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="footer-note">
+  <b>我的建议：</b>
+  <b>A · 分区卡片</b>改动力最小、和现有结构最贴近，只是把四块收进带标题的卡片并统一日期控件，最稳妥；
+  <b>B · 表单行</b>最整齐紧凑，基线对齐后「散乱」感消失得最彻底，但左侧标签列会占用宽度，模板卡被压窄；
+  <b>C · 单卡分步</b>引导感最强、最省空间，步骤号让「先选时间→再选模板→最后生成」的意图一目了然；
+  <b>D · 摘要侧栏</b>最像专业工具，右侧摘要卡把「生成」按钮锚定，数据量实时反馈，但需要更宽的右栏才不挤。
+  四版都保留了真实令牌、原生日期控件已替换为手写药丸、主操作不再混在次要信息里。你选定一版后，我再落到 <code>ReportsView.module.css</code> + <code>ReportPanel.tsx</code>。
+</div>
+
+<script>
+  const tabs = document.querySelectorAll(".tab");
+  const variants = {
+    a: document.getElementById("v-a"),
+    b: document.getElementById("v-b"),
+    c: document.getElementById("v-c"),
+    d: document.getElementById("v-d"),
+  };
+  tabs.forEach((t) => {
+    t.addEventListener("click", () => {
+      tabs.forEach((x) => x.classList.remove("on"));
+      t.classList.add("on");
+      Object.entries(variants).forEach(([k, el]) => el.classList.toggle("on", k === t.dataset.v));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
+</script>
+</body>
+</html>
