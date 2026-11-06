@@ -12,6 +12,9 @@ src-tauri/gen/
 *.log
 _*/
 
+# README 图片资源目录：下划线开头的目录默认被忽略，此处单独放行
+!_resources/
+
 # IDE / 编辑器
 .vs/
 .idea/
